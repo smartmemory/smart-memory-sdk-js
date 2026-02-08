@@ -130,7 +130,8 @@ const client = new SmartMemoryClient({
     access: 'smart_memory_auth_token',
     refresh: 'smart_memory_refresh_token',
     user: 'smart_memory_user',
-    tenant: 'smart_memory_tenant_id'
+    tenant: 'smart_memory_tenant_id',
+    team: 'smart_memory_team_id'
   },
   onTokenRefresh: (newToken) => {}  // callback after successful refresh
 });

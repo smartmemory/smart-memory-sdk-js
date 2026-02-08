@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.0 (2026-02-08)
+
+### Migration Complete
+
+All 4 SmartMemory frontends now use `@smartmemory/sdk-js` for authentication:
+
+| App | Auth Mode | Lines Removed | Pattern |
+|-----|-----------|---------------|---------|
+| **smart-memory-web** | custom | ~520 | SDK compat layer in api.js, SDK-backed AuthContext |
+| **smart-memory-insights** | sso | ~384 | SDK AuthCore in main.jsx fetch interceptor |
+| **smart-memory-studio** | sso | ~371 | SDK AuthCore + sdkAuth export for non-React code |
+| **maya** | custom | ~143 | SDK AuthCore for auth, MayaAPI kept for chat endpoints |
+
+Total: ~1418 lines of duplicated auth/API code removed across 4 apps.
+
 ## 0.1.1 (2026-02-08)
 
 ### Added
