@@ -31,4 +31,13 @@ export class SmartMemoryClient {
     this.usage = new UsageAPI(baseAPI);
     this.insights = new InsightsAPI(baseAPI);
   }
+
+  setTeamId(teamId) {
+    this.auth.tokenManager.setTeamId(teamId);
+    this.auth.notifyListeners();
+  }
+
+  getTeamId() {
+    return this.auth.tokenManager.getTeamId();
+  }
 }

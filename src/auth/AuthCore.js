@@ -74,6 +74,11 @@ export class AuthCore {
       headers['X-Workspace-Id'] = tenantId;
     }
 
+    const teamId = this.tokenManager.getTeamId();
+    if (teamId) {
+      headers['X-Team-Id'] = teamId;
+    }
+
     return headers;
   }
 
@@ -129,8 +134,10 @@ export class AuthCore {
     this.currentUser = user;
     this.currentToken = accessToken;
 
-    if (user?.default_team_id || data.team_id) {
-      this.tokenManager.setTenantId(user?.default_team_id || data.team_id);
+    const teamId = user?.default_team_id || data.team_id;
+    if (teamId) {
+      this.tokenManager.setTenantId(teamId);
+      this.tokenManager.setTeamId(teamId);
     }
 
     this.notifyListeners();

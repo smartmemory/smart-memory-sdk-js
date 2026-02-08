@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1 (2026-02-08)
+
+### Added
+- **X-Team-Id header**: TokenManager stores team ID separately from tenant ID; AuthCore emits both `X-Workspace-Id` and `X-Team-Id` headers
+- **DecisionAPI**: `reinforce()`, `supersede()`, `retract()`, `getProvenance()` methods
+- **SmartMemoryClient**: `setTeamId()` / `getTeamId()` convenience methods
+- 9 new tests (110 total)
+
+### Fixed
+- **SSOManager.storeCallbackTokens()**: accepts both param conventions (`refresh_token`/`refresh`, `team_id`/`team`) for cross-app SSO compatibility
+
 ## 0.1.0 (2026-02-08)
 
 ### Added

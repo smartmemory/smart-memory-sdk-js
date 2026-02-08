@@ -114,6 +114,24 @@ describe('AuthCore', () => {
       const headers = auth.getAuthHeaders({ 'X-Custom': 'value' });
       expect(headers['X-Custom']).toBe('value');
     });
+
+    it('should include X-Team-Id header when team is set', () => {
+      const auth = createCustomAuth();
+      auth.tokenManager.setTeamId('team-456');
+
+      const headers = auth.getAuthHeaders();
+      expect(headers['X-Team-Id']).toBe('team-456');
+    });
+
+    it('should include both X-Workspace-Id and X-Team-Id when both set', () => {
+      const auth = createCustomAuth();
+      auth.setTenantId('ws-123');
+      auth.tokenManager.setTeamId('team-456');
+
+      const headers = auth.getAuthHeaders();
+      expect(headers['X-Workspace-Id']).toBe('ws-123');
+      expect(headers['X-Team-Id']).toBe('team-456');
+    });
   });
 
   describe('custom mode: login', () => {
@@ -132,6 +150,22 @@ describe('AuthCore', () => {
       expect(auth.isAuthenticated()).toBe(true);
       expect(result.user.name).toBe('Alice');
       expect(auth.getCurrentToken()).toBe('at');
+    });
+
+    it('should store team_id from login response', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          tokens: { access_token: 'at', refresh_token: 'rt' },
+          user: { id: '1', name: 'Alice', default_team_id: 'team-99' }
+        })
+      });
+
+      const auth = createCustomAuth();
+      await auth.login({ email: 'a@b.com', password: 'pass' });
+
+      expect(auth.tokenManager.getTeamId()).toBe('team-99');
+      expect(auth.getAuthHeaders()['X-Team-Id']).toBe('team-99');
     });
 
     it('should throw on failed login', async () => {

@@ -46,6 +46,38 @@ describe('DecisionAPI', () => {
       max_depth: 3
     });
   });
+
+  it('should reinforce a decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.reinforce('d-1');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/reinforce');
+  });
+
+  it('should supersede a decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.supersede('d-1', { reason: 'outdated' });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/supersede', { reason: 'outdated' });
+  });
+
+  it('should retract a decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.retract('d-1');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/retract');
+  });
+
+  it('should get provenance for a decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.getProvenance('d-1');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/decisions/d-1/provenance');
+  });
 });
 
 describe('GraphAPI', () => {

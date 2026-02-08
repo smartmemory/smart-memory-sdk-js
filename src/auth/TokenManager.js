@@ -2,7 +2,8 @@ const DEFAULT_KEYS = {
   access: 'smart_memory_auth_token',
   refresh: 'smart_memory_refresh_token',
   user: 'smart_memory_user',
-  tenant: 'smart_memory_tenant_id'
+  tenant: 'smart_memory_tenant_id',
+  team: 'smart_memory_team_id'
 };
 
 export class TokenManager {
@@ -14,7 +15,7 @@ export class TokenManager {
   constructor({ storage = 'localStorage', keys = {} } = {}) {
     this.storageType = storage;
     this.keys = { ...DEFAULT_KEYS, ...keys };
-    this._memory = { access: null, refresh: null, user: null, tenant: null };
+    this._memory = { access: null, refresh: null, user: null, tenant: null, team: null };
   }
 
   getAccessToken() {
@@ -75,9 +76,22 @@ export class TokenManager {
     this._setInStorage(this.keys.tenant, tenantId);
   }
 
+  getTeamId() {
+    if (this.storageType === 'memory') return this._memory.team;
+    return this._getFromStorage(this.keys.team);
+  }
+
+  setTeamId(teamId) {
+    if (this.storageType === 'memory') {
+      this._memory.team = teamId;
+      return;
+    }
+    this._setInStorage(this.keys.team, teamId);
+  }
+
   clearAll() {
     if (this.storageType === 'memory') {
-      this._memory = { access: null, refresh: null, user: null, tenant: null };
+      this._memory = { access: null, refresh: null, user: null, tenant: null, team: null };
       return;
     }
     for (const key of Object.values(this.keys)) {

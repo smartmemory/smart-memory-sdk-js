@@ -30,12 +30,15 @@ export class SSOManager {
 
   storeCallbackTokens(params) {
     const token = params.get('token');
-    const refreshToken = params.get('refresh_token');
-    const teamId = params.get('team_id');
+    const refreshToken = params.get('refresh_token') || params.get('refresh');
+    const teamId = params.get('team_id') || params.get('team');
 
     if (token) this.tokenManager.setAccessToken(token);
     if (refreshToken) this.tokenManager.setRefreshToken(refreshToken);
-    if (teamId) this.tokenManager.setTenantId(teamId);
+    if (teamId) {
+      this.tokenManager.setTenantId(teamId);
+      this.tokenManager.setTeamId(teamId);
+    }
   }
 
   storeRedirect(url) {

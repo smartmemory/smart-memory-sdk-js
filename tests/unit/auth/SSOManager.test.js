@@ -77,6 +77,38 @@ describe('SSOManager', () => {
       expect(tokenManager.getTenantId()).toBe('team-123');
     });
 
+    it('should accept short param names (refresh, team)', () => {
+      const sso = createManager();
+      const params = new URLSearchParams({
+        token: 'access-tok',
+        refresh: 'refresh-tok',
+        team: 'team-456'
+      });
+
+      sso.storeCallbackTokens(params);
+
+      expect(tokenManager.getAccessToken()).toBe('access-tok');
+      expect(tokenManager.getRefreshToken()).toBe('refresh-tok');
+      expect(tokenManager.getTenantId()).toBe('team-456');
+      expect(tokenManager.getTeamId()).toBe('team-456');
+    });
+
+    it('should prefer long param names over short ones', () => {
+      const sso = createManager();
+      const params = new URLSearchParams({
+        token: 'access-tok',
+        refresh_token: 'long-refresh',
+        refresh: 'short-refresh',
+        team_id: 'long-team',
+        team: 'short-team'
+      });
+
+      sso.storeCallbackTokens(params);
+
+      expect(tokenManager.getRefreshToken()).toBe('long-refresh');
+      expect(tokenManager.getTenantId()).toBe('long-team');
+    });
+
     it('should handle missing optional params', () => {
       const sso = createManager();
       const params = new URLSearchParams({ token: 'only-access' });

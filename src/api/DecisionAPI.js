@@ -24,4 +24,20 @@ export class DecisionAPI {
       decision_id: decisionId
     });
   }
+
+  async reinforce(decisionId) {
+    return this.api.post(`/memory/decisions/${decisionId}/reinforce`);
+  }
+
+  async supersede(decisionId, data = {}) {
+    return this.api.post(`/memory/decisions/${decisionId}/supersede`, data);
+  }
+
+  async retract(decisionId) {
+    return this.api.post(`/memory/decisions/${decisionId}/retract`);
+  }
+
+  async getProvenance(decisionId) {
+    return this.api.get(`/memory/decisions/${decisionId}/provenance`);
+  }
 }
