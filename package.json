@@ -1,7 +1,7 @@
 {
   "name": "@smartmemory/sdk-js",
-  "version": "0.1.0",
-  "description": "Unified JavaScript SDK for SmartMemory API — auth + API client for all frontends",
+  "version": "0.3.9",
+  "description": "Unified JavaScript SDK for SmartMemory API \u2014 auth + API client for all frontends",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -26,8 +26,12 @@
     "react-dom": ">=18.0.0"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": true },
-    "react-dom": { "optional": true }
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "vite": "^6.0.0",
@@ -40,6 +44,11 @@
     "eslint": "^9.0.0",
     "@vitest/coverage-v8": "^3.0.0"
   },
-  "keywords": ["smartmemory", "sdk", "auth", "api-client"],
+  "keywords": [
+    "smartmemory",
+    "sdk",
+    "auth",
+    "api-client"
+  ],
   "license": "MIT"
 }
