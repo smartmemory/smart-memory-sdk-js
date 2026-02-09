@@ -5,7 +5,7 @@ export class DecisionAPI {
 
   async list(params = {}) {
     const qs = new URLSearchParams(params).toString();
-    return this.api.get(`/memory/decisions/${qs ? '?' + qs : ''}`);
+    return this.api.get(`/memory/decisions${qs ? '?' + qs : ''}`);
   }
 
   async listPending(limit = 50) {
