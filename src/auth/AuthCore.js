@@ -9,24 +9,35 @@ export class AuthCore {
     this.endpoints = config.endpoints || {};
     this.listeners = new Set();
 
+    // API key mode: simple static auth, no token management
+    this.apiKey = config.apiKey || null;
+    if (this.apiKey) {
+      this.mode = 'apiKey';
+    }
+
     this.tokenManager = new TokenManager({
       storage: config.storage || 'localStorage',
       keys: config.tokenKeys
     });
 
-    this.refreshManager = new RefreshManager({
-      apiBaseUrl: this.apiBaseUrl,
-      refreshEndpoint: this.endpoints.refresh || '/auth/refresh',
-      tokenManager: this.tokenManager,
-      onTokenRefreshed: (token) => {
-        this.currentToken = token;
-        this.notifyListeners();
-        config.onTokenRefresh?.(token);
-      },
-      onRefreshFailed: () => {
-        this.logout();
-      }
-    });
+    // Only set up refresh manager for non-apiKey modes
+    if (this.mode !== 'apiKey') {
+      this.refreshManager = new RefreshManager({
+        apiBaseUrl: this.apiBaseUrl,
+        refreshEndpoint: this.endpoints.refresh || '/auth/refresh',
+        tokenManager: this.tokenManager,
+        onTokenRefreshed: (token) => {
+          this.currentToken = token;
+          this.notifyListeners();
+          config.onTokenRefresh?.(token);
+        },
+        onRefreshFailed: () => {
+          this.logout();
+        }
+      });
+    } else {
+      this.refreshManager = null;
+    }
 
     if (this.mode === 'sso') {
       this.ssoManager = new SSOManager({
@@ -36,8 +47,14 @@ export class AuthCore {
       });
     }
 
-    this.currentUser = this.tokenManager.getUser();
-    this.currentToken = this.tokenManager.getAccessToken();
+    // For API key mode, token is the API key itself
+    if (this.mode === 'apiKey') {
+      this.currentUser = null;
+      this.currentToken = this.apiKey;
+    } else {
+      this.currentUser = this.tokenManager.getUser();
+      this.currentToken = this.tokenManager.getAccessToken();
+    }
   }
 
   isAuthenticated() {
@@ -105,6 +122,9 @@ export class AuthCore {
   }
 
   async login(credentials) {
+    if (this.mode === 'apiKey') {
+      throw new Error('login() not available in apiKey mode');
+    }
     if (this.mode !== 'custom') {
       throw new Error('login() only available in custom mode');
     }
@@ -162,6 +182,14 @@ export class AuthCore {
   }
 
   async logout() {
+    // API key mode: just clear the key
+    if (this.mode === 'apiKey') {
+      this.apiKey = null;
+      this.currentToken = null;
+      this.notifyListeners();
+      return;
+    }
+
     if (this.endpoints.logout) {
       try {
         await fetch(`${this.apiBaseUrl}${this.endpoints.logout}`, {
@@ -180,6 +208,13 @@ export class AuthCore {
   }
 
   async refreshToken() {
+    // API key mode doesn't need token refresh
+    if (this.mode === 'apiKey') {
+      return this.apiKey;
+    }
+    if (!this.refreshManager) {
+      throw new Error('Token refresh not available in this mode');
+    }
     const token = await this.refreshManager.refresh();
     this.currentToken = token;
     return token;
