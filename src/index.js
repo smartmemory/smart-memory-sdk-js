@@ -18,6 +18,7 @@ export { AuthAPI } from './api/AuthAPI.js';
 export { AgentAPI } from './api/AgentAPI.js';
 export { UsageAPI } from './api/UsageAPI.js';
 export { InsightsAPI } from './api/InsightsAPI.js';
+export { TokenUsageAPI } from './api/TokenUsageAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';

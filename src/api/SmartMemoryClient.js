@@ -10,6 +10,7 @@ import { AuthAPI } from './AuthAPI.js';
 import { AgentAPI } from './AgentAPI.js';
 import { UsageAPI } from './UsageAPI.js';
 import { InsightsAPI } from './InsightsAPI.js';
+import { TokenUsageAPI } from './TokenUsageAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -30,6 +31,7 @@ export class SmartMemoryClient {
     this.agents = new AgentAPI(baseAPI);
     this.usage = new UsageAPI(baseAPI);
     this.insights = new InsightsAPI(baseAPI);
+    this.tokenUsage = new TokenUsageAPI(baseAPI);
   }
 
   setTeamId(teamId) {
