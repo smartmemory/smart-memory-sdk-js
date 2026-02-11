@@ -4,18 +4,18 @@ export class InsightsAPI {
   }
 
   async getHealth() {
-    return this.api.get('/insights/health');
+    return this.api.get('/memory/health');
   }
 
   async getReflection() {
-    return this.api.get('/insights/reflect');
+    return this.api.get('/memory/reflect');
   }
 
   async getMaintenanceStatus() {
-    return this.api.get('/insights/maintenance/status');
+    return this.api.get('/memory/maintenance/status');
   }
 
   async getPlugins() {
-    return this.api.get('/insights/plugins');
+    return this.api.get('/memory/plugins');
   }
 }

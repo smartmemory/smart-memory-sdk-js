@@ -25,16 +25,20 @@ export class DecisionAPI {
     });
   }
 
-  async reinforce(decisionId) {
-    return this.api.post(`/memory/decisions/${decisionId}/reinforce`);
+  async reinforce(decisionId, evidenceId) {
+    return this.api.post(`/memory/decisions/${decisionId}/reinforce`, {
+      evidence_id: evidenceId
+    });
   }
 
   async supersede(decisionId, data = {}) {
     return this.api.post(`/memory/decisions/${decisionId}/supersede`, data);
   }
 
-  async retract(decisionId) {
-    return this.api.post(`/memory/decisions/${decisionId}/retract`);
+  async retract(decisionId, reason) {
+    return this.api.post(`/memory/decisions/${decisionId}/retract`, {
+      reason
+    });
   }
 
   async getProvenance(decisionId) {

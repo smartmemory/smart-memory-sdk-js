@@ -25,7 +25,7 @@ describe('DecisionAPI', () => {
     const decisions = new DecisionAPI(api);
     await decisions.list({ status: 'pending' });
 
-    expect(api.get).toHaveBeenCalledWith('/memory/decisions/?status=pending');
+    expect(api.get).toHaveBeenCalledWith('/memory/decisions?status=pending');
   });
 
   it('should list pending decisions', async () => {
@@ -50,9 +50,11 @@ describe('DecisionAPI', () => {
   it('should reinforce a decision', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
-    await decisions.reinforce('d-1');
+    await decisions.reinforce('d-1', 'ev-42');
 
-    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/reinforce');
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/reinforce', {
+      evidence_id: 'ev-42'
+    });
   });
 
   it('should supersede a decision', async () => {
@@ -66,9 +68,11 @@ describe('DecisionAPI', () => {
   it('should retract a decision', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
-    await decisions.retract('d-1');
+    await decisions.retract('d-1', 'No longer valid');
 
-    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/retract');
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/retract', {
+      reason: 'No longer valid'
+    });
   });
 
   it('should get provenance for a decision', async () => {
@@ -232,7 +236,7 @@ describe('InsightsAPI', () => {
     const insights = new InsightsAPI(api);
     await insights.getHealth();
 
-    expect(api.get).toHaveBeenCalledWith('/insights/health');
+    expect(api.get).toHaveBeenCalledWith('/memory/health');
   });
 
   it('should get plugins', async () => {
@@ -240,6 +244,6 @@ describe('InsightsAPI', () => {
     const insights = new InsightsAPI(api);
     await insights.getPlugins();
 
-    expect(api.get).toHaveBeenCalledWith('/insights/plugins');
+    expect(api.get).toHaveBeenCalledWith('/memory/plugins');
   });
 });
