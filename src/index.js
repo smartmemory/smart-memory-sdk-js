@@ -19,6 +19,17 @@ export { AgentAPI } from './api/AgentAPI.js';
 export { UsageAPI } from './api/UsageAPI.js';
 export { InsightsAPI } from './api/InsightsAPI.js';
 export { TokenUsageAPI } from './api/TokenUsageAPI.js';
+export { TemporalAPI } from './api/TemporalAPI.js';
+export { GovernanceAPI } from './api/GovernanceAPI.js';
+export { EvolutionAPI } from './api/EvolutionAPI.js';
+export { ReasoningAPI } from './api/ReasoningAPI.js';
+export { ReasoningTracesAPI } from './api/ReasoningTracesAPI.js';
+export { OntologyAPI } from './api/OntologyAPI.js';
+export { AnalyticsAPI } from './api/AnalyticsAPI.js';
+export { ValidationAPI } from './api/ValidationAPI.js';
+export { PipelineAPI } from './api/PipelineAPI.js';
+export { ArchiveAPI } from './api/ArchiveAPI.js';
+export { ZettelkastenAPI } from './api/ZettelkastenAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';

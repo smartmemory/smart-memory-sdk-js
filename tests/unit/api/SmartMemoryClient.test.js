@@ -22,6 +22,18 @@ describe('SmartMemoryClient', () => {
     expect(client.agents).toBeDefined();
     expect(client.usage).toBeDefined();
     expect(client.insights).toBeDefined();
+    expect(client.tokenUsage).toBeDefined();
+    expect(client.temporal).toBeDefined();
+    expect(client.governance).toBeDefined();
+    expect(client.evolution).toBeDefined();
+    expect(client.reasoning).toBeDefined();
+    expect(client.reasoningTraces).toBeDefined();
+    expect(client.ontology).toBeDefined();
+    expect(client.analytics).toBeDefined();
+    expect(client.validation).toBeDefined();
+    expect(client.pipeline).toBeDefined();
+    expect(client.archive).toBeDefined();
+    expect(client.zettelkasten).toBeDefined();
   });
 
   it('should work in SSO mode', () => {

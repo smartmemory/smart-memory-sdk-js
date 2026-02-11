@@ -11,6 +11,17 @@ import { AgentAPI } from './AgentAPI.js';
 import { UsageAPI } from './UsageAPI.js';
 import { InsightsAPI } from './InsightsAPI.js';
 import { TokenUsageAPI } from './TokenUsageAPI.js';
+import { TemporalAPI } from './TemporalAPI.js';
+import { GovernanceAPI } from './GovernanceAPI.js';
+import { EvolutionAPI } from './EvolutionAPI.js';
+import { ReasoningAPI } from './ReasoningAPI.js';
+import { ReasoningTracesAPI } from './ReasoningTracesAPI.js';
+import { OntologyAPI } from './OntologyAPI.js';
+import { AnalyticsAPI } from './AnalyticsAPI.js';
+import { ValidationAPI } from './ValidationAPI.js';
+import { PipelineAPI } from './PipelineAPI.js';
+import { ArchiveAPI } from './ArchiveAPI.js';
+import { ZettelkastenAPI } from './ZettelkastenAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -32,6 +43,17 @@ export class SmartMemoryClient {
     this.usage = new UsageAPI(baseAPI);
     this.insights = new InsightsAPI(baseAPI);
     this.tokenUsage = new TokenUsageAPI(baseAPI);
+    this.temporal = new TemporalAPI(baseAPI);
+    this.governance = new GovernanceAPI(baseAPI);
+    this.evolution = new EvolutionAPI(baseAPI);
+    this.reasoning = new ReasoningAPI(baseAPI);
+    this.reasoningTraces = new ReasoningTracesAPI(baseAPI);
+    this.ontology = new OntologyAPI(baseAPI);
+    this.analytics = new AnalyticsAPI(baseAPI);
+    this.validation = new ValidationAPI(baseAPI);
+    this.pipeline = new PipelineAPI(baseAPI);
+    this.archive = new ArchiveAPI(baseAPI);
+    this.zettelkasten = new ZettelkastenAPI(baseAPI);
   }
 
   setTeamId(teamId) {

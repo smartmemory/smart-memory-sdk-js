@@ -29,4 +29,14 @@ export class GraphAPI {
       rule_names: ruleNames
     });
   }
+
+  /**
+   * Find the shortest path between two graph nodes.
+   * @param {string} startId
+   * @param {string} endId
+   * @param {number} [maxHops=5]
+   */
+  async findShortestPath(startId, endId, maxHops = 5) {
+    return this.api.get(`/memory/graph/path?start_id=${encodeURIComponent(startId)}&end_id=${encodeURIComponent(endId)}&max_hops=${maxHops}`);
+  }
 }
