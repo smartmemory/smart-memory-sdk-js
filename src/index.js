@@ -30,6 +30,8 @@ export { ValidationAPI } from './api/ValidationAPI.js';
 export { PipelineAPI } from './api/PipelineAPI.js';
 export { ArchiveAPI } from './api/ArchiveAPI.js';
 export { ZettelkastenAPI } from './api/ZettelkastenAPI.js';
+export { ProcedureMatchAPI } from './api/ProcedureMatchAPI.js';
+export { ProcedureCandidateAPI } from './api/ProcedureCandidateAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
