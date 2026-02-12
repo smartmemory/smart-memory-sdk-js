@@ -12,6 +12,8 @@ import { ArchiveAPI } from '../../../src/api/ArchiveAPI.js';
 import { ZettelkastenAPI } from '../../../src/api/ZettelkastenAPI.js';
 import { GraphAPI } from '../../../src/api/GraphAPI.js';
 import { DecisionAPI } from '../../../src/api/DecisionAPI.js';
+import { ProcedureMatchAPI } from '../../../src/api/ProcedureMatchAPI.js';
+import { ProcedureCandidateAPI } from '../../../src/api/ProcedureCandidateAPI.js';
 
 function mockBaseAPI() {
   return {
@@ -1391,5 +1393,177 @@ describe('ZettelkastenAPI', () => {
     await zettel.queryByRelation('src-1', 'DEPENDS_ON', 30);
 
     expect(api.get).toHaveBeenCalledWith('/memory/zettel/by-relation/src-1/DEPENDS_ON?limit=30');
+  });
+});
+
+// ============================================================
+// ProcedureMatchAPI (CFS-2)
+// ============================================================
+
+describe('ProcedureMatchAPI', () => {
+  it('should list procedure matches with no params', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.list();
+
+    expect(api.get).toHaveBeenCalledWith('/memory/procedure-matches');
+  });
+
+  it('should list procedure matches with filters', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.list({
+      start_date: '2026-02-01',
+      end_date: '2026-02-12',
+      procedure_id: 'proc-1',
+      feedback: 'success',
+      limit: 50
+    });
+
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('/memory/procedure-matches?');
+    expect(url).toContain('start_date=2026-02-01');
+    expect(url).toContain('end_date=2026-02-12');
+    expect(url).toContain('procedure_id=proc-1');
+    expect(url).toContain('feedback=success');
+    expect(url).toContain('limit=50');
+  });
+
+  it('should omit null and undefined params from list query', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.list({ feedback: null, procedure_id: undefined, limit: 10 });
+
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('limit=10');
+    expect(url).not.toContain('feedback');
+    expect(url).not.toContain('procedure_id');
+    expect(url).not.toContain('null');
+    expect(url).not.toContain('undefined');
+  });
+
+  it('should submit feedback without note', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.submitFeedback('match-1', 'success');
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedure-matches/match-1/feedback',
+      { feedback: 'success' }
+    );
+  });
+
+  it('should submit feedback with note', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.submitFeedback('match-1', 'failure', 'Wrong profile selected');
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedure-matches/match-1/feedback',
+      { feedback: 'failure', note: 'Wrong profile selected' }
+    );
+  });
+
+  it('should get procedure match stats', async () => {
+    const api = mockBaseAPI();
+    const pm = new ProcedureMatchAPI(api);
+    await pm.getStats();
+
+    expect(api.get).toHaveBeenCalledWith('/memory/procedure-matches/stats');
+  });
+});
+
+// ============================================================
+// ProcedureCandidateAPI (CFS-3b)
+// ============================================================
+
+describe('ProcedureCandidateAPI', () => {
+  it('should list candidates with no params', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.list();
+
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/candidates');
+  });
+
+  it('should list candidates with all params', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.list({
+      min_score: 0.8,
+      min_cluster_size: 5,
+      days_back: 14,
+      limit: 10
+    });
+
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('/memory/procedures/candidates?');
+    expect(url).toContain('min_score=0.8');
+    expect(url).toContain('min_cluster_size=5');
+    expect(url).toContain('days_back=14');
+    expect(url).toContain('limit=10');
+  });
+
+  it('should omit null/undefined params from list query', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.list({ min_score: null, days_back: undefined, limit: 5 });
+
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('limit=5');
+    expect(url).not.toContain('min_score');
+    expect(url).not.toContain('days_back');
+    expect(url).not.toContain('null');
+    expect(url).not.toContain('undefined');
+  });
+
+  it('should promote with defaults', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.promote('cluster-123');
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedures/candidates/cluster-123/promote',
+      {
+        name: null,
+        description: null,
+        procedure_type: 'extraction',
+        preferred_profile: 'quick_extract',
+        remove_working_items: false
+      }
+    );
+  });
+
+  it('should promote with all options', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.promote('cluster-456', {
+      name: 'API Error Handler',
+      description: 'Handles 4xx errors',
+      procedure_type: 'validation',
+      preferred_profile: 'full_extract',
+      remove_working_items: true
+    });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedures/candidates/cluster-456/promote',
+      {
+        name: 'API Error Handler',
+        description: 'Handles 4xx errors',
+        procedure_type: 'validation',
+        preferred_profile: 'full_extract',
+        remove_working_items: true
+      }
+    );
+  });
+
+  it('should dismiss a candidate', async () => {
+    const api = mockBaseAPI();
+    const pc = new ProcedureCandidateAPI(api);
+    await pc.dismiss('cluster-789');
+
+    expect(api.delete).toHaveBeenCalledWith(
+      '/memory/procedures/candidates/cluster-789/dismiss'
+    );
   });
 });
