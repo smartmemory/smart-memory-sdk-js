@@ -14,6 +14,7 @@ import { GraphAPI } from '../../../src/api/GraphAPI.js';
 import { DecisionAPI } from '../../../src/api/DecisionAPI.js';
 import { ProcedureMatchAPI } from '../../../src/api/ProcedureMatchAPI.js';
 import { ProcedureCandidateAPI } from '../../../src/api/ProcedureCandidateAPI.js';
+import { ProcedureDriftAPI } from '../../../src/api/ProcedureDriftAPI.js';
 
 function mockBaseAPI() {
   return {
@@ -1565,5 +1566,90 @@ describe('ProcedureCandidateAPI', () => {
     expect(api.delete).toHaveBeenCalledWith(
       '/memory/procedures/candidates/cluster-789/dismiss'
     );
+  });
+});
+
+// ============================================================
+// ProcedureDriftAPI — Schema Drift Detection (CFS-4)
+// ============================================================
+
+describe('ProcedureDriftAPI', () => {
+  it('should list drift events with no params', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.list();
+    expect(api.get).toHaveBeenCalledWith('/memory/procedure-drift');
+  });
+
+  it('should list drift events with all params', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.list({
+      procedure_id: 'proc-1',
+      resolved: false,
+      breaking_only: true,
+      start_date: '2026-02-01',
+      end_date: '2026-02-13',
+      limit: 50
+    });
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('/memory/procedure-drift?');
+    expect(url).toContain('procedure_id=proc-1');
+    expect(url).toContain('resolved=false');
+    expect(url).toContain('breaking_only=true');
+    expect(url).toContain('start_date=2026-02-01');
+    expect(url).toContain('end_date=2026-02-13');
+    expect(url).toContain('limit=50');
+  });
+
+  it('should omit null/undefined params from list', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.list({ procedure_id: null, resolved: undefined, limit: 25 });
+    const url = api.get.mock.calls[0][0];
+    expect(url).toContain('limit=25');
+    expect(url).not.toContain('procedure_id');
+    expect(url).not.toContain('resolved');
+  });
+
+  it('should get a single drift event', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.get('evt-abc-123');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedure-drift/evt-abc-123');
+  });
+
+  it('should resolve a drift event with note', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.resolve('evt-abc-123', 'Schema updated intentionally');
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedure-drift/evt-abc-123/resolve',
+      { note: 'Schema updated intentionally' }
+    );
+  });
+
+  it('should resolve a drift event without note', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.resolve('evt-abc-123');
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/procedure-drift/evt-abc-123/resolve',
+      {}
+    );
+  });
+
+  it('should trigger a drift sweep', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.sweep();
+    expect(api.post).toHaveBeenCalledWith('/memory/procedure-drift/sweep', {});
+  });
+
+  it('should list schema snapshots for a procedure', async () => {
+    const api = mockBaseAPI();
+    const pd = new ProcedureDriftAPI(api);
+    await pd.listSnapshots('proc-abc-123');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedure-schemas/proc-abc-123');
   });
 });

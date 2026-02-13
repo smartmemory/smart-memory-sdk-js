@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **ProcedureDriftAPI (CFS-4)**: Schema drift detection methods
+  - `list(params)` — list drift events with filtering (procedure_id, resolved, breaking_only, date range)
+  - `get(eventId)` — get drift event detail with full changes
+  - `resolve(eventId, note)` — mark drift event as resolved
+  - `sweep()` — trigger workspace-wide drift sweep
+  - `listSnapshots(procedureId)` — list schema snapshot history
+- Registered as `client.procedureDrift` on SmartMemoryClient
+- 8 new tests in NewDomainAPIs.test.js (155 total)
+
 ## 0.2.0 (2026-02-08)
 
 ### Migration Complete
