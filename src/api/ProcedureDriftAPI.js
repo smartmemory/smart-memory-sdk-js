@@ -45,7 +45,7 @@ export class ProcedureDriftAPI {
    */
   async resolve(eventId, note = null) {
     const body = {};
-    if (note) body.note = note;
+    if (note != null) body.note = note;
     return this.api.post(`/memory/procedure-drift/${eventId}/resolve`, body);
   }
 
