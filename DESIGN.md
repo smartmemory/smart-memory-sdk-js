@@ -339,7 +339,7 @@ const auth = new AuthCore({
   // Mode: sso only
   webAppUrl: 'http://localhost:5173',
   allowedRedirectHosts: [
-    'app.smartmemory.ai',
+    'www.smartmemory.ai',
     'studio.smartmemory.ai',
     'insights.smartmemory.ai',
     'maya.smartmemory.ai'
