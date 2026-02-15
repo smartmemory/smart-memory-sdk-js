@@ -306,7 +306,7 @@ class BaseAPI {
 
 **Key Implementation Details:**
 - Prevent infinite retry loops with `__isRetry` flag
-- Auto-add `Authorization` and `X-Workspace-Id` headers
+- Auto-add `Authorization` and `X-Team-Id` headers
 - Parse error responses (JSON or text)
 - Throw `APIError` with status code and detail
 
