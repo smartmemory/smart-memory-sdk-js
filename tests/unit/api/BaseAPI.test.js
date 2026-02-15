@@ -21,7 +21,7 @@ describe('BaseAPI', () => {
   describe('request', () => {
     it('should make GET request with auth headers', async () => {
       authCore.currentToken = 'test-token';
-      authCore.setTenantId('ws-1');
+      authCore.tokenManager.setTeamId('team-1');
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: true,
@@ -37,7 +37,7 @@ describe('BaseAPI', () => {
           method: 'GET',
           headers: expect.objectContaining({
             'Authorization': 'Bearer test-token',
-            'X-Workspace-Id': 'ws-1',
+            'X-Team-Id': 'team-1',
             'Content-Type': 'application/json'
           })
         })

@@ -86,11 +86,6 @@ export class AuthCore {
         : `Bearer ${this.currentToken}`;
     }
 
-    const tenantId = this.tokenManager.getTenantId();
-    if (tenantId) {
-      headers['X-Workspace-Id'] = tenantId;
-    }
-
     const teamId = this.tokenManager.getTeamId();
     if (teamId) {
       headers['X-Team-Id'] = teamId;
@@ -136,7 +131,12 @@ export class AuthCore {
     });
 
     if (!response.ok) {
-      throw new Error(`Login failed: ${response.status}`);
+      let detail = `Login failed: ${response.status}`;
+      try {
+        const errBody = await response.json();
+        if (errBody.detail) detail = errBody.detail;
+      } catch { /* ignore parse errors */ }
+      throw new Error(detail);
     }
 
     const data = await response.json();
@@ -161,7 +161,7 @@ export class AuthCore {
     }
 
     this.notifyListeners();
-    return { token: this.currentToken, user };
+    return { token: this.currentToken, user, isNewAccount: !!data.is_new_account };
   }
 
   getLoginUrl(currentUrl) {
