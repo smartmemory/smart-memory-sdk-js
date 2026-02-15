@@ -1,0 +1,88 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+    paths: ['package.json']
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Check if version exists on npm
+        id: check_version
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Package: $PACKAGE_NAME@$LOCAL_VERSION"
+
+          if npm view "$PACKAGE_NAME@$LOCAL_VERSION" version 2>/dev/null; then
+            echo "⏭️  Version $LOCAL_VERSION already exists on npm, skipping..."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Version $LOCAL_VERSION not found on npm, proceeding with publish..."
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "version=$LOCAL_VERSION" >> $GITHUB_OUTPUT
+            echo "package=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Publish to npm
+        if: steps.check_version.outputs.skip != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "🚀 Publishing to npm..."
+          npm publish --access public --provenance
+          echo "✅ Published successfully!"
+
+      - name: Create deployment summary
+        if: steps.check_version.outputs.skip != 'true'
+        run: |
+          VERSION=${{ steps.check_version.outputs.version }}
+          PACKAGE=${{ steps.check_version.outputs.package }}
+          echo "## 🎉 $PACKAGE@$VERSION Published to npm" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "npm install $PACKAGE@$VERSION" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Links" >> $GITHUB_STEP_SUMMARY
+          echo "- 📦 [npm Package](https://www.npmjs.com/package/$PACKAGE)" >> $GITHUB_STEP_SUMMARY
+          echo "- 🐙 [GitHub Repository](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Discord
+        if: always()
+        uses: smart-memory/smart-memory-infra/.github/actions/discord-notify@main
+        with:
+          discord_webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: ${{ job.status }}
