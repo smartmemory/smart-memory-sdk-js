@@ -41,6 +41,8 @@
     "jsdom": "^25.0.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "@eslint/js": "^9.0.0",
+    "globals": "^16.0.0",
     "eslint": "^9.0.0",
     "@vitest/coverage-v8": "^3.0.0"
   },
