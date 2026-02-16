@@ -123,7 +123,7 @@ describe('TeamAPI', () => {
     const teams = new TeamAPI(api);
     await teams.create({ name: 'Engineering', dataClassification: 'confidential' });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/teams/', {
+    expect(api.post).toHaveBeenCalledWith('/memory/teams', {
       name: 'Engineering',
       description: null,
       data_classification: 'confidential',

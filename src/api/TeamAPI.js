@@ -4,11 +4,11 @@ export class TeamAPI {
   }
 
   async list() {
-    return this.api.get('/memory/teams/');
+    return this.api.get('/memory/teams');
   }
 
   async create({ name, description = null, dataClassification = 'internal', costCenter = null }) {
-    return this.api.post('/memory/teams/', {
+    return this.api.post('/memory/teams', {
       name,
       description,
       data_classification: dataClassification,

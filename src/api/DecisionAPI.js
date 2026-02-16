@@ -3,7 +3,7 @@
  *
  * Covers all endpoints from decisions.py:
  *   POST /memory/decisions/create
- *   GET  /memory/decisions/
+ *   GET  /memory/decisions
  *   GET  /memory/decisions/search
  *   GET  /memory/decisions/pending
  *   GET  /memory/decisions/{decision_id}

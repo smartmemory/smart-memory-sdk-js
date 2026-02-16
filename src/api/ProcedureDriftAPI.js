@@ -25,7 +25,7 @@ export class ProcedureDriftAPI {
       Object.entries(params).filter(([, v]) => v != null)
     );
     const qs = new URLSearchParams(filtered).toString();
-    return this.api.get(`/memory/procedure-drift${qs ? '?' + qs : ''}`);
+    return this.api.get(`/memory/procedures/drift${qs ? '?' + qs : ''}`);
   }
 
   /**
@@ -34,7 +34,7 @@ export class ProcedureDriftAPI {
    * @returns {Promise<Object>} DriftEventDetail
    */
   async get(eventId) {
-    return this.api.get(`/memory/procedure-drift/${eventId}`);
+    return this.api.get(`/memory/procedures/drift/${eventId}`);
   }
 
   /**
@@ -46,7 +46,7 @@ export class ProcedureDriftAPI {
   async resolve(eventId, note = null) {
     const body = {};
     if (note != null) body.note = note;
-    return this.api.post(`/memory/procedure-drift/${eventId}/resolve`, body);
+    return this.api.post(`/memory/procedures/drift/${eventId}/resolve`, body);
   }
 
   /**
@@ -54,7 +54,7 @@ export class ProcedureDriftAPI {
    * @returns {Promise<{workspace_id: string, procedures_checked: number, drift_detected: number, events_created: number}>}
    */
   async sweep() {
-    return this.api.post('/memory/procedure-drift/sweep', {});
+    return this.api.post('/memory/procedures/drift/sweep', {});
   }
 
   /**
@@ -63,6 +63,6 @@ export class ProcedureDriftAPI {
    * @returns {Promise<{workspace_id: string, procedure_id: string, record_count: number, snapshots: Object[]}>}
    */
   async listSnapshots(procedureId) {
-    return this.api.get(`/memory/procedure-schemas/${procedureId}`);
+    return this.api.get(`/memory/procedures/schemas/${procedureId}`);
   }
 }

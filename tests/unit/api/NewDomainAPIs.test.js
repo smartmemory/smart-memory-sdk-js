@@ -312,7 +312,7 @@ describe('GovernanceAPI', () => {
     const gov = new GovernanceAPI(api);
     await gov.runAnalysis();
 
-    expect(api.post).toHaveBeenCalledWith('/memory/governance/run_analysis', {
+    expect(api.post).toHaveBeenCalledWith('/memory/governance/run-analysis', {
       query: '*',
       top_k: 100,
       memory_items: []
@@ -324,7 +324,7 @@ describe('GovernanceAPI', () => {
     const gov = new GovernanceAPI(api);
     await gov.runAnalysis({ query: 'security', topK: 50 });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/governance/run_analysis', {
+    expect(api.post).toHaveBeenCalledWith('/memory/governance/run-analysis', {
       query: 'security',
       top_k: 50,
       memory_items: []
@@ -367,7 +367,7 @@ describe('GovernanceAPI', () => {
       decidedBy: 'admin'
     });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/governance/apply_decision', {
+    expect(api.post).toHaveBeenCalledWith('/memory/governance/apply-decision', {
       violation_id: 'v-1',
       action: 'fix_data',
       rationale: 'Incorrect type',
@@ -380,7 +380,7 @@ describe('GovernanceAPI', () => {
     const gov = new GovernanceAPI(api);
     await gov.autoFix();
 
-    expect(api.post).toHaveBeenCalledWith('/memory/governance/auto_fix', {
+    expect(api.post).toHaveBeenCalledWith('/memory/governance/auto-fix', {
       confidence_threshold: 0.8
     });
   });
@@ -932,7 +932,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.getUpdateConfig();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/ontology-update/config');
+    expect(api.get).toHaveBeenCalledWith('/memory/ontology/updates/config');
   });
 
   it('should update config', async () => {
@@ -940,7 +940,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.updateConfig({ enabled: true, schedule: 'daily', batchSize: 50 });
 
-    expect(api.put).toHaveBeenCalledWith('/memory/ontology-update/config', {
+    expect(api.put).toHaveBeenCalledWith('/memory/ontology/updates/config', {
       enabled: true,
       schedule: 'daily',
       batch_size: 50
@@ -952,7 +952,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.triggerUpdate({ batchSize: 25 });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/ontology-update/trigger', {
+    expect(api.post).toHaveBeenCalledWith('/memory/ontology/updates/trigger', {
       batch_size: 25
     });
   });
@@ -962,7 +962,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.getUpdateStatus();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/ontology-update/status');
+    expect(api.get).toHaveBeenCalledWith('/memory/ontology/updates/status');
   });
 
   it('should get update history', async () => {
@@ -970,7 +970,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.getUpdateHistory({ page: 2, pageSize: 20 });
 
-    expect(api.get).toHaveBeenCalledWith('/memory/ontology-update/history?page=2&page_size=20');
+    expect(api.get).toHaveBeenCalledWith('/memory/ontology/updates/history?page=2&page_size=20');
   });
 
   it('should get update stats', async () => {
@@ -978,7 +978,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.getUpdateStats({ history: true });
 
-    expect(api.get).toHaveBeenCalledWith('/memory/ontology-update/stats?history=true');
+    expect(api.get).toHaveBeenCalledWith('/memory/ontology/updates/stats?history=true');
   });
 });
 
@@ -1407,7 +1407,7 @@ describe('ProcedureMatchAPI', () => {
     const pm = new ProcedureMatchAPI(api);
     await pm.list();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/procedure-matches');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/matches');
   });
 
   it('should list procedure matches with filters', async () => {
@@ -1422,7 +1422,7 @@ describe('ProcedureMatchAPI', () => {
     });
 
     const url = api.get.mock.calls[0][0];
-    expect(url).toContain('/memory/procedure-matches?');
+    expect(url).toContain('/memory/procedures/matches?');
     expect(url).toContain('start_date=2026-02-01');
     expect(url).toContain('end_date=2026-02-12');
     expect(url).toContain('procedure_id=proc-1');
@@ -1449,7 +1449,7 @@ describe('ProcedureMatchAPI', () => {
     await pm.submitFeedback('match-1', 'success');
 
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/procedure-matches/match-1/feedback',
+      '/memory/procedures/matches/match-1/feedback',
       { feedback: 'success' }
     );
   });
@@ -1460,7 +1460,7 @@ describe('ProcedureMatchAPI', () => {
     await pm.submitFeedback('match-1', 'failure', 'Wrong profile selected');
 
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/procedure-matches/match-1/feedback',
+      '/memory/procedures/matches/match-1/feedback',
       { feedback: 'failure', note: 'Wrong profile selected' }
     );
   });
@@ -1470,7 +1470,7 @@ describe('ProcedureMatchAPI', () => {
     const pm = new ProcedureMatchAPI(api);
     await pm.getStats();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/procedure-matches/stats');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/matches/stats');
   });
 });
 
@@ -1578,7 +1578,7 @@ describe('ProcedureDriftAPI', () => {
     const api = mockBaseAPI();
     const pd = new ProcedureDriftAPI(api);
     await pd.list();
-    expect(api.get).toHaveBeenCalledWith('/memory/procedure-drift');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/drift');
   });
 
   it('should list drift events with all params', async () => {
@@ -1593,7 +1593,7 @@ describe('ProcedureDriftAPI', () => {
       limit: 50
     });
     const url = api.get.mock.calls[0][0];
-    expect(url).toContain('/memory/procedure-drift?');
+    expect(url).toContain('/memory/procedures/drift?');
     expect(url).toContain('procedure_id=proc-1');
     expect(url).toContain('resolved=false');
     expect(url).toContain('breaking_only=true');
@@ -1616,7 +1616,7 @@ describe('ProcedureDriftAPI', () => {
     const api = mockBaseAPI();
     const pd = new ProcedureDriftAPI(api);
     await pd.get('evt-abc-123');
-    expect(api.get).toHaveBeenCalledWith('/memory/procedure-drift/evt-abc-123');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/drift/evt-abc-123');
   });
 
   it('should resolve a drift event with note', async () => {
@@ -1624,7 +1624,7 @@ describe('ProcedureDriftAPI', () => {
     const pd = new ProcedureDriftAPI(api);
     await pd.resolve('evt-abc-123', 'Schema updated intentionally');
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/procedure-drift/evt-abc-123/resolve',
+      '/memory/procedures/drift/evt-abc-123/resolve',
       { note: 'Schema updated intentionally' }
     );
   });
@@ -1634,7 +1634,7 @@ describe('ProcedureDriftAPI', () => {
     const pd = new ProcedureDriftAPI(api);
     await pd.resolve('evt-abc-123');
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/procedure-drift/evt-abc-123/resolve',
+      '/memory/procedures/drift/evt-abc-123/resolve',
       {}
     );
   });
@@ -1643,13 +1643,13 @@ describe('ProcedureDriftAPI', () => {
     const api = mockBaseAPI();
     const pd = new ProcedureDriftAPI(api);
     await pd.sweep();
-    expect(api.post).toHaveBeenCalledWith('/memory/procedure-drift/sweep', {});
+    expect(api.post).toHaveBeenCalledWith('/memory/procedures/drift/sweep', {});
   });
 
   it('should list schema snapshots for a procedure', async () => {
     const api = mockBaseAPI();
     const pd = new ProcedureDriftAPI(api);
     await pd.listSnapshots('proc-abc-123');
-    expect(api.get).toHaveBeenCalledWith('/memory/procedure-schemas/proc-abc-123');
+    expect(api.get).toHaveBeenCalledWith('/memory/procedures/schemas/proc-abc-123');
   });
 });

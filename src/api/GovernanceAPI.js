@@ -2,11 +2,11 @@
  * Governance API - Ontology governance analysis, violations, and auto-fix.
  *
  * Covers all endpoints from governance.py:
- *   POST /memory/governance/run_analysis
+ *   POST /memory/governance/run-analysis
  *   GET  /memory/governance/violations
  *   GET  /memory/governance/violations/{violation_id}
- *   POST /memory/governance/apply_decision
- *   POST /memory/governance/auto_fix
+ *   POST /memory/governance/apply-decision
+ *   POST /memory/governance/auto-fix
  *   GET  /memory/governance/summary
  */
 export class GovernanceAPI {
@@ -22,7 +22,7 @@ export class GovernanceAPI {
    * @param {Object[]} [options.memoryItems] - Direct items to analyze
    */
   async runAnalysis({ query = '*', topK = 100, memoryItems = [] } = {}) {
-    return this.api.post('/memory/governance/run_analysis', {
+    return this.api.post('/memory/governance/run-analysis', {
       query,
       top_k: topK,
       memory_items: memoryItems
@@ -60,7 +60,7 @@ export class GovernanceAPI {
    * @param {string} [params.decidedBy='human']
    */
   async applyDecision({ violationId, action = 'approve', rationale = '', decidedBy = 'human' }) {
-    return this.api.post('/memory/governance/apply_decision', {
+    return this.api.post('/memory/governance/apply-decision', {
       violation_id: violationId,
       action,
       rationale,
@@ -73,7 +73,7 @@ export class GovernanceAPI {
    * @param {number} [confidenceThreshold=0.8]
    */
   async autoFix(confidenceThreshold = 0.8) {
-    return this.api.post('/memory/governance/auto_fix', {
+    return this.api.post('/memory/governance/auto-fix', {
       confidence_threshold: confidenceThreshold
     });
   }

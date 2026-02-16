@@ -36,12 +36,12 @@
  *   POST /memory/ontology/registry/{id}/subscribe/hidden
  *   DELETE /memory/ontology/registry/{id}/subscribe/hidden/{type_name}
  *   --- Ontology update endpoints (ontology_update.py) ---
- *   GET  /memory/ontology-update/config
- *   PUT  /memory/ontology-update/config
- *   POST /memory/ontology-update/trigger
- *   GET  /memory/ontology-update/status
- *   GET  /memory/ontology-update/history
- *   GET  /memory/ontology-update/stats
+ *   GET  /memory/ontology/updates/config
+ *   PUT  /memory/ontology/updates/config
+ *   POST /memory/ontology/updates/trigger
+ *   GET  /memory/ontology/updates/status
+ *   GET  /memory/ontology/updates/history
+ *   GET  /memory/ontology/updates/stats
  */
 export class OntologyAPI {
   constructor(baseAPI) {
@@ -407,7 +407,7 @@ export class OntologyAPI {
    * Get the ontology update configuration for this workspace.
    */
   async getUpdateConfig() {
-    return this.api.get('/memory/ontology-update/config');
+    return this.api.get('/memory/ontology/updates/config');
   }
 
   /**
@@ -424,7 +424,7 @@ export class OntologyAPI {
     if (updates.schedule !== undefined) body.schedule = updates.schedule;
     if (updates.batchSize !== undefined) body.batch_size = updates.batchSize;
     if (updates.model !== undefined) body.model = updates.model;
-    return this.api.put('/memory/ontology-update/config', body);
+    return this.api.put('/memory/ontology/updates/config', body);
   }
 
   /**
@@ -435,14 +435,14 @@ export class OntologyAPI {
   async triggerUpdate({ batchSize = null } = {}) {
     const body = {};
     if (batchSize !== null) body.batch_size = batchSize;
-    return this.api.post('/memory/ontology-update/trigger', body);
+    return this.api.post('/memory/ontology/updates/trigger', body);
   }
 
   /**
    * Get the status of the latest batch run.
    */
   async getUpdateStatus() {
-    return this.api.get('/memory/ontology-update/status');
+    return this.api.get('/memory/ontology/updates/status');
   }
 
   /**
@@ -452,7 +452,7 @@ export class OntologyAPI {
    * @param {number} [options.pageSize=10]
    */
   async getUpdateHistory({ page = 1, pageSize = 10 } = {}) {
-    return this.api.get(`/memory/ontology-update/history?page=${page}&page_size=${pageSize}`);
+    return this.api.get(`/memory/ontology/updates/history?page=${page}&page_size=${pageSize}`);
   }
 
   /**
@@ -461,6 +461,6 @@ export class OntologyAPI {
    * @param {boolean} [options.history=false]
    */
   async getUpdateStats({ history = false } = {}) {
-    return this.api.get(`/memory/ontology-update/stats?history=${history}`);
+    return this.api.get(`/memory/ontology/updates/stats?history=${history}`);
   }
 }

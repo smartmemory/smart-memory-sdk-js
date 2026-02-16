@@ -17,7 +17,7 @@ export class ProcedureMatchAPI {
       Object.entries(params).filter(([, v]) => v != null)
     );
     const qs = new URLSearchParams(filtered).toString();
-    return this.api.get(`/memory/procedure-matches${qs ? '?' + qs : ''}`);
+    return this.api.get(`/memory/procedures/matches${qs ? '?' + qs : ''}`);
   }
 
   /**
@@ -29,13 +29,13 @@ export class ProcedureMatchAPI {
   async submitFeedback(matchId, feedback, note = null) {
     const body = { feedback };
     if (note) body.note = note;
-    return this.api.post(`/memory/procedure-matches/${matchId}/feedback`, body);
+    return this.api.post(`/memory/procedures/matches/${matchId}/feedback`, body);
   }
 
   /**
    * Get aggregated procedure match statistics.
    */
   async getStats() {
-    return this.api.get('/memory/procedure-matches/stats');
+    return this.api.get('/memory/procedures/matches/stats');
   }
 }
