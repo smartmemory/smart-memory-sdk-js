@@ -39,4 +39,53 @@ export class GraphAPI {
   async findShortestPath(startId, endId, maxHops = 5) {
     return this.api.get(`/memory/graph/path?start_id=${encodeURIComponent(startId)}&end_id=${encodeURIComponent(endId)}&max_hops=${maxHops}`);
   }
+
+  /**
+   * Fetch the full knowledge graph.
+   * @param {number} [limit=5000]
+   */
+  async getFullGraph(limit = 5000) {
+    return this.api.get(`/memory/graph/full?limit=${limit}`);
+  }
+
+  /**
+   * Fetch edges for multiple node IDs in bulk.
+   * @param {string[]} nodeIds
+   */
+  async getEdgesBulk(nodeIds) {
+    return this.api.post('/memory/graph/edges', { node_ids: nodeIds });
+  }
+
+  /**
+   * Get Wikipedia grounding status for an entity node.
+   * @param {string} nodeId
+   */
+  async getGroundingStatus(nodeId) {
+    return this.api.get(`/memory/graph/nodes/${encodeURIComponent(nodeId)}/grounding`);
+  }
+
+  /**
+   * Update an entity node's label or type. Triggers ontology self-learning.
+   * @param {string} nodeId
+   * @param {Object} updates - { label, entity_type }
+   */
+  async updateEntityNode(nodeId, updates) {
+    return this.api.patch(`/memory/graph/nodes/${encodeURIComponent(nodeId)}`, updates);
+  }
+
+  /**
+   * Remove Wikipedia grounding from an entity node.
+   * @param {string} nodeId
+   */
+  async removeGrounding(nodeId) {
+    return this.api.delete(`/memory/graph/nodes/${encodeURIComponent(nodeId)}/grounding`);
+  }
+
+  /**
+   * Get links for a memory item.
+   * @param {string} itemId
+   */
+  async getLinks(itemId) {
+    return this.api.get(`/memory/${encodeURIComponent(itemId)}/links`);
+  }
 }
