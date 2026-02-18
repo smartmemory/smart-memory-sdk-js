@@ -65,28 +65,30 @@ export class TokenManager {
 
   getTenantId() {
     if (this.storageType === 'memory') return this._memory.tenant;
-    return this._getFromStorage(this.keys.tenant);
+    return this._normalizeId(this._getFromStorage(this.keys.tenant));
   }
 
   setTenantId(tenantId) {
+    const normalized = this._normalizeId(tenantId);
     if (this.storageType === 'memory') {
-      this._memory.tenant = tenantId;
+      this._memory.tenant = normalized;
       return;
     }
-    this._setInStorage(this.keys.tenant, tenantId);
+    this._setInStorage(this.keys.tenant, normalized);
   }
 
   getTeamId() {
     if (this.storageType === 'memory') return this._memory.team;
-    return this._getFromStorage(this.keys.team);
+    return this._normalizeId(this._getFromStorage(this.keys.team));
   }
 
   setTeamId(teamId) {
+    const normalized = this._normalizeId(teamId);
     if (this.storageType === 'memory') {
-      this._memory.team = teamId;
+      this._memory.team = normalized;
       return;
     }
-    this._setInStorage(this.keys.team, teamId);
+    this._setInStorage(this.keys.team, normalized);
   }
 
   clearAll() {
@@ -128,5 +130,17 @@ export class TokenManager {
     } catch (e) {
       console.error('Failed to write to storage:', e);
     }
+  }
+
+  /** @private */
+  _normalizeId(value) {
+    if (value == null) return null;
+    const str = String(value).trim();
+    if (!str) return null;
+    const lower = str.toLowerCase();
+    if (lower === 'none' || lower === 'null' || lower === 'undefined') {
+      return null;
+    }
+    return str;
   }
 }

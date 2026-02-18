@@ -2,7 +2,7 @@
  * Validation API - Memory item validation, graph health, and inference engine.
  *
  * Covers all endpoints from validation.py:
- *   GET  /memory/validation/health
+ *   GET  /memory/graph/health
  *   POST /memory/validation/validate
  *   POST /memory/validation/inference
  *   GET  /memory/validation/inference/rules
@@ -16,7 +16,7 @@ export class ValidationAPI {
    * Get graph health metrics: orphan ratio, type distribution, provenance coverage.
    */
   async getHealth() {
-    return this.api.get('/memory/validation/health');
+    return this.api.get('/memory/graph/health');
   }
 
   /**

@@ -17,7 +17,7 @@ export class GraphAPI {
   }
 
   async getHealth() {
-    return this.api.get('/memory/validation/health');
+    return this.api.get('/memory/graph/health');
   }
 
   async getInferenceRules() {
@@ -42,9 +42,9 @@ export class GraphAPI {
 
   /**
    * Fetch the full knowledge graph.
-   * @param {number} [limit=5000]
+   * @param {number} [limit=1000]
    */
-  async getFullGraph(limit = 5000) {
+  async getFullGraph(limit = 1000) {
     return this.api.get(`/memory/graph/full?limit=${limit}`);
   }
 
