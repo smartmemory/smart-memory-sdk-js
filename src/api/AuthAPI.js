@@ -3,28 +3,8 @@ export class AuthAPI {
     this.api = baseAPI;
   }
 
-  async signup({ email, password, fullName, tier = 'free' }) {
-    return this.api.post('/auth/signup', {
-      email,
-      password,
-      full_name: fullName,
-      subscription_tier: tier
-    });
-  }
-
   async getCurrentUser() {
     return this.api.get('/auth/me');
-  }
-
-  async requestPasswordReset(email) {
-    return this.api.post('/auth/password-reset/request', { email });
-  }
-
-  async resetPassword(token, newPassword) {
-    return this.api.post('/auth/password-reset/confirm', {
-      token,
-      new_password: newPassword
-    });
   }
 
   async createAPIKey(name, scopes, expiresInDays = null) {

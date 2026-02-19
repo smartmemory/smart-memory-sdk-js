@@ -6,13 +6,15 @@ export class RefreshManager {
    * @param {string} options.apiBaseUrl
    * @param {string} options.refreshEndpoint
    * @param {import('./TokenManager.js').TokenManager} options.tokenManager
+   * @param {boolean} [options.useCookieAuth=false]
    * @param {function(string): void} options.onTokenRefreshed
    * @param {function(): void} options.onRefreshFailed
    */
-  constructor({ apiBaseUrl, refreshEndpoint, tokenManager, onTokenRefreshed, onRefreshFailed }) {
+  constructor({ apiBaseUrl, refreshEndpoint, tokenManager, useCookieAuth = false, onTokenRefreshed, onRefreshFailed }) {
     this.apiBaseUrl = apiBaseUrl;
     this.refreshEndpoint = refreshEndpoint;
     this.tokenManager = tokenManager;
+    this.useCookieAuth = useCookieAuth;
     this.onTokenRefreshed = onTokenRefreshed;
     this.onRefreshFailed = onRefreshFailed;
   }
@@ -32,15 +34,17 @@ export class RefreshManager {
 
   async #doRefresh() {
     const refreshToken = this.tokenManager.getRefreshToken();
-    if (!refreshToken) {
+    if (!refreshToken && !this.useCookieAuth) {
       this.onRefreshFailed();
       throw new Error('No refresh token');
     }
 
+    const body = refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : JSON.stringify({});
     const response = await fetch(`${this.apiBaseUrl}${this.refreshEndpoint}`, {
+      ...(this.useCookieAuth ? { credentials: 'include' } : {}),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken })
+      body
     });
 
     if (!response.ok) {

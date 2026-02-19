@@ -65,6 +65,24 @@ describe('TokenManager', () => {
       expect(localStorage.getItem('smart_memory_auth_token')).toBeNull();
       expect(tm.getAccessToken()).toBeNull();
     });
+
+    it('should migrate legacy access key on read', () => {
+      localStorage.setItem('access_token', 'legacy-token');
+      const tm = new TokenManager({ storage: 'localStorage' });
+
+      expect(tm.getAccessToken()).toBe('legacy-token');
+      expect(localStorage.getItem('smart_memory_auth_token')).toBe('legacy-token');
+      expect(localStorage.getItem('access_token')).toBeNull();
+    });
+
+    it('should migrate legacy team key on read', () => {
+      localStorage.setItem('team_id', 'team-legacy');
+      const tm = new TokenManager({ storage: 'localStorage' });
+
+      expect(tm.getTeamId()).toBe('team-legacy');
+      expect(localStorage.getItem('smart_memory_team_id')).toBe('team-legacy');
+      expect(localStorage.getItem('team_id')).toBeNull();
+    });
   });
 
   describe('user storage', () => {

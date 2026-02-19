@@ -12,7 +12,7 @@ export function createAuthFetch(authCore) {
       ...authCore.getAuthHeaders(options.headers)
     };
 
-    const response = await fetch(url, { ...options, headers });
+    const response = await fetch(url, authCore.getRequestOptions({ ...options, headers }));
 
     if (response.status === 401 && !options.__isRetry) {
       try {
@@ -21,9 +21,13 @@ export function createAuthFetch(authCore) {
           'Content-Type': 'application/json',
           ...authCore.getAuthHeaders(options.headers)
         };
-        return fetch(url, { ...options, headers: retryHeaders, __isRetry: true });
+        return fetch(
+          url,
+          authCore.getRequestOptions({ ...options, headers: retryHeaders, __isRetry: true })
+        );
       } catch {
-        await authCore.logout();
+        // Do not globally revoke cookie sessions from passive request failures.
+        authCore.clearLocalAuth?.();
         throw new Error('Authentication required');
       }
     }

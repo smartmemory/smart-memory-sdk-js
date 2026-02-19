@@ -36,6 +36,12 @@ describe('AuthCore', () => {
       expect(auth.getCurrentUser()).toBeNull();
       expect(auth.getCurrentToken()).toBeNull();
     });
+
+    it('should enable cookie auth by default in sso mode', () => {
+      const auth = createSSOAuth();
+      expect(auth.useCookieAuth).toBe(true);
+      expect(auth.getRequestOptions()).toEqual(expect.objectContaining({ credentials: 'include' }));
+    });
   });
 
   describe('listener system', () => {
@@ -214,6 +220,20 @@ describe('AuthCore', () => {
       expect(listener).toHaveBeenCalledWith(
         expect.objectContaining({ isAuthenticated: true, token: 'sso-tok' })
       );
+    });
+
+    it('should bootstrap cookie session via /auth/me', async () => {
+      const auth = createSSOAuth();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ id: 'u1', default_team_id: 'team-1', tenant_id: 'tenant-1' })
+      });
+
+      const ok = await auth.bootstrapSession();
+
+      expect(ok).toBe(true);
+      expect(auth.isAuthenticated()).toBe(true);
+      expect(auth.tokenManager.getTeamId()).toBe('team-1');
     });
   });
 

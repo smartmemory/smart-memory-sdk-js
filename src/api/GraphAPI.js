@@ -42,10 +42,13 @@ export class GraphAPI {
 
   /**
    * Fetch the full knowledge graph.
-   * @param {number} [limit=1000]
+   * @param {number} [limit] - Optional client hint; backend enforces hard cap.
    */
-  async getFullGraph(limit = 1000) {
-    return this.api.get(`/memory/graph/full?limit=${limit}`);
+  async getFullGraph(limit) {
+    if (limit == null) {
+      return this.api.get('/memory/graph/full');
+    }
+    return this.api.get(`/memory/graph/full?limit=${encodeURIComponent(limit)}`);
   }
 
   /**

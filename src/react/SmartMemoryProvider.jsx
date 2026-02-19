@@ -33,18 +33,6 @@ export function SmartMemoryProvider({ children, ...config }) {
     return unsubscribe;
   }, [client]);
 
-  const login = useCallback(async (credentials) => {
-    setAuthState(prev => ({ ...prev, loading: true, error: null }));
-    try {
-      const result = await client.auth.login(credentials);
-      setAuthState(prev => ({ ...prev, loading: false }));
-      return result;
-    } catch (e) {
-      setAuthState(prev => ({ ...prev, loading: false, error: e.message }));
-      throw e;
-    }
-  }, [client]);
-
   const logout = useCallback(async () => {
     await client.auth.logout();
   }, [client]);
@@ -63,7 +51,6 @@ export function SmartMemoryProvider({ children, ...config }) {
 
   const authValue = {
     ...authState,
-    login,
     logout,
     storeCallbackTokens,
     hasRole,

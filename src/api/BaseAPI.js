@@ -16,7 +16,7 @@ export class BaseAPI {
       ...this.auth.getAuthHeaders(options.headers)
     };
 
-    const config = { ...options, headers };
+    const config = this.auth.getRequestOptions({ ...options, headers });
 
     try {
       let response = await fetch(url, config);
@@ -29,14 +29,18 @@ export class BaseAPI {
             'Content-Type': 'application/json',
             ...this.auth.getAuthHeaders(options.headers)
           };
-          response = await fetch(url, { ...config, headers: retryHeaders, __isRetry: true });
+          response = await fetch(
+            url,
+            this.auth.getRequestOptions({ ...config, headers: retryHeaders, __isRetry: true })
+          );
         } catch {
           // Refresh failed — fall through to 401 handling below
         }
       }
 
       if (response.status === 401) {
-        await this.auth.logout();
+        // Do not globally revoke cookie sessions from passive request failures.
+        this.auth.clearLocalAuth?.();
         throw new APIError('Authentication required', 401, 'auth_expired');
       }
 

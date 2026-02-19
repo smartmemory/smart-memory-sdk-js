@@ -8,6 +8,7 @@ export class AuthCore {
     this.apiBaseUrl = config.apiBaseUrl;
     this.endpoints = config.endpoints || {};
     this.listeners = new Set();
+    this.useCookieAuth = config.useCookieAuth ?? (this.mode === 'sso');
 
     // API key mode: simple static auth, no token management
     this.apiKey = config.apiKey || null;
@@ -26,13 +27,15 @@ export class AuthCore {
         apiBaseUrl: this.apiBaseUrl,
         refreshEndpoint: this.endpoints.refresh || '/auth/refresh',
         tokenManager: this.tokenManager,
+        useCookieAuth: this.useCookieAuth,
         onTokenRefreshed: (token) => {
           this.currentToken = token;
           this.notifyListeners();
           config.onTokenRefresh?.(token);
         },
         onRefreshFailed: () => {
-          this.logout();
+          // Passive auth failures should not globally revoke shared cookie sessions.
+          this.clearLocalAuth();
         }
       });
     } else {
@@ -58,7 +61,7 @@ export class AuthCore {
   }
 
   isAuthenticated() {
-    return !!this.currentToken;
+    return !!this.currentToken || (this.useCookieAuth && !!this.currentUser);
   }
 
   getCurrentUser() {
@@ -94,6 +97,11 @@ export class AuthCore {
     return headers;
   }
 
+  getRequestOptions(extra = {}) {
+    if (!this.useCookieAuth) return { ...extra };
+    return { credentials: 'include', ...extra };
+  }
+
   addListener(listener) {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -116,54 +124,6 @@ export class AuthCore {
     });
   }
 
-  async login(credentials) {
-    if (this.mode === 'apiKey') {
-      throw new Error('login() not available in apiKey mode');
-    }
-    if (this.mode !== 'custom') {
-      throw new Error('login() only available in custom mode');
-    }
-
-    const response = await fetch(`${this.apiBaseUrl}${this.endpoints.login}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
-    });
-
-    if (!response.ok) {
-      let detail = `Login failed: ${response.status}`;
-      try {
-        const errBody = await response.json();
-        if (errBody.detail) detail = errBody.detail;
-      } catch { /* ignore parse errors */ }
-      throw new Error(detail);
-    }
-
-    const data = await response.json();
-
-    const accessToken = data.tokens?.access_token || data.access_token;
-    const refreshToken = data.tokens?.refresh_token || data.refresh_token;
-
-    this.tokenManager.setAccessToken(accessToken);
-    if (refreshToken) {
-      this.tokenManager.setRefreshToken(refreshToken);
-    }
-
-    const user = data.user;
-    this.tokenManager.setUser(user);
-    this.currentUser = user;
-    this.currentToken = accessToken;
-
-    const teamId = user?.default_team_id || data.team_id;
-    if (teamId) {
-      this.tokenManager.setTenantId(teamId);
-      this.tokenManager.setTeamId(teamId);
-    }
-
-    this.notifyListeners();
-    return { token: this.currentToken, user, isNewAccount: !!data.is_new_account };
-  }
-
   getLoginUrl(currentUrl) {
     if (this.mode !== 'sso') {
       throw new Error('getLoginUrl() only available in sso mode');
@@ -181,7 +141,7 @@ export class AuthCore {
     this.notifyListeners();
   }
 
-  async logout() {
+  clearLocalAuth() {
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
       this.apiKey = null;
@@ -189,10 +149,23 @@ export class AuthCore {
       this.notifyListeners();
       return;
     }
+    this.tokenManager.clearAll();
+    this.currentUser = null;
+    this.currentToken = null;
+    this.notifyListeners();
+  }
+
+  async logout() {
+    // API key mode: just clear the key
+    if (this.mode === 'apiKey') {
+      this.clearLocalAuth();
+      return;
+    }
 
     if (this.endpoints.logout) {
       try {
         await fetch(`${this.apiBaseUrl}${this.endpoints.logout}`, {
+          ...this.getRequestOptions(),
           method: 'POST',
           headers: this.getAuthHeaders()
         });
@@ -201,10 +174,7 @@ export class AuthCore {
       }
     }
 
-    this.tokenManager.clearAll();
-    this.currentUser = null;
-    this.currentToken = null;
-    this.notifyListeners();
+    this.clearLocalAuth();
   }
 
   async refreshToken() {
@@ -218,6 +188,54 @@ export class AuthCore {
     const token = await this.refreshManager.refresh();
     this.currentToken = token;
     return token;
+  }
+
+  async bootstrapSession() {
+    if (this.mode === 'apiKey' || !this.useCookieAuth) {
+      return false;
+    }
+    try {
+      const meUrl = `${this.apiBaseUrl}/auth/me`;
+      let response = await fetch(
+        meUrl,
+        this.getRequestOptions({ method: 'GET', headers: this.getAuthHeaders() })
+      );
+
+      // If a stale bearer token is present, middleware may reject before cookie fallback.
+      // Retry once with cookie-only auth (no Authorization/X-Team-Id headers).
+      let usedCookieOnlyFallback = false;
+      if (!response.ok && (this.currentToken || this.tokenManager.getTeamId())) {
+        response = await fetch(
+          meUrl,
+          this.getRequestOptions({ method: 'GET', headers: {} })
+        );
+        usedCookieOnlyFallback = response.ok;
+      }
+      if (!response.ok) return false;
+
+      const user = await response.json();
+      this.currentUser = user;
+      this.tokenManager.setUser(user);
+      const teamId = user?.default_team_id || this.tokenManager.getTeamId() || null;
+      if (teamId) {
+        this.tokenManager.setTeamId(teamId);
+        this.tokenManager.setTenantId(user?.tenant_id || teamId);
+      }
+
+      if (usedCookieOnlyFallback) {
+        // Prevent future requests from sending known-bad bearer/team headers.
+        this.tokenManager.setAccessToken(null);
+        this.currentToken = null;
+        if (user?.default_team_id) {
+          this.tokenManager.setTeamId(user.default_team_id);
+        }
+      }
+
+      this.notifyListeners();
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   setTenantId(tenantId) {

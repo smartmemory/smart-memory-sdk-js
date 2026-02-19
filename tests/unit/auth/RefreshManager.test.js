@@ -57,6 +57,27 @@ describe('RefreshManager', () => {
     expect(onRefreshFailed).toHaveBeenCalled();
   });
 
+  it('should allow cookie-mode refresh without stored refresh token', async () => {
+    const mockResponse = {
+      ok: true,
+      json: () => Promise.resolve({ access_token: 'cookie-access' })
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockResponse);
+
+    const rm = createManager({ useCookieAuth: true });
+    const result = await rm.refresh();
+
+    expect(result).toBe('cookie-access');
+    expect(fetch).toHaveBeenCalledWith(
+      'http://localhost:9001/auth/refresh',
+      expect.objectContaining({
+        credentials: 'include',
+        body: JSON.stringify({})
+      })
+    );
+    expect(onRefreshFailed).not.toHaveBeenCalled();
+  });
+
   it('should call onRefreshFailed when refresh endpoint returns non-ok', async () => {
     tokenManager.setRefreshToken('expired-refresh');
 

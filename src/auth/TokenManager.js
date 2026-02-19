@@ -6,6 +6,14 @@ const DEFAULT_KEYS = {
   team: 'smart_memory_team_id'
 };
 
+const LEGACY_KEYS = {
+  access: ['access_token', 'sm_token'],
+  refresh: ['refresh_token', 'sm_refresh_token'],
+  user: ['sm_user'],
+  tenant: ['tenant_id', 'workspace_id', 'sm_workspace_id'],
+  team: ['team_id', 'sm_team_id']
+};
+
 export class TokenManager {
   /**
    * @param {Object} options
@@ -20,7 +28,7 @@ export class TokenManager {
 
   getAccessToken() {
     if (this.storageType === 'memory') return this._memory.access;
-    return this._getFromStorage(this.keys.access);
+    return this._getFromStorage(this.keys.access, LEGACY_KEYS.access);
   }
 
   setAccessToken(token) {
@@ -33,7 +41,7 @@ export class TokenManager {
 
   getRefreshToken() {
     if (this.storageType === 'memory') return this._memory.refresh;
-    return this._getFromStorage(this.keys.refresh);
+    return this._getFromStorage(this.keys.refresh, LEGACY_KEYS.refresh);
   }
 
   setRefreshToken(token) {
@@ -46,7 +54,7 @@ export class TokenManager {
 
   getUser() {
     if (this.storageType === 'memory') return this._memory.user;
-    const raw = this._getFromStorage(this.keys.user);
+    const raw = this._getFromStorage(this.keys.user, LEGACY_KEYS.user);
     if (!raw) return null;
     try {
       return JSON.parse(raw);
@@ -65,7 +73,7 @@ export class TokenManager {
 
   getTenantId() {
     if (this.storageType === 'memory') return this._memory.tenant;
-    return this._normalizeId(this._getFromStorage(this.keys.tenant));
+    return this._normalizeId(this._getFromStorage(this.keys.tenant, LEGACY_KEYS.tenant));
   }
 
   setTenantId(tenantId) {
@@ -79,7 +87,7 @@ export class TokenManager {
 
   getTeamId() {
     if (this.storageType === 'memory') return this._memory.team;
-    return this._normalizeId(this._getFromStorage(this.keys.team));
+    return this._normalizeId(this._getFromStorage(this.keys.team, LEGACY_KEYS.team));
   }
 
   setTeamId(teamId) {
@@ -102,14 +110,37 @@ export class TokenManager {
         sessionStorage.removeItem(key);
       } catch { /* ignore */ }
     }
+    for (const aliases of Object.values(LEGACY_KEYS)) {
+      for (const alias of aliases) {
+        try {
+          localStorage.removeItem(alias);
+          sessionStorage.removeItem(alias);
+        } catch { /* ignore */ }
+      }
+    }
   }
 
   /** @private */
-  _getFromStorage(key) {
+  _getFromStorage(key, aliases = []) {
     try {
       const primary = this.storageType === 'localStorage' ? localStorage : sessionStorage;
       const fallback = this.storageType === 'localStorage' ? sessionStorage : localStorage;
-      return primary.getItem(key) || fallback.getItem(key) || null;
+      const current = primary.getItem(key) || fallback.getItem(key);
+      if (current != null) return current;
+
+      for (const alias of aliases) {
+        const legacy = primary.getItem(alias) || fallback.getItem(alias);
+        if (legacy != null) {
+          // Migrate legacy key to canonical key lazily on first read.
+          this._setInStorage(key, legacy);
+          try {
+            primary.removeItem(alias);
+            fallback.removeItem(alias);
+          } catch { /* ignore */ }
+          return legacy;
+        }
+      }
+      return null;
     } catch {
       return null;
     }
