@@ -37,8 +37,8 @@ export function SmartMemoryProvider({ children, ...config }) {
     await client.auth.logout();
   }, [client]);
 
-  const storeCallbackTokens = useCallback((params) => {
-    client.auth.storeCallbackTokens(params);
+  const storeCallbackTokens = useCallback(async (params) => {
+    return client.auth.storeCallbackTokens(params);
   }, [client]);
 
   const hasRole = useCallback((role) => {
