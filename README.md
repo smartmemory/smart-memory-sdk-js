@@ -4,7 +4,7 @@ Unified JavaScript SDK for [SmartMemory](https://smartmemory.ai) — consolidate
 
 ## Features
 
-- **Dual-mode auth**: Custom (email/password) and SSO (redirect-based) authentication
+- **SSO auth (Clerk)**: Cookie-based session bootstrap via `/auth/me`; redirect to Clerk IdP for login
 - **Automatic token refresh**: Single-flight deduplication prevents race conditions
 - **80+ API methods**: Full coverage of SmartMemory's REST API across 10 domain modules
 - **React bindings**: Provider, hooks, and route protection components
@@ -19,33 +19,7 @@ npm install @smartmemory/sdk-js
 
 ## Quick Start
 
-### Custom Mode (Web App with Login Form)
-
-```javascript
-import { SmartMemoryClient } from '@smartmemory/sdk-js';
-
-const client = new SmartMemoryClient({
-  mode: 'custom',
-  apiBaseUrl: 'http://localhost:9001',
-  endpoints: {
-    login: '/auth/login',
-    refresh: '/auth/refresh',
-    logout: '/auth/logout'
-  }
-});
-
-// Login
-const { user, token } = await client.auth.login({
-  email: 'user@example.com',
-  password: 'password'
-});
-
-// Use the API
-const memories = await client.memories.list({ limit: 10 });
-const results = await client.memories.search('machine learning', { topK: 5 });
-```
-
-### SSO Mode (Studio/Insights Apps)
+### SSO Mode (All Apps — Clerk-backed)
 
 ```javascript
 import { SmartMemoryClient } from '@smartmemory/sdk-js';
@@ -57,12 +31,17 @@ const client = new SmartMemoryClient({
   endpoints: { refresh: '/auth/refresh' }
 });
 
-// Redirect to login
-window.location.href = client.auth.getLoginUrl();
+// In SSO mode, auth is bootstrapped via /auth/me using the sm_access_token cookie
+// set by the Clerk-hosted login flow. No local login form or token URL params.
+await client.auth.bootstrapSession();   // calls GET /auth/me, credentials: 'include'
 
-// On callback page, store tokens from URL params
-const params = new URLSearchParams(window.location.search);
-client.auth.storeCallbackTokens(params);
+// If unauthenticated, redirect to the Clerk IdP:
+if (!client.auth.isAuthenticated()) {
+  window.location.href = client.auth.getLoginUrl(window.location.href);
+}
+
+// Use the API (cookie auth is automatic)
+const memories = await client.memories.list({ limit: 10 });
 ```
 
 ### React
@@ -121,9 +100,8 @@ const client = new SmartMemoryClient({
 
   // Optional
   endpoints: {
-    login: '/auth/login',       // custom mode only
-    refresh: '/auth/refresh',   // both modes
-    logout: '/auth/logout'      // both modes
+    refresh: '/auth/refresh',   // token refresh
+    logout: '/auth/logout'      // optional override
   },
   storage: 'localStorage',      // 'localStorage' | 'sessionStorage' | 'memory'
   tokenKeys: {                   // custom storage key names

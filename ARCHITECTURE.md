@@ -1,9 +1,19 @@
 # Architecture Document: JavaScript SDK
 
 **Feature:** @smartmemory/sdk-js
-**Status:** Approved for Implementation
-**Date:** 2026-02-08
+**Status:** Implemented
+**Date:** 2026-02-08 (updated 2026-02-21)
 **Related:** `PRD.md`, `DESIGN.md`
+
+> **⚠ Auth model superseded (PLAT-SSO-IDP-1, 2026-02-21):**
+> The `custom` mode login flow (`AuthCore.login()`, `POST /auth/login`,
+> `POST /auth/signup`) has been removed. All applications now use `mode: 'sso'`
+> with Clerk-backed authentication. Session bootstrap is cookie-based
+> (`GET /auth/me` with `credentials: 'include'`), not token-URL-param-based.
+> The `SSOManager.redirectWithTokens()` and `storeCallbackTokens()` patterns
+> described in §2.2.3 and §3.1 are deleted. Sections §7.1 (localStorage), §7.5
+> (CORS token params), and §8.5 (token encryption) describe the old model.
+> See `PLAT-SSO-IDP-1` feature docs for the current auth architecture.
 
 ---
 
