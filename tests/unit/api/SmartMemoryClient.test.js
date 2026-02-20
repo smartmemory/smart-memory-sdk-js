@@ -4,9 +4,10 @@ import { SmartMemoryClient } from '../../../src/api/SmartMemoryClient.js';
 describe('SmartMemoryClient', () => {
   it('should expose auth and all domain APIs', () => {
     const client = new SmartMemoryClient({
-      mode: 'custom',
+      mode: 'sso',
       apiBaseUrl: 'http://localhost:9001',
-      endpoints: { login: '/auth/login', refresh: '/auth/refresh' },
+      webAppUrl: 'http://localhost:5173',
+      endpoints: { refresh: '/auth/refresh' },
       storage: 'memory'
     });
 

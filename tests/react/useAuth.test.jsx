@@ -6,9 +6,10 @@ import { SmartMemoryProvider, useAuth, useSmartMemory } from '../../src/react/in
 function wrapper({ children }) {
   return (
     <SmartMemoryProvider
-      mode="custom"
+      mode="sso"
       apiBaseUrl="http://localhost:9001"
-      endpoints={{ login: '/auth/login', refresh: '/auth/refresh' }}
+      webAppUrl="http://localhost:5173"
+      endpoints={{ refresh: '/auth/refresh' }}
       storage="memory"
     >
       {children}

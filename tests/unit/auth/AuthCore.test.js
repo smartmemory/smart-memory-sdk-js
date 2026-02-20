@@ -12,7 +12,7 @@ describe('AuthCore', () => {
     return new AuthCore({
       mode: 'custom',
       apiBaseUrl: 'http://localhost:9001',
-      endpoints: { login: '/auth/login', refresh: '/auth/refresh' },
+      endpoints: { refresh: '/auth/refresh' },
       storage: 'memory',
       ...overrides
     });
@@ -137,55 +137,6 @@ describe('AuthCore', () => {
       const headers = auth.getAuthHeaders();
       expect(headers['X-Team-Id']).toBe('team-456');
       expect(headers['X-Workspace-Id']).toBeUndefined();
-    });
-  });
-
-  describe('custom mode: login', () => {
-    it('should login and store tokens from API response', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          tokens: { access_token: 'at', refresh_token: 'rt' },
-          user: { id: '1', name: 'Alice', roles: ['user'] }
-        })
-      });
-
-      const auth = createCustomAuth();
-      const result = await auth.login({ email: 'a@b.com', password: 'pass' });
-
-      expect(auth.isAuthenticated()).toBe(true);
-      expect(result.user.name).toBe('Alice');
-      expect(auth.getCurrentToken()).toBe('at');
-    });
-
-    it('should store team_id from login response', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          tokens: { access_token: 'at', refresh_token: 'rt' },
-          user: { id: '1', name: 'Alice', default_team_id: 'team-99' }
-        })
-      });
-
-      const auth = createCustomAuth();
-      await auth.login({ email: 'a@b.com', password: 'pass' });
-
-      expect(auth.tokenManager.getTeamId()).toBe('team-99');
-      expect(auth.getAuthHeaders()['X-Team-Id']).toBe('team-99');
-    });
-
-    it('should throw on failed login', async () => {
-      vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 401 });
-
-      const auth = createCustomAuth();
-      await expect(auth.login({ email: 'a@b.com', password: 'wrong' }))
-        .rejects.toThrow('Login failed');
-    });
-
-    it('should throw if called in sso mode', async () => {
-      const auth = createSSOAuth();
-      await expect(auth.login({ email: 'a', password: 'b' }))
-        .rejects.toThrow('login() only available in custom mode');
     });
   });
 

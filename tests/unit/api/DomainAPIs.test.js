@@ -183,19 +183,6 @@ describe('SubscriptionAPI', () => {
 });
 
 describe('AuthAPI', () => {
-  it('should signup with snake_case params', async () => {
-    const api = mockBaseAPI();
-    const auth = new AuthAPI(api);
-    await auth.signup({ email: 'a@b.com', password: 'pass', fullName: 'Alice', tier: 'pro' });
-
-    expect(api.post).toHaveBeenCalledWith('/auth/signup', {
-      email: 'a@b.com',
-      password: 'pass',
-      full_name: 'Alice',
-      subscription_tier: 'pro'
-    });
-  });
-
   it('should get current user', async () => {
     const api = mockBaseAPI();
     const auth = new AuthAPI(api);
