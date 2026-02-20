@@ -203,17 +203,6 @@ describe('AuthCore', () => {
         .toThrow('getLoginUrl() only available in sso mode');
     });
 
-    it('storeCallbackTokens() is deprecated: ignores params and delegates to bootstrapSession()', async () => {
-      const auth = createSSOAuth();
-      const bootstrapSpy = vi.spyOn(auth, 'bootstrapSession').mockResolvedValue(true);
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      const params = new URLSearchParams({ token: 'sso-tok', refresh_token: 'sso-ref', team_id: 'team-1' });
-      const result = await auth.storeCallbackTokens(params);
-      expect(bootstrapSpy).toHaveBeenCalledOnce();
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('deprecated'));
-      expect(result).toBe(true);
-    });
-
     it('should bootstrap cookie session via /auth/me', async () => {
       const auth = createSSOAuth();
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({

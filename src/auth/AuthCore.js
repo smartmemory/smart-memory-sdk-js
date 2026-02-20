@@ -131,17 +131,6 @@ export class AuthCore {
     return this.ssoManager.getLoginUrl(currentUrl);
   }
 
-  async storeCallbackTokens(_params) {
-    if (this.mode !== 'sso') {
-      throw new Error('storeCallbackTokens() only available in sso mode');
-    }
-    console.warn(
-      '[SmartMemory] storeCallbackTokens() is deprecated and will be removed in a future release. ' +
-      'URL token params are no longer supported. Use bootstrapSession() instead.'
-    );
-    return this.bootstrapSession();
-  }
-
   clearLocalAuth() {
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {

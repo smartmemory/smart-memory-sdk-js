@@ -37,10 +37,6 @@ export function SmartMemoryProvider({ children, ...config }) {
     await client.auth.logout();
   }, [client]);
 
-  const storeCallbackTokens = useCallback(async (params) => {
-    return client.auth.storeCallbackTokens(params);
-  }, [client]);
-
   const hasRole = useCallback((role) => {
     return client.auth.hasRole(role);
   }, [client]);
@@ -52,7 +48,6 @@ export function SmartMemoryProvider({ children, ...config }) {
   const authValue = {
     ...authState,
     logout,
-    storeCallbackTokens,
     hasRole,
     getLoginUrl
   };
