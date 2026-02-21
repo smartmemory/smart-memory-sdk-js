@@ -26,6 +26,7 @@ export const CLERK_APPEARANCE = {
     formFieldErrorText: 'text-red-300',
     formButtonPrimary: 'bg-blue-600 hover:bg-blue-500 text-white',
     footerActionLink: 'text-blue-400 hover:text-blue-300',
+    badge: 'hidden',
   },
 };
 
