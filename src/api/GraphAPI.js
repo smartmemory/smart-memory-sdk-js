@@ -85,6 +85,14 @@ export class GraphAPI {
   }
 
   /**
+   * Delete an entity graph node and all its edges.
+   * @param {string} nodeId
+   */
+  async deleteEntityNode(nodeId) {
+    return this.api.delete(`/memory/graph/nodes/${encodeURIComponent(nodeId)}`);
+  }
+
+  /**
    * Get links for a memory item.
    * @param {string} itemId
    */
