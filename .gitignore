@@ -4,3 +4,7 @@ coverage/
 *.log
 .DS_Store
 package-lock.json
+
+# Local secrets
+.secrets
+.act.secrets
