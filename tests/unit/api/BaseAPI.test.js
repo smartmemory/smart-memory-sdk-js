@@ -38,7 +38,7 @@ describe('BaseAPI', () => {
           method: 'GET',
           headers: expect.objectContaining({
             'Authorization': 'Bearer test-token',
-            'X-Team-Id': 'team-1',
+            'X-Workspace-Id': 'team-1',
             'Content-Type': 'application/json'
           })
         })

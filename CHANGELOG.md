@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+#### Header Rename: X-Team-Id → X-Workspace-Id (SCOPE-WS-1)
+- `AuthCore.getAuthHeaders()` now sends `X-Workspace-Id` instead of `X-Team-Id`
+- `clerkWeb.js` bootstrapper reads `x-sm-workspace-id` response header (old `x-sm-team-id` removed)
+- All frontends using this SDK updated in lockstep; no transition fallback needed
+
 ### Added
 - **ProcedureDriftAPI (CFS-4)**: Schema drift detection methods
   - `list(params)` — list drift events with filtering (procedure_id, resolved, breaking_only, date range)

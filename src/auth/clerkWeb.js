@@ -68,7 +68,7 @@ export async function exchangeClerkSession({
   return {
     response: resp,
     accessToken: resp.headers.get('x-sm-access-token'),
-    teamId: resp.headers.get('x-sm-team-id'),
+    teamId: resp.headers.get('x-sm-workspace-id'),
   };
 }
 

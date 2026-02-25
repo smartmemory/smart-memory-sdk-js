@@ -91,7 +91,7 @@ export class AuthCore {
 
     const teamId = this.tokenManager.getTeamId();
     if (teamId) {
-      headers['X-Team-Id'] = teamId;
+      headers['X-Workspace-Id'] = teamId;
     }
 
     return headers;

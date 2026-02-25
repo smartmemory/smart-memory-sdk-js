@@ -107,15 +107,15 @@ describe('AuthCore', () => {
       expect(headers.Authorization).toBe('Bearer already-bearer');
     });
 
-    it('should include X-Team-Id header when team is set', () => {
+    it('should include X-Workspace-Id header when team is set', () => {
       const auth = createCustomAuth();
       auth.tokenManager.setTeamId('team-123');
 
       const headers = auth.getAuthHeaders();
-      expect(headers['X-Team-Id']).toBe('team-123');
+      expect(headers['X-Workspace-Id']).toBe('team-123');
     });
 
-    it('should not include X-Workspace-Id header', () => {
+    it('should not include X-Workspace-Id header when only tenant is set (no team)', () => {
       const auth = createCustomAuth();
       auth.setTenantId('ws-123');
 
@@ -129,14 +129,13 @@ describe('AuthCore', () => {
       expect(headers['X-Custom']).toBe('value');
     });
 
-    it('should only include X-Team-Id (not X-Workspace-Id) when both tenant and team are set', () => {
+    it('should include X-Workspace-Id when both tenant and team are set', () => {
       const auth = createCustomAuth();
       auth.setTenantId('ws-123');
       auth.tokenManager.setTeamId('team-456');
 
       const headers = auth.getAuthHeaders();
-      expect(headers['X-Team-Id']).toBe('team-456');
-      expect(headers['X-Workspace-Id']).toBeUndefined();
+      expect(headers['X-Workspace-Id']).toBe('team-456');
     });
   });
 
