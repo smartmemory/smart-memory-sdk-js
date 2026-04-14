@@ -9,7 +9,8 @@
     ".": "./dist/index.js",
     "./core": "./dist/core.js",
     "./react": "./dist/react.js",
-    "./fetch": "./dist/fetch.js"
+    "./fetch": "./dist/fetch.js",
+    "./progress": "./dist/progress.js"
   },
   "files": [
     "dist"
