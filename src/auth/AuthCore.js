@@ -201,6 +201,24 @@ export class AuthCore {
         );
         usedCookieOnlyFallback = response.ok;
       }
+
+      // If still unauthorized, the sm_access_token cookie may have expired while
+      // sm_refresh_token is still valid. Attempt one cookie-based refresh and retry.
+      // RefreshManager with useCookieAuth sends an empty body with credentials:'include',
+      // so the server reads sm_refresh_token from the cookie jar.
+      if (!response.ok && response.status === 401 && this.refreshManager) {
+        try {
+          await this.refreshManager.refresh();
+          response = await fetch(
+            meUrl,
+            this.getRequestOptions({ method: 'GET', headers: this.getAuthHeaders() })
+          );
+        } catch {
+          // Refresh failed (missing/invalid sm_refresh_token). Fall through to
+          // return false below; onRefreshFailed has already cleared local state.
+        }
+      }
+
       if (!response.ok) return false;
 
       const user = await response.json();
