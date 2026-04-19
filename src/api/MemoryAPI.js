@@ -38,6 +38,17 @@ export class MemoryAPI {
     return this.api.post('/memory/search', body);
   }
 
+  async getWorkingContext(sessionId, query, { k = 20, maxTokens = null, strategy = null } = {}) {
+    const body = {
+      session_id: sessionId,
+      query,
+      k,
+    };
+    if (maxTokens !== null && maxTokens !== undefined) body.max_tokens = maxTokens;
+    if (strategy !== null && strategy !== undefined) body.strategy = strategy;
+    return this.api.post('/memory/context', body);
+  }
+
   async searchAdvanced(query, { algorithm = 'query_traversal', maxResults = 15, useSSG = true } = {}) {
     return this.api.post('/memory/search/advanced', {
       query,

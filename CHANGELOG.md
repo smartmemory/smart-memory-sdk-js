@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- **CORE-MEMORY-DYNAMICS-1 M1a: `MemoryAPI.getWorkingContext(sessionId, query, { k = 20, maxTokens = null, strategy = null } = {})`.** New method posting to `POST /memory/context`. Returns the contract-shape response per `smart-memory-docs/docs/features/CORE-MEMORY-DYNAMICS-1/context-api-contract.json` pass-through. Optional params omitted when `null` *or* `undefined` (parity verified by regression test). Body uses canonical snake_case field names (`session_id`, `max_tokens`) to match the service contract. 5 new Vitest tests (19 total in `MemoryAPI.test.js`). No shim layer — JS SDK never exposed `memoryRecall`.
+
 ### Changed
 
 #### Header Rename: X-Team-Id → X-Workspace-Id (SCOPE-WS-1)

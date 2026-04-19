@@ -133,4 +133,64 @@ describe('MemoryAPI', () => {
 
     expect(baseAPI.delete).toHaveBeenCalledWith('/memory/clear-all?nuclear=true');
   });
+
+  // CORE-MEMORY-DYNAMICS-1 M1a — getWorkingContext
+  it('getWorkingContext should POST to /memory/context with snake_case body', async () => {
+    await memoryAPI.getWorkingContext('s1', 'hello');
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/context', {
+      session_id: 's1',
+      query: 'hello',
+      k: 20,
+    });
+  });
+
+  it('getWorkingContext should include max_tokens and strategy when set', async () => {
+    await memoryAPI.getWorkingContext('s1', 'hello', { k: 10, maxTokens: 500, strategy: 'fast:recency' });
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/context', {
+      session_id: 's1',
+      query: 'hello',
+      k: 10,
+      max_tokens: 500,
+      strategy: 'fast:recency',
+    });
+  });
+
+  it('getWorkingContext should omit optional params when null', async () => {
+    await memoryAPI.getWorkingContext('s1', 'hello', { k: 5, maxTokens: null, strategy: null });
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/context', {
+      session_id: 's1',
+      query: 'hello',
+      k: 5,
+    });
+  });
+
+  it('getWorkingContext should omit optional params when undefined (not just null)', async () => {
+    // The JS method uses `!== null && !== undefined` — both paths must omit.
+    await memoryAPI.getWorkingContext('s1', 'hello', { k: 5, maxTokens: undefined, strategy: undefined });
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/context', {
+      session_id: 's1',
+      query: 'hello',
+      k: 5,
+    });
+  });
+
+  it('getWorkingContext should return response pass-through', async () => {
+    const mockResponse = {
+      decision_id: 'abc',
+      items: [],
+      drift_warnings: [],
+      strategy_used: 'fast:recency',
+      tokens_used: 0,
+      tokens_budget: null,
+      deprecation: null,
+    };
+    baseAPI.post.mockResolvedValueOnce(mockResponse);
+
+    const result = await memoryAPI.getWorkingContext('s1', 'hello');
+    expect(result).toEqual(mockResponse);
+  });
 });
