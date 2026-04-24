@@ -18,6 +18,19 @@ export class MemoryAPI {
     return { ...response, id: response.item_id || response.id };
   }
 
+  /**
+   * Update a memory item (CORE-CRUD-UPDATE-1 contract).
+   *
+   * @param {string} id - Memory item ID
+   * @param {Object} updates - Update fields
+   * @param {string} [updates.content] - Convenience — replaces content
+   * @param {Object} [updates.metadata] - Convenience — deep-merges with existing metadata
+   * @param {Object} [updates.properties] - Advanced — direct node-property dict.
+   *   When provided, takes precedence over content/metadata conveniences.
+   * @param {'merge'|'replace'} [updates.write_mode] - Node-property write semantics.
+   *   'merge' (default) overlays new properties; 'replace' replaces all
+   *   (preserving memory_type and node_category).
+   */
   async update(id, updates) {
     return this.api.put(`/memory/${id}`, updates);
   }
