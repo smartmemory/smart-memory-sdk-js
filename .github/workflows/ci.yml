@@ -32,8 +32,25 @@ jobs:
         run: npm run build
 
       - name: Notify Discord
-        if: always()
-        uses: smart-memory/smart-memory-infra/.github/actions/discord-notify@main
-        with:
-          discord_webhook: ${{ secrets.DISCORD_WEBHOOK }}
-          status: ${{ job.status }}
+        if: always() && env.DISCORD_WEBHOOK != ''
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          STATUS: ${{ job.status }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ format('https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          # Inlined from smart-memory-infra/.github/actions/discord-notify (private repo
+          # not accessible from this public repo's workflow runner).
+          case "$STATUS" in
+            success)   EMOJI="✅"; COLOR=3066993 ;;
+            failure)   EMOJI="❌"; COLOR=15158332 ;;
+            cancelled) EMOJI="⚠️"; COLOR=15844367 ;;
+            *)         EMOJI="ℹ️"; COLOR=3447003 ;;
+          esac
+          PAYLOAD=$(jq -nc --arg t "$EMOJI $REPO · $WORKFLOW_NAME · $STATUS" \
+                              --arg u "$RUN_URL" \
+                              --argjson c "$COLOR" \
+              '{embeds:[{title:$t, url:$u, color:$c}]}')
+          curl -sS -X POST -H "Content-Type: application/json" \
+               -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
