@@ -25,6 +25,7 @@ import { ZettelkastenAPI } from './ZettelkastenAPI.js';
 import { ProcedureMatchAPI } from './ProcedureMatchAPI.js';
 import { ProcedureCandidateAPI } from './ProcedureCandidateAPI.js';
 import { ProcedureDriftAPI } from './ProcedureDriftAPI.js';
+import { SummaryAPI } from './SummaryAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -60,6 +61,7 @@ export class SmartMemoryClient {
     this.procedureMatches = new ProcedureMatchAPI(baseAPI);
     this.procedureCandidates = new ProcedureCandidateAPI(baseAPI);
     this.procedureDrift = new ProcedureDriftAPI(baseAPI);
+    this.summaries = new SummaryAPI(baseAPI);
   }
 
   setTeamId(teamId) {
