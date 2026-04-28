@@ -47,6 +47,13 @@ export interface SubscribeProgressOptions {
   apiKey?: string;
 
   /**
+   * Active workspace / team id. Forwarded as `X-Workspace-Id` so the server's
+   * team_required scope policy resolves the tenant. Without it, the progress
+   * route returns 400 "Team context is required".
+   */
+  workspaceId?: string;
+
+  /**
    * Filter to a single run (run_replay mode).
    * Must accompany fromSeq; omit for live mode.
    */
@@ -114,6 +121,7 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
     baseUrl = '',
     token,
     apiKey,
+    workspaceId,
     runId,
     fromSeq,
     since,
@@ -139,6 +147,9 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
     headers['Authorization'] = `Bearer ${token}`;
   } else if (apiKey) {
     headers['X-API-Key'] = apiKey;
+  }
+  if (workspaceId) {
+    headers['X-Workspace-Id'] = workspaceId;
   }
 
   // AbortController for close()
