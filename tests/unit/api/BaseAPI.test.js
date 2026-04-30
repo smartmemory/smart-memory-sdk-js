@@ -138,6 +138,38 @@ describe('BaseAPI', () => {
     });
   });
 
+  describe('custom fetchFn', () => {
+    it('should use custom fetchFn when provided', async () => {
+      const customFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ custom: true })
+      });
+
+      const customBaseAPI = new BaseAPI(authCore, { fetchFn: customFetch });
+      const result = await customBaseAPI.get('/memory/list');
+
+      expect(customFetch).toHaveBeenCalledWith(
+        'http://localhost:9001/memory/list',
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(result).toEqual({ custom: true });
+    });
+
+    it('should fall back to globalThis.fetch when fetchFn not provided', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ default: true })
+      });
+
+      const result = await baseAPI.get('/memory/list');
+
+      expect(fetch).toHaveBeenCalled();
+      expect(result).toEqual({ default: true });
+    });
+  });
+
   describe('network errors', () => {
     it('should wrap fetch errors in APIError', async () => {
       vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));

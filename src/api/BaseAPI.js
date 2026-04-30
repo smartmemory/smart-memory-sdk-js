@@ -3,10 +3,16 @@ import { APIError } from '../errors/APIError.js';
 export class BaseAPI {
   /**
    * @param {import('../auth/AuthCore.js').AuthCore} authCore
+   * @param {{ fetchFn?: typeof globalThis.fetch }} [options]
    */
-  constructor(authCore) {
+  constructor(authCore, { fetchFn } = {}) {
     this.auth = authCore;
     this.baseURL = authCore.apiBaseUrl;
+    this._customFetchFn = fetchFn || null;
+  }
+
+  get fetchFn() {
+    return this._customFetchFn || globalThis.fetch;
   }
 
   async request(endpoint, options = {}) {
@@ -19,7 +25,7 @@ export class BaseAPI {
     const config = this.auth.getRequestOptions({ ...options, headers });
 
     try {
-      let response = await fetch(url, config);
+      let response = await this.fetchFn(url, config);
 
       if (response.status === 401 && !options.__isRetry) {
         try {
@@ -29,7 +35,7 @@ export class BaseAPI {
             'Content-Type': 'application/json',
             ...this.auth.getAuthHeaders(options.headers)
           };
-          response = await fetch(
+          response = await this.fetchFn(
             url,
             this.auth.getRequestOptions({ ...config, headers: retryHeaders, __isRetry: true })
           );

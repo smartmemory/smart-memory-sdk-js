@@ -34,7 +34,7 @@ import { SummaryAPI } from './SummaryAPI.js';
 export class SmartMemoryClient {
   constructor(config) {
     this.auth = new AuthCore(config);
-    const baseAPI = new BaseAPI(this.auth);
+    const baseAPI = new BaseAPI(this.auth, { fetchFn: config.fetchFn });
 
     this.memories = new MemoryAPI(baseAPI);
     this.decisions = new DecisionAPI(baseAPI);
