@@ -165,7 +165,7 @@ describe('ProfileAPI', () => {
     const profiles = new ProfileAPI(api);
     await profiles.updateLLMKeys({ openai: 'sk-...' });
 
-    expect(api.put).toHaveBeenCalledWith('/auth/llm-keys', { openai: 'sk-...' });
+    expect(api.patch).toHaveBeenCalledWith('/auth/llm-keys', { openai: 'sk-...' });
   });
 });
 

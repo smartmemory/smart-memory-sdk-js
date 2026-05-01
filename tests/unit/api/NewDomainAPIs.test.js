@@ -940,7 +940,7 @@ describe('OntologyAPI', () => {
     const ontology = new OntologyAPI(api);
     await ontology.updateConfig({ enabled: true, schedule: 'daily', batchSize: 50 });
 
-    expect(api.put).toHaveBeenCalledWith('/memory/ontology/updates/config', {
+    expect(api.patch).toHaveBeenCalledWith('/memory/ontology/updates/config', {
       enabled: true,
       schedule: 'daily',
       batch_size: 50
@@ -1046,7 +1046,7 @@ describe('ValidationAPI', () => {
     const validation = new ValidationAPI(api);
     await validation.getHealth();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/validation/health');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/health');
   });
 
   it('should validate an item', async () => {
@@ -1191,7 +1191,7 @@ describe('PipelineAPI', () => {
     const pipeline = new PipelineAPI(api);
     await pipeline.updateConfig('default', { name: 'default', description: 'Updated', config: { steps: ['extract'] } });
 
-    expect(api.put).toHaveBeenCalledWith('/memory/pipeline/configs/default', {
+    expect(api.patch).toHaveBeenCalledWith('/memory/pipeline/configs/default', {
       name: 'default',
       description: 'Updated',
       config: { steps: ['extract'] }

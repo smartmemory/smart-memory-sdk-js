@@ -122,7 +122,7 @@ describe('BaseAPI', () => {
       expect(calls).toHaveLength(3);
     });
 
-    it('should logout and throw on failed refresh', async () => {
+    it('should clear local auth and throw on failed refresh', async () => {
       authCore.currentToken = 'expired';
 
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -130,11 +130,11 @@ describe('BaseAPI', () => {
         status: 401
       });
 
-      const logoutSpy = vi.spyOn(authCore, 'logout').mockResolvedValue();
+      const clearLocalAuthSpy = vi.spyOn(authCore, 'clearLocalAuth').mockImplementation(() => {});
 
       await expect(baseAPI.get('/memory/list'))
         .rejects.toThrow('Authentication required');
-      expect(logoutSpy).toHaveBeenCalled();
+      expect(clearLocalAuthSpy).toHaveBeenCalled();
     });
   });
 

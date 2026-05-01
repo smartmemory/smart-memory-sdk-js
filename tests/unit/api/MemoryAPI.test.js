@@ -10,6 +10,7 @@ describe('MemoryAPI', () => {
       get: vi.fn().mockResolvedValue({}),
       post: vi.fn().mockResolvedValue({}),
       put: vi.fn().mockResolvedValue({}),
+      patch: vi.fn().mockResolvedValue({}),
       delete: vi.fn().mockResolvedValue(null)
     };
     memoryAPI = new MemoryAPI(baseAPI);
@@ -57,7 +58,7 @@ describe('MemoryAPI', () => {
   it('update should only include defined fields', async () => {
     await memoryAPI.update('id-1', { content: 'updated' });
 
-    expect(baseAPI.put).toHaveBeenCalledWith('/memory/id-1', { content: 'updated' });
+    expect(baseAPI.patch).toHaveBeenCalledWith('/memory/id-1', { content: 'updated' });
   });
 
   it('delete should call DELETE /memory/:id', async () => {
