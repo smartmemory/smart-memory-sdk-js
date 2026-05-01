@@ -56,5 +56,13 @@
   "license": "MIT",
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smart-memory/smart-memory-sdk-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/smart-memory/smart-memory-sdk-js/issues"
+  },
+  "homepage": "https://github.com/smart-memory/smart-memory-sdk-js#readme"
 }
