@@ -3,14 +3,25 @@ export class MemoryAPI {
     this.api = baseAPI;
   }
 
-  async create({ content, memoryType = 'semantic', metadata = null, usePipeline = true, profileName = null }) {
-    return this.api.post('/memory/add', {
+  async create({
+    content,
+    memoryType = 'semantic',
+    metadata = null,
+    usePipeline = true,
+    profileName = null,
+    conversationContext = null,
+  }) {
+    const body = {
       content,
       memory_type: memoryType,
       metadata,
       use_pipeline: usePipeline,
-      profile_name: profileName
-    });
+      profile_name: profileName,
+    };
+    if (conversationContext !== null && conversationContext !== undefined) {
+      body.conversation_context = conversationContext;
+    }
+    return this.api.post('/memory/add', body);
   }
 
   async get(id) {
@@ -186,8 +197,22 @@ export class MemoryAPI {
     return this.api.post('/memory/personalize', { traits, preferences });
   }
 
-  async feedback(feedback, memoryType = 'semantic') {
-    return this.api.post('/memory/feedback', { feedback, memory_type: memoryType });
+  /**
+   * Reinforce recalled memory items with explicit feedback.
+   *
+   * Bumps `retention_score` immediately and, for `helpful` outcomes with multiple
+   * items, strengthens the `CO_RETRIEVED` edges between every pair — feeding into
+   * the Hebbian co-retrieval evolver.
+   *
+   * @param {string[]} itemIds - Item IDs returned by a prior `search()` call (1-50).
+   * @param {'helpful'|'misleading'|'neutral'} outcome - Feedback signal.
+   * @param {string} [query] - Original query that produced these results.
+   * @returns {Promise<{updated: number, edges_strengthened: number, outcome: string}>}
+   */
+  async feedback(itemIds, outcome, query = null) {
+    const body = { item_ids: itemIds, outcome };
+    if (query !== null && query !== undefined) body.query = query;
+    return this.api.post('/memory/feedback', body);
   }
 
   async ground(itemId, sourceUrl, validation = null) {

@@ -28,6 +28,20 @@ describe('MemoryAPI', () => {
     });
   });
 
+  it('create should pass conversationContext through as snake_case (SDK-CONSISTENCY-1 B2)', async () => {
+    const ctx = { participants: ['alice', 'bob'], topic: 'project status' };
+    await memoryAPI.create({ content: 'test', conversationContext: ctx });
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.conversation_context).toEqual(ctx);
+  });
+
+  it('create should omit conversation_context when not provided (SDK-CONSISTENCY-1 B2)', async () => {
+    await memoryAPI.create({ content: 'test' });
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body).not.toHaveProperty('conversation_context');
+  });
+
   it('get should normalize item_id to id', async () => {
     baseAPI.get.mockResolvedValue({ item_id: 'abc', content: 'hello' });
 
@@ -193,5 +207,33 @@ describe('MemoryAPI', () => {
 
     const result = await memoryAPI.getWorkingContext('s1', 'hello');
     expect(result).toEqual(mockResponse);
+  });
+
+  describe('feedback (SDK-CONSISTENCY-1 B1)', () => {
+    it('should POST item_ids and outcome in the new contract shape', async () => {
+      await memoryAPI.feedback(['id-1', 'id-2'], 'helpful');
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/feedback', {
+        item_ids: ['id-1', 'id-2'],
+        outcome: 'helpful',
+      });
+    });
+
+    it('should include query when provided', async () => {
+      await memoryAPI.feedback(['id-1'], 'misleading', 'what is jwt?');
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/feedback', {
+        item_ids: ['id-1'],
+        outcome: 'misleading',
+        query: 'what is jwt?',
+      });
+    });
+
+    it('should omit query when null/undefined', async () => {
+      await memoryAPI.feedback(['id-1'], 'neutral');
+
+      const body = baseAPI.post.mock.calls.at(-1)[1];
+      expect(body).not.toHaveProperty('query');
+    });
   });
 });

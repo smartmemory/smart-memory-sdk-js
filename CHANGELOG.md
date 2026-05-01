@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed — BREAKING (SDK-CONSISTENCY-1)
+
+- **`MemoryAPI.feedback(itemIds, outcome, query?)` signature changed.** Previously `feedback(feedback, memoryType = 'semantic')` which posted `{feedback, memory_type}` to a server endpoint that has been removed. The new signature posts `{item_ids, outcome, query?}` to the surviving `POST /memory/feedback` route — bumps `retention_score` on the items and (for `helpful` with multiple IDs) strengthens `CO_RETRIEVED` edges between every pair. The only known caller was the dead `provideFeedback` wrapper in `smart-memory-web` (deleted in the same change set).
+
+### Added (SDK-CONSISTENCY-1)
+
+- **`MemoryAPI.create({ ..., conversationContext })`** parameter added to bring JS parity with the Python SDK's `client.add(..., conversation_context=...)`. Marshalled to `conversation_context` in the request body; omitted when `null`/`undefined`.
+
 ### Added
 
 - **CORE-SUMMARY-1: Memory snapshot JS SDK API.** New `SummaryAPI` class wired as `client.summaries.*` on `SmartMemoryClient`: `generate({ windowStart, includeMarkdown })`, `latest()`, `get(snapshotId)`, `getMarkdown(snapshotId)` (graph-only fast path), `list({ isHeartbeat, limit, before })`, `delta({ from, to })`, `delete(snapshotId)`. Read methods return `null` on 404; write methods reject. 11 new Vitest tests in `tests/unit/api/SummaryAPI.test.js`. Contract: `smart-memory-docs/docs/features/CORE-SUMMARY-1/snapshot-contract.json`.
