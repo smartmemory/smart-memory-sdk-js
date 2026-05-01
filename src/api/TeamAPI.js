@@ -21,7 +21,7 @@ export class TeamAPI {
   }
 
   async update(teamId, updates) {
-    return this.api.put(`/memory/teams/${teamId}`, updates);
+    return this.api.patch(`/memory/teams/${teamId}`, updates);
   }
 
   async delete(teamId) {
@@ -40,7 +40,7 @@ export class TeamAPI {
   }
 
   async updateMember(teamId, userId, role) {
-    return this.api.put(`/memory/teams/${teamId}/members/${userId}`, { role });
+    return this.api.patch(`/memory/teams/${teamId}/members/${userId}`, { role });
   }
 
   async removeMember(teamId, userId) {

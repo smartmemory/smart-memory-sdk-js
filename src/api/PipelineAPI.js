@@ -134,7 +134,7 @@ export class PipelineAPI {
    * @param {Object} [params.config={}]
    */
   async updateConfig(configName, { name = '', description = '', config = {} }) {
-    return this.api.put(`/memory/pipeline/configs/${configName}`, {
+    return this.api.patch(`/memory/pipeline/configs/${configName}`, {
       name,
       description,
       config

@@ -424,7 +424,7 @@ export class OntologyAPI {
     if (updates.schedule !== undefined) body.schedule = updates.schedule;
     if (updates.batchSize !== undefined) body.batch_size = updates.batchSize;
     if (updates.model !== undefined) body.model = updates.model;
-    return this.api.put('/memory/ontology/updates/config', body);
+    return this.api.patch('/memory/ontology/updates/config', body);
   }
 
   /**

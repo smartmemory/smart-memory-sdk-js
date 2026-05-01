@@ -16,6 +16,6 @@ export class ProfileAPI {
   }
 
   async updateLLMKeys(keys) {
-    return this.api.put('/auth/llm-keys', keys);
+    return this.api.patch('/auth/llm-keys', keys);
   }
 }

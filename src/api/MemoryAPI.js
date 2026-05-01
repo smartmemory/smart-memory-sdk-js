@@ -32,7 +32,7 @@ export class MemoryAPI {
    *   (preserving memory_type and node_category).
    */
   async update(id, updates) {
-    return this.api.put(`/memory/${id}`, updates);
+    return this.api.patch(`/memory/${id}`, updates);
   }
 
   async delete(id) {
