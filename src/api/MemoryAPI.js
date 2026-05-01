@@ -88,9 +88,10 @@ export class MemoryAPI {
     return this.api.get(`/memory/${id}/links`);
   }
 
-  async searchByMetadata(filters = {}, { limit = 50, offset = 0 } = {}) {
-    const params = new URLSearchParams({ limit, offset, ...filters }).toString();
-    return this.api.get(`/memory/by-metadata${params ? '?' + params : ''}`);
+  async searchByMetadata(metadataKey, metadataValue, { memoryType = null } = {}) {
+    const params = new URLSearchParams({ metadata_key: metadataKey, metadata_value: metadataValue });
+    if (memoryType) params.append('memory_type', memoryType);
+    return this.api.get(`/memory/by-metadata?${params}`);
   }
 
   async getNeighbors(id) {
@@ -101,10 +102,14 @@ export class MemoryAPI {
     return this.api.get('/memory/summary');
   }
 
-  async ingestConversation(turns, { profileName = null, sessionId = null } = {}) {
-    const body = { turns };
-    if (profileName) body.profile_name = profileName;
-    if (sessionId) body.session_id = sessionId;
+  async ingestConversation(turns, {
+    sessionBoundaries = null, conversationId = null, sessionDates = null,
+    turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4
+  } = {}) {
+    const body = { turns, turns_per_chunk: turnsPerChunk, max_chunk_chars: maxChunkChars, max_concurrent: maxConcurrent };
+    if (sessionBoundaries) body.session_boundaries = sessionBoundaries;
+    if (conversationId) body.conversation_id = conversationId;
+    if (sessionDates) body.session_dates = sessionDates;
     return this.api.post('/memory/ingest/conversation', body);
   }
 
@@ -147,27 +152,19 @@ export class MemoryAPI {
   }
 
   async getPlan(planId) {
-    return this.api.get(`/memory/${planId}`);
+    return this.api.get(`/memory/plans/${planId}`);
   }
 
-  async deletePlan(planId) {
-    return this.api.delete(`/memory/${planId}`);
+  async updatePlanTask(planId, { taskId, status }) {
+    return this.api.patch(`/memory/plans/${planId}/task`, { task_id: taskId, status });
   }
 
-  async updatePlanTask(planId, { taskId, status, outcome = null }) {
-    const body = { task_id: taskId, status };
-    if (outcome) body.outcome = outcome;
-    return this.api.patch(`/memory/${planId}/task`, body);
-  }
-
-  async completePlan(planId, { summary = null, graduateToDecision = false } = {}) {
-    const body = { graduate_to_decision: graduateToDecision };
-    if (summary) body.summary = summary;
-    return this.api.post(`/memory/${planId}/complete`, body);
+  async completePlan(planId, { graduate = false } = {}) {
+    return this.api.post(`/memory/plans/${planId}/complete`, { graduate });
   }
 
   async failPlan(planId, reason) {
-    return this.api.post(`/memory/${planId}/fail`, { reason });
+    return this.api.post(`/memory/plans/${planId}/fail`, { reason });
   }
 
   async link(sourceId, targetId, linkType = 'RELATED') {
