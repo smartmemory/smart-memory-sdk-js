@@ -80,8 +80,94 @@ export class MemoryAPI {
     });
   }
 
+  async getLineage(id) {
+    return this.api.get(`/memory/${id}/lineage`);
+  }
+
+  async getLinks(id) {
+    return this.api.get(`/memory/${id}/links`);
+  }
+
+  async searchByMetadata(filters = {}, { limit = 50, offset = 0 } = {}) {
+    const params = new URLSearchParams({ limit, offset, ...filters }).toString();
+    return this.api.get(`/memory/by-metadata${params ? '?' + params : ''}`);
+  }
+
+  async getNeighbors(id) {
+    return this.api.get(`/memory/${id}/neighbors`);
+  }
+
   async getSummary() {
     return this.api.get('/memory/summary');
+  }
+
+  async ingestConversation(turns, { profileName = null, sessionId = null } = {}) {
+    const body = { turns };
+    if (profileName) body.profile_name = profileName;
+    if (sessionId) body.session_id = sessionId;
+    return this.api.post('/memory/ingest/conversation', body);
+  }
+
+  async ingestDocument(content, { title = null, source = null, chunkStrategy = null } = {}) {
+    const body = { content };
+    if (title) body.title = title;
+    if (source) body.source = source;
+    if (chunkStrategy) body.chunk_strategy = chunkStrategy;
+    return this.api.post('/memory/ingest/document', body);
+  }
+
+  async codeIndex(path, { repo = null, commit = null } = {}) {
+    const body = { path };
+    if (repo) body.repo = repo;
+    if (commit) body.commit = commit;
+    return this.api.post('/memory/code/index', body);
+  }
+
+  async codeSearch(query, { entityType = null, repo = null, limit = 20, semantic = false } = {}) {
+    const params = new URLSearchParams({ query, limit, semantic });
+    if (entityType) params.append('entity_type', entityType);
+    if (repo) params.append('repo', repo);
+    return this.api.get(`/memory/code/search?${params}`);
+  }
+
+  async codeContext(entityName, { repo = null } = {}) {
+    const params = new URLSearchParams({ entity_name: entityName });
+    if (repo) params.append('repo', repo);
+    return this.api.get(`/memory/code/context?${params}`);
+  }
+
+  async codeDeadCode(repo) {
+    return this.api.get(`/memory/code/dead-code?repo=${encodeURIComponent(repo)}`);
+  }
+
+  async codeDependencies(entityName, { direction = 'both', repo = null } = {}) {
+    const params = new URLSearchParams({ entity_name: entityName, direction });
+    if (repo) params.append('repo', repo);
+    return this.api.get(`/memory/code/dependencies?${params}`);
+  }
+
+  async getPlan(planId) {
+    return this.api.get(`/memory/${planId}`);
+  }
+
+  async deletePlan(planId) {
+    return this.api.delete(`/memory/${planId}`);
+  }
+
+  async updatePlanTask(planId, { taskId, status, outcome = null }) {
+    const body = { task_id: taskId, status };
+    if (outcome) body.outcome = outcome;
+    return this.api.patch(`/memory/${planId}/task`, body);
+  }
+
+  async completePlan(planId, { summary = null, graduateToDecision = false } = {}) {
+    const body = { graduate_to_decision: graduateToDecision };
+    if (summary) body.summary = summary;
+    return this.api.post(`/memory/${planId}/complete`, body);
+  }
+
+  async failPlan(planId, reason) {
+    return this.api.post(`/memory/${planId}/fail`, { reason });
   }
 
   async link(sourceId, targetId, linkType = 'RELATED') {
