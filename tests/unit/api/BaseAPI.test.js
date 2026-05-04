@@ -20,6 +20,33 @@ describe('BaseAPI', () => {
   });
 
   describe('request', () => {
+    // Regression: native fetch enforces `this === Window`. A previous
+    // implementation returned `globalThis.fetch` from the fetchFn getter as
+    // a bare reference; calling `this.fetchFn(...)` then invoked fetch with
+    // `this = undefined`, throwing "Failed to execute 'fetch' on 'Window':
+    // Illegal invocation". This test pins the binding contract.
+    it('does not lose this-binding when invoking native fetch', async () => {
+      let capturedThis = 'unset';
+      // Simulate the browser's native binding check: throw unless called as a
+      // method on globalThis (or with explicit binding). vi.spyOn would smear
+      // over this — assign a function whose body inspects `this`.
+      const nativeLike = function (url, init) {
+        capturedThis = this;
+        if (this !== globalThis) {
+          throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+        }
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+      };
+      const original = globalThis.fetch;
+      globalThis.fetch = nativeLike;
+      try {
+        await expect(baseAPI.get('/memory/list')).resolves.toEqual({});
+        expect(capturedThis).toBe(globalThis);
+      } finally {
+        globalThis.fetch = original;
+      }
+    });
+
     it('should make GET request with auth headers', async () => {
       authCore.currentToken = 'test-token';
       authCore.tokenManager.setTeamId('team-1');

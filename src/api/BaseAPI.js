@@ -12,7 +12,11 @@ export class BaseAPI {
   }
 
   get fetchFn() {
-    return this._customFetchFn || globalThis.fetch;
+    // Native fetch requires `this` to be Window/WorkerGlobalScope. Returning
+    // a bare reference and calling it as `this.fetchFn(...)` loses that
+    // binding and throws "Illegal invocation". Bind to globalThis so callers
+    // can invoke the result as a free function.
+    return this._customFetchFn || globalThis.fetch.bind(globalThis);
   }
 
   async request(endpoint, options = {}) {

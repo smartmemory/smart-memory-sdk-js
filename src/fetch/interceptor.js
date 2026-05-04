@@ -8,7 +8,12 @@
  * @returns {function} uninstall function to restore original fetch
  */
 export function installInterceptor(authCore, { urlPatterns = [] } = {}) {
+  // Capture the original reference so uninstall() can restore it identically.
   const originalFetch = globalThis.fetch;
+  // Native fetch requires `this` to be Window/WorkerGlobalScope — calling a
+  // bare reference throws "Illegal invocation". Use a bound copy internally
+  // for calls; keep the unbound reference for uninstall identity.
+  const boundFetch = originalFetch.bind(globalThis);
 
   globalThis.fetch = async function interceptedFetch(url, options = {}) {
     const urlStr = typeof url === 'string' ? url : url.toString();
@@ -17,7 +22,7 @@ export function installInterceptor(authCore, { urlPatterns = [] } = {}) {
       urlPatterns.some(pattern => urlStr.includes(pattern));
 
     if (!shouldIntercept) {
-      return originalFetch(url, options);
+      return boundFetch(url, options);
     }
 
     const headers = {
@@ -25,7 +30,7 @@ export function installInterceptor(authCore, { urlPatterns = [] } = {}) {
       ...authCore.getAuthHeaders()
     };
 
-    return originalFetch(url, { ...options, headers });
+    return boundFetch(url, { ...options, headers });
   };
 
   return function uninstall() {
