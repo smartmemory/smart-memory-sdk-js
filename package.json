@@ -6,11 +6,26 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
-    "./core": "./dist/core.js",
-    "./react": "./dist/react.js",
-    "./fetch": "./dist/fetch.js",
-    "./progress": "./dist/progress.js"
+    ".": {
+      "development": "./src/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "development": "./src/core.js",
+      "default": "./dist/core.js"
+    },
+    "./react": {
+      "development": "./src/react/index.js",
+      "default": "./dist/react.js"
+    },
+    "./fetch": {
+      "development": "./src/fetch/index.js",
+      "default": "./dist/fetch.js"
+    },
+    "./progress": {
+      "development": "./src/progress.ts",
+      "default": "./dist/progress.js"
+    }
   },
   "files": [
     "dist"
