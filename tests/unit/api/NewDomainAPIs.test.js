@@ -50,8 +50,43 @@ describe('DecisionAPI (new methods)', () => {
       source_session_id: null,
       evidence_ids: null,
       domain: 'infrastructure',
-      tags: ['database', 'graph']
+      tags: ['database', 'graph'],
+      // CORE-EXPERTISE-1 Phase 1 — new fields default null when omitted.
+      rejected_alternatives: null,
+      rationale: null,
+      constraints: null
     });
+  });
+
+  it('should create a decision with expertise fields (CORE-EXPERTISE-1)', async () => {
+    const api = mockBaseAPI();
+    // Stub the response so we can assert the SDK passes it through to the caller.
+    api.post = vi.fn().mockResolvedValue({
+      decision_id: 'dec_exp',
+      status: 'active',
+      rejected_alternatives: ['session tokens', 'OAuth'],
+      rationale: 'Stateless plus mobile coverage',
+      constraints: ['mobile <v3.2', 'no shared store']
+    });
+    const decisions = new DecisionAPI(api);
+    const result = await decisions.create({
+      content: 'Use JWT for auth tokens',
+      decisionType: 'choice',
+      rejectedAlternatives: ['session tokens', 'OAuth'],
+      rationale: 'Stateless plus mobile coverage',
+      constraints: ['mobile <v3.2', 'no shared store']
+    });
+
+    // Outbound payload uses snake_case.
+    const payload = api.post.mock.calls[0][1];
+    expect(payload.rejected_alternatives).toEqual(['session tokens', 'OAuth']);
+    expect(payload.rationale).toBe('Stateless plus mobile coverage');
+    expect(payload.constraints).toEqual(['mobile <v3.2', 'no shared store']);
+
+    // Inbound response surfaces the three fields back to the caller.
+    expect(result.rejected_alternatives).toEqual(['session tokens', 'OAuth']);
+    expect(result.rationale).toBe('Stateless plus mobile coverage');
+    expect(result.constraints).toEqual(['mobile <v3.2', 'no shared store']);
   });
 
   it('should get a decision by ID', async () => {

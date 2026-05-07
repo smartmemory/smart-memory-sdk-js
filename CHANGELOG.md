@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added (CORE-EXPERTISE-1 Phase 1, 2026-05-07)
+
+- **`DecisionAPI.create()` accepts `rejectedAlternatives`, `rationale`, `constraints`.** Three new optional camelCase params forwarded to `POST /memory/decisions/create` as snake_case payload keys (`rejected_alternatives`, `rationale`, `constraints`). 1 new unit test in `tests/unit/api/NewDomainAPIs.test.js` plus existing test updated for the new payload shape. Feature folder: `smart-memory-docs/docs/features/CORE-EXPERTISE-1/phase-1-decision-schema/`.
+
 ### Added (DIST-OBSIDIAN-1)
 
 - **`new BaseAPI(authCore, { fetchFn })` and `new SmartMemoryClient({ ..., fetchFn })`.** Optional `fetchFn` constructor option to inject a custom fetch-compatible function for environments where the global `fetch` is unavailable or restricted (notably Obsidian, where network calls must go through `requestUrl`). Defaults to global `fetch` when omitted; behavior unchanged for existing callers. Propagates from `SmartMemoryClient` config through to `BaseAPI` so all sub-API HTTP calls use the injected function. New test in `tests/api/BaseAPI.test.js`.

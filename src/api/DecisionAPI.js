@@ -44,7 +44,10 @@ export class DecisionAPI {
     sourceSessionId = null,
     evidenceIds = null,
     domain = null,
-    tags = null
+    tags = null,
+    rejectedAlternatives = null,
+    rationale = null,
+    constraints = null
   }) {
     return this.api.post('/memory/decisions/create', {
       content,
@@ -54,7 +57,10 @@ export class DecisionAPI {
       source_session_id: sourceSessionId,
       evidence_ids: evidenceIds,
       domain,
-      tags
+      tags,
+      rejected_alternatives: rejectedAlternatives,
+      rationale,
+      constraints
     });
   }
 
