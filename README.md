@@ -1,5 +1,7 @@
 # @smartmemory/sdk-js
 
+**Version:** 0.6.0
+
 Unified JavaScript SDK for [SmartMemory](https://smartmemory.ai) — consolidates authentication and API client logic across all SmartMemory frontend applications.
 
 ## Features
@@ -264,3 +266,7 @@ npm run build         # production build
 ## License
 
 MIT
+
+## Documentation
+
+Full SmartMemory documentation: https://docs.smartmemory.ai
