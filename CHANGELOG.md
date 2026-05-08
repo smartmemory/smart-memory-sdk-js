@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added (CORE-EXPERTISE-1 Phase 4a, 2026-05-08)
+
+- **`MemoryAPI.search(query, { expertise: true })` returns the typed-dict response.** New `expertise` boolean option forwarded as `expertise: true` in the POST body; when set, the service responds with `{ results: { decision: [...], constraint: [...], learned: [...], opinion: [...], reasoning: [...], observation: [...] } }` keyed by expertise memory type. Default behaviour (flat list) unchanged. JSDoc covers the conditional return shape. 2 new unit tests in `tests/unit/api/MemoryAPI.test.js` (passthrough body + omission when not set). Contract: `smart-memory-docs/docs/features/CORE-EXPERTISE-1/expertise-search-contract.json`.
+
 ### Added (CORE-EXPERTISE-1 Phase 1, 2026-05-07)
 
 - **`DecisionAPI.create()` accepts `rejectedAlternatives`, `rationale`, `constraints`.** Three new optional camelCase params forwarded to `POST /memory/decisions/create` as snake_case payload keys (`rejected_alternatives`, `rationale`, `constraints`). 1 new unit test in `tests/unit/api/NewDomainAPIs.test.js` plus existing test updated for the new payload shape. Feature folder: `smart-memory-docs/docs/features/CORE-EXPERTISE-1/phase-1-decision-schema/`.

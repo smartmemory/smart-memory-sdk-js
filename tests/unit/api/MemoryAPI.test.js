@@ -91,6 +91,31 @@ describe('MemoryAPI', () => {
     });
   });
 
+  // CORE-EXPERTISE-1 Phase 4a — expertise flag toggles typed-dict response shape.
+  it('search should pass expertise=true through to body', async () => {
+    baseAPI.post.mockResolvedValueOnce({
+      results: { decision: [], constraint: [], learned: [], opinion: [], reasoning: [], observation: [] }
+    });
+    const result = await memoryAPI.search('auth', { topK: 5, expertise: true });
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/search', {
+      query: 'auth',
+      top_k: 5,
+      enable_hybrid: true,
+      expertise: true
+    });
+    expect(result).toHaveProperty('results');
+    expect(Object.keys(result.results)).toEqual(
+      expect.arrayContaining(['decision', 'constraint', 'learned', 'opinion', 'reasoning', 'observation'])
+    );
+  });
+
+  it('search should omit expertise when not set (default flat list)', async () => {
+    await memoryAPI.search('plain query');
+    const callBody = baseAPI.post.mock.calls.at(-1)[1];
+    expect(callBody).not.toHaveProperty('expertise');
+  });
+
   it('ingest should POST to /memory/ingest', async () => {
     await memoryAPI.ingest('raw content', { extractorName: 'llm' });
 

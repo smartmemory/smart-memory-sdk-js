@@ -56,9 +56,25 @@ export class MemoryAPI {
     return this.api.get(url);
   }
 
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null } = {}) {
+  /**
+   * Search for memory items.
+   *
+   * @param {string} query - Search query string.
+   * @param {object} [options]
+   * @param {number} [options.topK=5]
+   * @param {boolean} [options.enableHybrid=true]
+   * @param {string|null} [options.memoryType=null]
+   * @param {boolean} [options.expertise=false] - When true (CORE-EXPERTISE-1 Phase 4a),
+   *   the response shape changes from a flat list to `{results: {<expertise_type>: [items]}}`
+   *   keyed by expertise type (decision, constraint, learned, opinion, reasoning, observation).
+   *   Each bucket holds up to topK items.
+   * @returns {Promise<Array|Object>} A flat array of items by default; a typed-dict
+   *   `{results: {decision: [...], constraint: [...], ...}}` when `expertise: true`.
+   */
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
+    if (expertise) body.expertise = true;
     return this.api.post('/memory/search', body);
   }
 
