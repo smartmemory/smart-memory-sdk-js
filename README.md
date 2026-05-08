@@ -119,6 +119,27 @@ const client = new SmartMemoryClient({
 
 ## Domain APIs
 
+### Expertise Layer
+
+SmartMemory's [expertise layer](https://docs.smartmemory.ai/smartmemory/concepts/expertise-vs-knowledge) — `decision`, `constraint`, `learned`, `opinion`, `reasoning`, `observation` — surfaces in this SDK via `client.decisions.create()` (with structured `rejectedAlternatives` / `rationale` / `constraints`) for capture and via `client.memories.search(query, { expertise: true })` for partitioned recall.
+
+```javascript
+// Capture
+await client.decisions.create({
+  title: 'Adopt FalkorDB',
+  rejectedAlternatives: ['Neo4j', 'Memgraph'],
+  rationale: 'Smallest ops surface; vector-native; permissive license.',
+  constraints: ['Must support Cypher subset'],
+});
+
+// Recall — typed-dict, partitioned by expertise type
+const results = await client.memories.search('graph db choice', { expertise: true });
+// { decision: [...], constraint: [...], learned: [...],
+//   opinion: [...], reasoning: [...], observation: [...] }
+```
+
+Default `client.memories.search(query)` returns the flat list — no breaking change. The `{ expertise: true }` option switches the response shape; the SDK passes it through verbatim.
+
 ### Memories
 
 ```javascript

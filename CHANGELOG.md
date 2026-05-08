@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed (CORE-EXPERTISE-1 Phase 4b, 2026-05-08)
+
+- **README gains "Expertise Layer" Domain APIs section.** Shows `client.decisions.create({ rejectedAlternatives, rationale, constraints })` for capture and `client.memories.search(query, { expertise: true })` returning the typed dict for partitioned recall. Links to the canonical 1-pager. No code change.
+
 ### Added (CORE-EXPERTISE-1 Phase 4a, 2026-05-08)
 
 - **`MemoryAPI.search(query, { expertise: true })` returns the typed-dict response.** New `expertise` boolean option forwarded as `expertise: true` in the POST body; when set, the service responds with `{ results: { decision: [...], constraint: [...], learned: [...], opinion: [...], reasoning: [...], observation: [...] } }` keyed by expertise memory type. Default behaviour (flat list) unchanged. JSDoc covers the conditional return shape. 2 new unit tests in `tests/unit/api/MemoryAPI.test.js` (passthrough body + omission when not set). Contract: `smart-memory-docs/docs/features/CORE-EXPERTISE-1/expertise-search-contract.json`.
