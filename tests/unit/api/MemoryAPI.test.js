@@ -116,6 +116,36 @@ describe('MemoryAPI', () => {
     expect(callBody).not.toHaveProperty('expertise');
   });
 
+  // RECALL-CITATIONS-1 — cite flag wraps response { results, citations }
+  it('search should pass cite=true through to body', async () => {
+    const wrapped = {
+      results: [
+        { item_id: 'id-1', content: 'alpha', memory_type: 'semantic', score: 0.9 }
+      ],
+      citations: [
+        { n: 1, item_id: 'id-1', item_type: 'semantic', preview: 'alpha', score: 0.9, footnote_marker: '[^1]' }
+      ]
+    };
+    baseAPI.post.mockResolvedValueOnce(wrapped);
+    const result = await memoryAPI.search('anything', { topK: 5, cite: true });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/search', {
+      query: 'anything',
+      top_k: 5,
+      enable_hybrid: true,
+      cite: true,
+    });
+    expect(result).toHaveProperty('results');
+    expect(result).toHaveProperty('citations');
+    expect(result.citations).toHaveLength(1);
+    expect(result.citations[0].footnote_marker).toBe('[^1]');
+  });
+
+  it('search should omit cite when not set', async () => {
+    await memoryAPI.search('plain query');
+    const callBody = baseAPI.post.mock.calls.at(-1)[1];
+    expect(callBody).not.toHaveProperty('cite');
+  });
+
   it('ingest should POST to /memory/ingest', async () => {
     await memoryAPI.ingest('raw content', { extractorName: 'llm' });
 

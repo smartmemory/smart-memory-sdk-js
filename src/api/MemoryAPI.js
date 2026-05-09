@@ -68,13 +68,18 @@ export class MemoryAPI {
    *   the response shape changes from a flat list to `{results: {<expertise_type>: [items]}}`
    *   keyed by expertise type (decision, constraint, learned, opinion, reasoning, observation).
    *   Each bucket holds up to topK items.
-   * @returns {Promise<Array|Object>} A flat array of items by default; a typed-dict
-   *   `{results: {decision: [...], constraint: [...], ...}}` when `expertise: true`.
+   * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the response
+   *   is wrapped as `{results: <existing>, citations: [{n, item_id, item_type, preview, score, footnote_marker}]}`.
+   *   The `citations` array holds the top-3 results pre-formatted for footnote rendering.
+   *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
+   * @returns {Promise<Array|Object>} A flat array by default; `{results: {...buckets}}`
+   *   when `expertise: true`; `{results, citations}` wrapper when `cite: true`.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
+    if (cite) body.cite = true;
     return this.api.post('/memory/search', body);
   }
 

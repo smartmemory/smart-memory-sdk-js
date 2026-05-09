@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added (RECALL-CITATIONS-1, 2026-05-10)
+
+- **`memoryAPI.search(query, { cite: true })`** opts into the citation-ready response. When `cite: true`, the response is the wrapped `{ results, citations }` envelope; `results` preserves the existing flat-list / typed-dict shape and `citations` is the top-3 array shaped `{ n, item_id, item_type, preview, score, footnote_marker }` per the RECALL-CITATIONS-1 contract. The SDK does no unwrapping — it returns the envelope as-is so callers can render the footnote block directly. Empty result set with `cite: true` returns `citations: []` (never omitted). 2 new unit tests in `tests/unit/api/MemoryAPI.test.js`.
+
 ### Changed (CORE-EXPERTISE-1 Phase 4b, 2026-05-08)
 
 - **README gains "Expertise Layer" Domain APIs section.** Shows `client.decisions.create({ rejectedAlternatives, rationale, constraints })` for capture and `client.memories.search(query, { expertise: true })` returning the typed dict for partitioned recall. Links to the canonical 1-pager. No code change.
