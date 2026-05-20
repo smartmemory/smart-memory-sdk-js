@@ -120,6 +120,45 @@ export class TokenManager {
     }
   }
 
+  startImpersonation({ token, teamId, tenantId, email }) {
+    if (this.storageType === 'memory') return;
+    const store = localStorage;
+    store.setItem('sm_impersonate_original_token', this.getAccessToken() || '');
+    store.setItem('sm_impersonate_original_team', this.getTeamId() || '');
+    store.setItem('sm_impersonate_original_tenant', this.getTenantId() || '');
+    const currentUser = this.getUser();
+    if (currentUser) store.setItem('sm_impersonate_original_user', JSON.stringify(currentUser));
+    store.setItem('sm_impersonate_email', email || '');
+    this.setAccessToken(token);
+    this.setTeamId(teamId);
+    this.setTenantId(tenantId);
+  }
+
+  endImpersonation() {
+    if (this.storageType === 'memory') return;
+    const store = localStorage;
+    const origToken = store.getItem('sm_impersonate_original_token');
+    const origTeam = store.getItem('sm_impersonate_original_team');
+    const origTenant = store.getItem('sm_impersonate_original_tenant');
+    const origUser = store.getItem('sm_impersonate_original_user');
+    if (origToken) this.setAccessToken(origToken);
+    if (origTeam) this.setTeamId(origTeam);
+    if (origTenant) this.setTenantId(origTenant);
+    if (origUser) { try { this.setUser(JSON.parse(origUser)); } catch { /* ignore */ } }
+    store.removeItem('sm_impersonate_original_token');
+    store.removeItem('sm_impersonate_original_team');
+    store.removeItem('sm_impersonate_original_tenant');
+    store.removeItem('sm_impersonate_original_user');
+    store.removeItem('sm_impersonate_email');
+  }
+
+  getImpersonationState() {
+    if (this.storageType === 'memory') return null;
+    const email = localStorage.getItem('sm_impersonate_email');
+    if (!email) return null;
+    return { email, hasOriginal: !!localStorage.getItem('sm_impersonate_original_token') };
+  }
+
   /** @private */
   _getFromStorage(key, aliases = []) {
     try {
