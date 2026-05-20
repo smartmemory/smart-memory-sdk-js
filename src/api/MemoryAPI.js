@@ -75,11 +75,17 @@ export class MemoryAPI {
    * @returns {Promise<Array|Object>} A flat array by default; `{results: {...buckets}}`
    *   when `expertise: true`; `{results, citations}` wrapper when `cite: true`.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
     if (cite) body.cite = true;
+    if (decompose) body.decompose = true;
+    if (multiHop) body.multi_hop = true;
+    if (multiHop && maxHops !== 3) body.max_hops = maxHops;
+    if (multiHop && budgetMs !== 1500) body.budget_ms = budgetMs;
+    if (multiHop && semanticHops) body.semantic_hops = true;
+    if (includeReference) body.include_reference = true;
     return this.api.post('/memory/search', body);
   }
 
