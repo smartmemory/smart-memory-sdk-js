@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed (CORE-RECALL-LINEAGE-1 Phase 3, 2026-05-22) — SearchResponse envelope is pass-through
+
+- **`MemoryAPI.search()`** is unchanged at the code level — the SDK is pass-through and the service now returns the unified `{results, group_roots, citations?}` envelope. JSDoc updated to describe the new shape and warn callers who previously indexed the response as a bare array to read `response.results` instead.
+- Per-result `lineage_roots: string[]` (always non-empty; canonicals self-reference) and per-envelope `group_roots: Record<string, GroupRootStub>` are now first-class. See `smart-memory-docs/docs/features/CORE-SEARCH-1/search-contract.json` for canonical shapes.
+- No new dependency; no API break (the field was previously serialised-but-undeclared in JSDoc).
+
 ### Added (RECALL-CITATIONS-1, 2026-05-10)
 
 - **`memoryAPI.search(query, { cite: true })`** opts into the citation-ready response. When `cite: true`, the response is the wrapped `{ results, citations }` envelope; `results` preserves the existing flat-list / typed-dict shape and `citations` is the top-3 array shaped `{ n, item_id, item_type, preview, score, footnote_marker }` per the RECALL-CITATIONS-1 contract. The SDK does no unwrapping — it returns the envelope as-is so callers can render the footnote block directly. Empty result set with `cite: true` returns `citations: []` (never omitted). 2 new unit tests in `tests/unit/api/MemoryAPI.test.js`.
