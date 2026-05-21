@@ -68,12 +68,17 @@ export class MemoryAPI {
    *   the response shape changes from a flat list to `{results: {<expertise_type>: [items]}}`
    *   keyed by expertise type (decision, constraint, learned, opinion, reasoning, observation).
    *   Each bucket holds up to topK items.
-   * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the response
-   *   is wrapped as `{results: <existing>, citations: [{n, item_id, item_type, preview, score, footnote_marker}]}`.
-   *   The `citations` array holds the top-3 results pre-formatted for footnote rendering.
+   * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
+   *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
-   * @returns {Promise<Array|Object>} A flat array by default; `{results: {...buckets}}`
-   *   when `expertise: true`; `{results, citations}` wrapper when `cite: true`.
+   * @returns {Promise<{results: Array|Object, group_roots: Object, citations?: Array}>}
+   *   CORE-RECALL-LINEAGE-1: the response is ALWAYS a `SearchResponse` envelope —
+   *   `results` is a flat array by default and a `{bucket: [...]}` map under
+   *   `expertise: true`; `group_roots` is always present (possibly `{}`) and
+   *   carries `GroupRootStub`s for any lineage root_id referenced by some
+   *   result's `lineage_roots` but not itself in `results`; `citations` is
+   *   present only under `cite: true`. Pre-LINEAGE-1 callers who indexed into a
+   *   bare array must read `response.results` instead.
    */
   async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
