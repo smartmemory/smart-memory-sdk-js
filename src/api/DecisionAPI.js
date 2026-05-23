@@ -66,7 +66,16 @@ export class DecisionAPI {
 
   /**
    * List active decisions with optional filters.
-   * @param {Object} [params] - Query parameters (domain, decision_type, min_confidence, limit)
+   * @param {Object} [params] - Query parameters
+   * @param {string} [params.domain] - Filter by domain
+   * @param {string} [params.decision_type] - Filter by decision type
+   * @param {number} [params.min_confidence=0.0] - Minimum confidence (0..1)
+   * @param {number} [params.limit=50] - Maximum results
+   * @param {string} [params.provenance_memory_id] - Inverse-provenance filter
+   *   (CORE-DECISION-PROVENANCE-LOOKUP-1). When set, returns only decisions whose
+   *   provenance subgraph contains this memory id. Filters compose in-query so
+   *   the response never silently truncates below `limit` when more matches exist.
+   *   Unknown or out-of-scope memory ids return an empty list (never 404).
    */
   async list(params = {}) {
     const qs = new URLSearchParams(params).toString();

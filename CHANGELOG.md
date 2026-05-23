@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added (CORE-DECISION-PROVENANCE-LOOKUP-1, 2026-05-23) — `DecisionAPI.list({ provenance_memory_id })`
+
+- **`client.decisions.list(params)`** now documents and accepts `provenance_memory_id` in `params`. The underlying `URLSearchParams` pass-through already supported arbitrary params, so no code change was needed — only a JSDoc update that surfaces the new query semantics: returns only active decisions whose provenance subgraph contains the given memory; existing filters compose in-query; unknown/out-of-scope memory ids return an empty list (never 404).
+
+
 ### Changed (CORE-RECALL-LINEAGE-1 Phase 3, 2026-05-22) — SearchResponse envelope is pass-through
 
 - **`MemoryAPI.search()`** is unchanged at the code level — the SDK is pass-through and the service now returns the unified `{results, group_roots, citations?}` envelope. JSDoc updated to describe the new shape and warn callers who previously indexed the response as a bare array to read `response.results` instead.
