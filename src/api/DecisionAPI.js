@@ -35,6 +35,9 @@ export class DecisionAPI {
    * @param {string[]} [params.evidenceIds]
    * @param {string} [params.domain]
    * @param {string[]} [params.tags]
+   * @param {string} [params.agentId] - Producing agent id (CORE-AGENT-ATTRIBUTION-1).
+   *   When omitted, the backend auto-populates from scope.resolve_agent_id() —
+   *   non-null only when the caller's user_type=='agent'.
    */
   async create({
     content,
@@ -47,7 +50,8 @@ export class DecisionAPI {
     tags = null,
     rejectedAlternatives = null,
     rationale = null,
-    constraints = null
+    constraints = null,
+    agentId = null
   }) {
     return this.api.post('/memory/decisions/create', {
       content,
@@ -60,7 +64,8 @@ export class DecisionAPI {
       tags,
       rejected_alternatives: rejectedAlternatives,
       rationale,
-      constraints
+      constraints,
+      agent_id: agentId
     });
   }
 
@@ -71,6 +76,8 @@ export class DecisionAPI {
    * @param {string} [params.decision_type] - Filter by decision type
    * @param {number} [params.min_confidence=0.0] - Minimum confidence (0..1)
    * @param {number} [params.limit=50] - Maximum results
+   * @param {string} [params.agent_id] - Filter by producing agent id
+   *   (CORE-AGENT-ATTRIBUTION-1). NULL-valued rows are excluded when set.
    * @param {string} [params.provenance_memory_id] - Inverse-provenance filter
    *   (CORE-DECISION-PROVENANCE-LOOKUP-1). When set, returns only decisions whose
    *   provenance subgraph contains this memory id. Filters compose in-query so

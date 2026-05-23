@@ -2,6 +2,7 @@ import { AuthCore } from '../auth/AuthCore.js';
 import { BaseAPI } from './BaseAPI.js';
 import { MemoryAPI } from './MemoryAPI.js';
 import { DecisionAPI } from './DecisionAPI.js';
+import { OpinionAPI } from './OpinionAPI.js';
 import { GraphAPI } from './GraphAPI.js';
 import { TeamAPI } from './TeamAPI.js';
 import { ProfileAPI } from './ProfileAPI.js';
@@ -38,6 +39,7 @@ export class SmartMemoryClient {
 
     this.memories = new MemoryAPI(baseAPI);
     this.decisions = new DecisionAPI(baseAPI);
+    this.opinions = new OpinionAPI(baseAPI);
     this.graph = new GraphAPI(baseAPI);
     this.teams = new TeamAPI(baseAPI);
     this.profiles = new ProfileAPI(baseAPI);
