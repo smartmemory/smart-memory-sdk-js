@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added (CORE-AGENT-2, 2026-05-24) — `client.agents.getEvaluation()` + `listEvaluationHistory()`
+
+- **`client.agents.getEvaluation(agentId, { dimension, domain })`** — wraps `GET /memory/agents/{agent_id}/evaluation`. Returns `{ evaluation: object | null }`; cold-start returns `{ evaluation: null }` (never throws) per the contract. 404 on cross-tenant / unknown agent.
+- **`client.agents.listEvaluationHistory(agentId, { dimension, domain, limit })`** — wraps `GET /memory/agents/{agent_id}/evaluation/history`. Returns a list of historical evaluation rows in supersession order.
+- Test harness for `src/api/AgentAPI.js` doesn't yet exist in this repo; new methods are verified by code inspection + sibling pattern matching. Filed as `SDK-JS-AGENTAPI-TESTS` follow-up (see CORE-AGENT-2 report §7).
+
+Source: `smart-memory-docs/docs/features/CORE-AGENT-2/report.md`. Contract: `smart-memory-docs/docs/features/CORE-AGENT-2/evaluation-contract.json`.
+
 ### Added (CORE-DECISION-PROVENANCE-LOOKUP-1, 2026-05-23) — `DecisionAPI.list({ provenance_memory_id })`
 
 - **`client.decisions.list(params)`** now documents and accepts `provenance_memory_id` in `params`. The underlying `URLSearchParams` pass-through already supported arbitrary params, so no code change was needed — only a JSDoc update that surfaces the new query semantics: returns only active decisions whose provenance subgraph contains the given memory; existing filters compose in-query; unknown/out-of-scope memory ids return an empty list (never 404).
