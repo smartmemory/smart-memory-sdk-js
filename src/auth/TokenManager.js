@@ -122,17 +122,18 @@ export class TokenManager {
 
   getImpersonationState() {
     if (this.storageType === 'memory') return null;
-    const email = localStorage.getItem('sm_impersonate_email');
+    // Impersonation is tab-scoped in sessionStorage so it dies with the tab.
+    const email = sessionStorage.getItem('sm_impersonate_email');
     if (!email) return null;
     return { email };
   }
 
   clearImpersonation() {
     if (this.storageType === 'memory') return;
-    localStorage.removeItem('sm_impersonate_token');
-    localStorage.removeItem('sm_impersonate_team');
-    localStorage.removeItem('sm_impersonate_tenant');
-    localStorage.removeItem('sm_impersonate_email');
+    sessionStorage.removeItem('sm_impersonate_token');
+    sessionStorage.removeItem('sm_impersonate_team');
+    sessionStorage.removeItem('sm_impersonate_tenant');
+    sessionStorage.removeItem('sm_impersonate_email');
   }
 
   /** @private */
