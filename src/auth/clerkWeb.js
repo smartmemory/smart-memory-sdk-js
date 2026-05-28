@@ -26,9 +26,16 @@ export const CLERK_APPEARANCE = {
     formFieldErrorText: 'text-red-300',
     formButtonPrimary: 'bg-blue-600 hover:bg-blue-500 text-white',
     footerActionLink: 'text-blue-400 hover:text-blue-300',
-    footer: '!bg-transparent',
+    // Clerk paints the footer with TWO stacked background-image layers, the
+    // second an opaque black linear-gradient — !bg-transparent only overrides
+    // background-COLOR, so !bg-none is required to kill the background-IMAGE
+    // and let the card show through. Verified against live DOM 2026-05-28.
+    footer: '!bg-transparent !bg-none',
     footerAction: '!bg-transparent',
     badge: 'hidden',
+    // The "Last used" pill is cl-lastAuthenticationStrategyBadge, NOT cl-badge —
+    // the badge:'hidden' above never caught it. It also clips past the card edge.
+    lastAuthenticationStrategyBadge: 'hidden',
   },
 };
 
