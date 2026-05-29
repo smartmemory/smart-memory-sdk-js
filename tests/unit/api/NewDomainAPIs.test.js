@@ -49,6 +49,7 @@ describe('DecisionAPI (new methods)', () => {
       source_trace_id: null,
       source_session_id: null,
       evidence_ids: null,
+      agent_id: null,
       domain: 'infrastructure',
       tags: ['database', 'graph'],
       // CORE-EXPERTISE-1 Phase 1 — new fields default null when omitted.
