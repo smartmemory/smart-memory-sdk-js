@@ -146,6 +146,35 @@ describe('MemoryAPI', () => {
     expect(callBody).not.toHaveProperty('cite');
   });
 
+  // NEURO-1d — consolidationFirst surfaces a consolidated summary above its scattered sources.
+  it('search should pass consolidationFirst=true through to body', async () => {
+    await memoryAPI.search('what is known about X', { topK: 5, consolidationFirst: true });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/search', {
+      query: 'what is known about X',
+      top_k: 5,
+      enable_hybrid: true,
+      consolidation_first: true,
+    });
+  });
+
+  // CORE-CONSOLIDATE-1 — includeConsolidated surfaces consolidated source memories.
+  it('search should pass includeConsolidated=true through to body', async () => {
+    await memoryAPI.search('X', { topK: 5, includeConsolidated: true });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/search', {
+      query: 'X',
+      top_k: 5,
+      enable_hybrid: true,
+      include_consolidated: true,
+    });
+  });
+
+  it('search should omit consolidation params when not set', async () => {
+    await memoryAPI.search('plain query');
+    const callBody = baseAPI.post.mock.calls.at(-1)[1];
+    expect(callBody).not.toHaveProperty('consolidation_first');
+    expect(callBody).not.toHaveProperty('include_consolidated');
+  });
+
   it('ingest should POST to /memory/ingest', async () => {
     await memoryAPI.ingest('raw content', { extractorName: 'llm' });
 

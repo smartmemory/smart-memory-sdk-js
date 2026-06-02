@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added (NEURO-1d, 2026-06-02) — `search({ consolidationFirst, includeConsolidated })`
+
+- **`client.memory.search(query, { consolidationFirst: true })`** surfaces a consolidated summary
+  above the scattered source memories it consolidates — best for synthesis queries. Opt-in; implies
+  `includeConsolidated`. **`includeConsolidated: true`** includes consolidated source memories
+  (normally hidden). Both default off → body omits the snake_case keys, so existing callers are
+  unchanged on the wire.
+- Tests: 3 new cases in `tests/unit/api/MemoryAPI.test.js` (body pass-through + default-omit), 31/31
+  green. Contract: `smart-memory-docs/docs/features/CORE-SEARCH-1/search-contract.json`.
+
 ### Added (CORE-AGENT-2, 2026-05-24) — `client.agents.getEvaluation()` + `listEvaluationHistory()`
 
 - **`client.agents.getEvaluation(agentId, { dimension, domain })`** — wraps `GET /memory/agents/{agent_id}/evaluation`. Returns `{ evaluation: object | null }`; cold-start returns `{ evaluation: null }` (never throws) per the contract. 404 on cross-tenant / unknown agent.

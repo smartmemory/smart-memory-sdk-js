@@ -68,6 +68,11 @@ export class MemoryAPI {
    *   the response shape changes from a flat list to `{results: {<expertise_type>: [items]}}`
    *   keyed by expertise type (decision, constraint, learned, opinion, reasoning, observation).
    *   Each bucket holds up to topK items.
+   * @param {boolean} [options.includeConsolidated=false] - When true (CORE-CONSOLIDATE-1),
+   *   include consolidated source memories (normally hidden) in results.
+   * @param {boolean} [options.consolidationFirst=false] - When true (NEURO-1d), surface a
+   *   consolidated summary above the scattered source memories it consolidates — best for
+   *   synthesis queries. Opt-in; implies includeConsolidated.
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
@@ -80,7 +85,7 @@ export class MemoryAPI {
    *   present only under `cite: true`. Pre-LINEAGE-1 callers who indexed into a
    *   bare array must read `response.results` instead.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
@@ -91,6 +96,8 @@ export class MemoryAPI {
     if (multiHop && budgetMs !== 1500) body.budget_ms = budgetMs;
     if (multiHop && semanticHops) body.semantic_hops = true;
     if (includeReference) body.include_reference = true;
+    if (includeConsolidated) body.include_consolidated = true; // CORE-CONSOLIDATE-1
+    if (consolidationFirst) body.consolidation_first = true;   // NEURO-1d: surface summaries above their sources
     return this.api.post('/memory/search', body);
   }
 
