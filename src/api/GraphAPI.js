@@ -5,6 +5,7 @@
  * @property {number} abstained - Single-token surfaces left untouched because >=2 canonical candidates existed.
  * @property {number} redirected_edges - External edges moved from alias nodes onto canonicals during the merge (0 when dry_run).
  * @property {string[]} ambiguous - The abstained surfaces, for observability.
+ * @property {number} disambiguated - Collisions recovered by the opt-in disambiguation pass (0 unless disambiguate=true).
  * @property {boolean} dry_run - Echoes the request flag.
  * @property {string} workspace_id - Echoed scope context.
  * @property {string} user_id - Echoed scope context.
@@ -122,9 +123,10 @@ export class GraphAPI {
    *
    * @param {Object} [options]
    * @param {boolean} [options.dryRun=false] - Compute the resolve/abstain plan and report counts without mutating the graph.
+   * @param {boolean} [options.disambiguate=false] - Opt-in (CORE-GRAPH-ALIAS-DISAMBIG-1): additionally recover colliding surfaces by structural typed-neighbor overlap, merging only on a confident, clear winner (never mis-merge). Extractor-dependent; helps LLM-extracted graphs.
    * @returns {Promise<AliasResolveReport>}
    */
-  async resolveAliases({ dryRun = false } = {}) {
-    return this.api.post(`/memory/graph/resolve-aliases?dry_run=${dryRun}`);
+  async resolveAliases({ dryRun = false, disambiguate = false } = {}) {
+    return this.api.post(`/memory/graph/resolve-aliases?dry_run=${dryRun}&disambiguate=${disambiguate}`);
   }
 }

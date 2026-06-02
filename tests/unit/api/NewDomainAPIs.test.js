@@ -192,13 +192,13 @@ describe('GraphAPI (findShortestPath)', () => {
 // ============================================================
 
 describe('GraphAPI (resolveAliases)', () => {
-  it('should POST with dry_run=false by default', async () => {
+  it('should POST with dry_run=false & disambiguate=false by default', async () => {
     const api = mockBaseAPI();
     const graph = new GraphAPI(api);
     await graph.resolveAliases();
 
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/graph/resolve-aliases?dry_run=false'
+      '/memory/graph/resolve-aliases?dry_run=false&disambiguate=false'
     );
   });
 
@@ -208,7 +208,17 @@ describe('GraphAPI (resolveAliases)', () => {
     await graph.resolveAliases({ dryRun: true });
 
     expect(api.post).toHaveBeenCalledWith(
-      '/memory/graph/resolve-aliases?dry_run=true'
+      '/memory/graph/resolve-aliases?dry_run=true&disambiguate=false'
+    );
+  });
+
+  it('should POST with disambiguate as a query param when set (CORE-GRAPH-ALIAS-DISAMBIG-1)', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.resolveAliases({ disambiguate: true });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/resolve-aliases?dry_run=false&disambiguate=true'
     );
   });
 });

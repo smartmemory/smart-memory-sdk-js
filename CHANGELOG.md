@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added (CORE-GRAPH-ALIAS-DISAMBIG-1, 2026-06-03) — `resolveAliases({ disambiguate })` (0.6.6)
+
+- **`client.graph.resolveAliases({ dryRun = false, disambiguate = false })`** threads the new opt-in
+  collision-disambiguation flag (default off) as a query param (`?dry_run=…&disambiguate=…`).
+  `AliasResolveReport` gains `disambiguated`. Contract:
+  `docs/features/CORE-GRAPH-ALIAS-DISAMBIG-1/disambiguate-contract.json`.
+
 ### Added (CORE-GRAPH-ALIAS-RESOLVE-2 B2, 2026-06-02) — `client.graph.resolveAliases({ dryRun })`
 
 - **`client.graph.resolveAliases({ dryRun = false })`** — wraps `POST /memory/graph/resolve-aliases`.
