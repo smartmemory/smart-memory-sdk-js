@@ -1,3 +1,15 @@
+/**
+ * Report returned by {@link GraphAPI#resolveAliases}.
+ * @typedef {Object} AliasResolveReport
+ * @property {number} resolved - Unambiguous alias surfaces merged into a canonical (plan count when dry_run).
+ * @property {number} abstained - Single-token surfaces left untouched because >=2 canonical candidates existed.
+ * @property {number} redirected_edges - External edges moved from alias nodes onto canonicals during the merge (0 when dry_run).
+ * @property {string[]} ambiguous - The abstained surfaces, for observability.
+ * @property {boolean} dry_run - Echoes the request flag.
+ * @property {string} workspace_id - Echoed scope context.
+ * @property {string} user_id - Echoed scope context.
+ */
+
 export class GraphAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -98,5 +110,21 @@ export class GraphAPI {
    */
   async getLinks(itemId) {
     return this.api.get(`/memory/${encodeURIComponent(itemId)}/links`);
+  }
+
+  /**
+   * Merge unambiguous single-token entity aliases ("Hudson") into their
+   * multi-token canonical ("Rock Hudson") over the caller's workspace graph,
+   * abstaining on collisions (>=2 canonical candidates).
+   *
+   * `dry_run` is a query parameter (matching the /clustering/run precedent),
+   * not a JSON body — POST .../resolve-aliases?dry_run=true.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.dryRun=false] - Compute the resolve/abstain plan and report counts without mutating the graph.
+   * @returns {Promise<AliasResolveReport>}
+   */
+  async resolveAliases({ dryRun = false } = {}) {
+    return this.api.post(`/memory/graph/resolve-aliases?dry_run=${dryRun}`);
   }
 }

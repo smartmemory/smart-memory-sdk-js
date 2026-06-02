@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added (CORE-GRAPH-ALIAS-RESOLVE-2 B2, 2026-06-02) — `client.graph.resolveAliases({ dryRun })`
+
+- **`client.graph.resolveAliases({ dryRun = false })`** — wraps `POST /memory/graph/resolve-aliases`.
+  Merges unambiguous single-token entity aliases ("Hudson") into their multi-token canonical
+  ("Rock Hudson") over the caller's workspace graph, abstaining on collisions (>=2 candidates).
+  `dry_run` is sent as a **query parameter** (`?dry_run=true`), matching the `/clustering/run`
+  precedent — not a JSON body. Returns the `AliasResolveReport` typedef:
+  `{ resolved, abstained, redirected_edges, ambiguous, dry_run, workspace_id, user_id }`.
+- Tests: 2 new cases in `tests/unit/api/NewDomainAPIs.test.js` (default `dry_run=false` + explicit
+  `dryRun: true`), 319/319 green. Contract:
+  `smart-memory-docs/docs/features/CORE-GRAPH-ALIAS-RESOLVE-2/resolve-aliases-contract.json`.
+
 ### Added (NEURO-1d, 2026-06-02) — `search({ consolidationFirst, includeConsolidated })`
 
 - **`client.memory.search(query, { consolidationFirst: true })`** surfaces a consolidated summary

@@ -188,6 +188,32 @@ describe('GraphAPI (findShortestPath)', () => {
 });
 
 // ============================================================
+// GraphAPI - resolveAliases (CORE-GRAPH-ALIAS-RESOLVE-2 B2)
+// ============================================================
+
+describe('GraphAPI (resolveAliases)', () => {
+  it('should POST with dry_run=false by default', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.resolveAliases();
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/resolve-aliases?dry_run=false'
+    );
+  });
+
+  it('should POST with dry_run as a query param when set', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.resolveAliases({ dryRun: true });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/resolve-aliases?dry_run=true'
+    );
+  });
+});
+
+// ============================================================
 // TemporalAPI
 // ============================================================
 
