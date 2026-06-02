@@ -11,6 +11,18 @@
  * @property {string} user_id - Echoed scope context.
  */
 
+/**
+ * Report returned by {@link GraphAPI#dedupEntities}.
+ * @typedef {Object} EntityDedupReport
+ * @property {number} merged_clusters - Same-name fragment (sub-)clusters collapsed into one surviving node.
+ * @property {number} merged_nodes - Total fragment nodes merged away (cluster size minus the survivor, summed).
+ * @property {number} redirected_edges - External edges moved from merged-away nodes onto survivors (0 when dry_run).
+ * @property {number} abstained_clusters - Same-name clusters left untouched (no confident identity tier — the disjoint-edge tail).
+ * @property {boolean} dry_run - Echoes the request flag.
+ * @property {string} workspace_id - Echoed scope context.
+ * @property {string} user_id - Echoed scope context.
+ */
+
 export class GraphAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -128,5 +140,27 @@ export class GraphAPI {
    */
   async resolveAliases({ dryRun = false, disambiguate = false } = {}) {
     return this.api.post(`/memory/graph/resolve-aliases?dry_run=${dryRun}&disambiguate=${disambiguate}`);
+  }
+
+  /**
+   * Dedup cross-extractor fragmented entity nodes (CORE-GRAPH-CANONICAL-DEDUP-1).
+   *
+   * Collapses same-name entity-node fragments (the same entity split across >1 node because two
+   * extractors disagreed on its type -> divergent canonical_key -> the write-time dedup missed them)
+   * into one node, precision-first, over the caller's workspace graph. Unblocks ensemble alias
+   * disambiguation. Opt-in, default-off. Recommended ensemble sequence: dedupEntities() then
+   * resolveAliases({ disambiguate: true }).
+   *
+   * Both flags are query parameters, not a JSON body — POST .../dedup-entities?dry_run=true.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.dryRun=false] - Compute the dedup plan and report counts without mutating the graph.
+   * @param {boolean} [options.requireStructuralConfirmation=true] - When true, a same-name pair merges only on T0 (same QID), T1 (same canonical_key), or T2 (>= tau_min shared typed entity-neighbors). When false, exact same-name clusters merge on name alone once T0/T1 fail (riskier disjoint-edge-tail recovery).
+   * @returns {Promise<EntityDedupReport>}
+   */
+  async dedupEntities({ dryRun = false, requireStructuralConfirmation = true } = {}) {
+    return this.api.post(
+      `/memory/graph/dedup-entities?dry_run=${dryRun}&require_structural_confirmation=${requireStructuralConfirmation}`
+    );
   }
 }

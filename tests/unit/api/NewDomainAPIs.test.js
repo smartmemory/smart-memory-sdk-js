@@ -224,6 +224,42 @@ describe('GraphAPI (resolveAliases)', () => {
 });
 
 // ============================================================
+// GraphAPI - dedupEntities (CORE-GRAPH-CANONICAL-DEDUP-1)
+// ============================================================
+
+describe('GraphAPI (dedupEntities)', () => {
+  it('should POST with dry_run=false & require_structural_confirmation=true by default', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.dedupEntities();
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/dedup-entities?dry_run=false&require_structural_confirmation=true'
+    );
+  });
+
+  it('should POST with dry_run as a query param when set', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.dedupEntities({ dryRun: true });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/dedup-entities?dry_run=true&require_structural_confirmation=true'
+    );
+  });
+
+  it('should POST with require_structural_confirmation=false when opted out', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.dedupEntities({ requireStructuralConfirmation: false });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/dedup-entities?dry_run=false&require_structural_confirmation=false'
+    );
+  });
+});
+
+// ============================================================
 // TemporalAPI
 // ============================================================
 

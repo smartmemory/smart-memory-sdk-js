@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added (CORE-GRAPH-CANONICAL-DEDUP-1, 2026-06-03) — `dedupEntities()` (0.6.7)
+
+- **`client.graph.dedupEntities({ dryRun = false, requireStructuralConfirmation = true })`** — POSTs
+  `/memory/graph/dedup-entities?dry_run=…&require_structural_confirmation=…`. Opt-in graph-maintenance op
+  that collapses same-name cross-extractor entity-node fragments into one node, unblocking ensemble alias
+  disambiguation. New `EntityDedupReport` typedef (`merged_clusters / merged_nodes / redirected_edges /
+  abstained_clusters / dry_run`). Contract:
+  `docs/features/CORE-GRAPH-CANONICAL-DEDUP-1/dedup-entities-contract.json`.
+
 ### Added (CORE-GRAPH-ALIAS-DISAMBIG-1, 2026-06-03) — `resolveAliases({ disambiguate })` (0.6.6)
 
 - **`client.graph.resolveAliases({ dryRun = false, disambiguate = false })`** threads the new opt-in
