@@ -86,6 +86,21 @@ async function openConnection() {
   await capturedOptions?.onopen?.(mockOk);
 }
 
+/**
+ * Drive onopen with a non-2xx status. The handler throws on failure (the real
+ * library catches it and routes to onerror); the mock does not, so callers must
+ * tolerate the throw. Returns the thrown error (or undefined if it resolved).
+ */
+async function openConnectionWithStatus(status: number): Promise<unknown> {
+  const resp = new Response(null, { status });
+  try {
+    await capturedOptions?.onopen?.(resp);
+    return undefined;
+  } catch (err) {
+    return err;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -399,6 +414,164 @@ describe('subscribeProgress (T011 — @internal)', () => {
 
       // onError should NOT have been called (never reached 3 consecutive)
       expect(onError).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5b. Clean server-side close is TERMINAL — no phantom onReconnect
+  //     (QUALITY-BUGHUNT-1: progress.ts:214 — silent-degradation)
+  // -------------------------------------------------------------------------
+
+  describe('onclose — clean server close is terminal, not a phantom reconnect', () => {
+    it('calls onError on the FIRST clean close (does not wait for MAX_RETRIES)', () => {
+      const onError = vi.fn();
+      const onReconnect = vi.fn();
+      subscribeProgress({
+        token: 'tok',
+        onEvent: vi.fn(),
+        onError,
+        onReconnect,
+      });
+
+      // A single clean server-side stream end. The library runs onclose() then
+      // dispose()+resolve() with NO reconnect, so this is permanently dead.
+      fireClose();
+
+      // Must surface as a terminal error immediately — NOT a phantom reconnect.
+      expect(onError).toHaveBeenCalledTimes(1);
+      const err = onError.mock.calls[0][0] as Error;
+      expect(err).toBeInstanceOf(Error);
+      expect((err as Error).message).toMatch(/closed by server/i);
+    });
+
+    it('does NOT fire onReconnect on a clean close (the library never reconnects after onclose)', () => {
+      const onReconnect = vi.fn();
+      subscribeProgress({
+        token: 'tok',
+        onEvent: vi.fn(),
+        onError: vi.fn(),
+        onReconnect,
+      });
+
+      fireClose();
+
+      // The phantom-reconnect bug: telling the consumer "reconnecting…" while
+      // the stream is dead. After the fix, onReconnect must never fire here.
+      expect(onReconnect).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent — a second close/error after onclose does not re-fire onError', () => {
+      const onError = vi.fn();
+      subscribeProgress({
+        token: 'tok',
+        onEvent: vi.fn(),
+        onError,
+        onReconnect: vi.fn(),
+      });
+
+      fireClose();
+      // Any straggler callbacks after the terminal close must be swallowed.
+      fireClose();
+      fireError(new Error('straggler'));
+
+      expect(onError).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops delivering events after a clean close', async () => {
+      const onEvent = vi.fn();
+      subscribeProgress({ token: 'tok', onEvent, onError: vi.fn() });
+      await openConnection();
+
+      fireClose();
+      fireMessage('1700000001-0', makeEvent());
+
+      // closed=true after onclose ⇒ onmessage is a no-op.
+      expect(onEvent).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5c. Non-retriable open status (401/403/404) — fail fast, do NOT retry 3×
+  //     (QUALITY-BUGHUNT-1: progress.ts:167 — correctness)
+  // -------------------------------------------------------------------------
+
+  describe('onopen — terminal 4xx fails fast (no retry storm)', () => {
+    it.each([401, 403, 404])('aborts immediately and calls onError on HTTP %i', async (status) => {
+      const onError = vi.fn();
+      const onReconnect = vi.fn();
+      subscribeProgress({
+        token: 'tok',
+        onEvent: vi.fn(),
+        onError,
+        onReconnect,
+      });
+
+      const signal = capturedOptions?.signal;
+      expect(signal?.aborted).toBe(false);
+
+      const thrown = await openConnectionWithStatus(status);
+
+      // onopen must still throw (so the real library's catch sees the aborted
+      // controller and does NOT schedule another create()).
+      expect(thrown).toBeInstanceOf(Error);
+      expect((thrown as Error).message).toContain(String(status));
+
+      // Terminal: onError fired exactly once, controller aborted, no reconnect.
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(signal?.aborted).toBe(true);
+      expect(onReconnect).not.toHaveBeenCalled();
+    });
+
+    it('does NOT retry a 401 — onerror after the terminal open is swallowed (no increment, no reconnect)', async () => {
+      const onError = vi.fn();
+      const onReconnect = vi.fn();
+      subscribeProgress({
+        token: 'expired',
+        onEvent: vi.fn(),
+        onError,
+        onReconnect,
+      });
+
+      // Terminal open throws; the real library routes that throw to onerror.
+      const thrown = await openConnectionWithStatus(401);
+      const retry = fireError(thrown);
+
+      // The bug: onopen-throw → onerror → increment → retry (3 attempts, ~3s).
+      // After the fix, the terminal path set closed=true, so onerror returns
+      // undefined WITHOUT scheduling a retry and WITHOUT a second onError.
+      expect(retry == null).toBe(true);
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onReconnect).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 5d. Transient open status (5xx/429) — still retried via onerror
+  //     (guard: the fail-fast fix must NOT swallow retriable failures)
+  // -------------------------------------------------------------------------
+
+  describe('onopen — transient non-2xx still retries', () => {
+    it.each([500, 502, 503, 429])('throws WITHOUT aborting on HTTP %i (retriable)', async (status) => {
+      const onError = vi.fn();
+      subscribeProgress({
+        token: 'tok',
+        onEvent: vi.fn(),
+        onError,
+      });
+
+      const signal = capturedOptions?.signal;
+      const thrown = await openConnectionWithStatus(status);
+
+      // Throws (so onerror runs), but the connection is NOT torn down and
+      // onError is NOT called yet — it goes through the normal retry path.
+      expect(thrown).toBeInstanceOf(Error);
+      expect(signal?.aborted).toBe(false);
+      expect(onError).not.toHaveBeenCalled();
+
+      // Routed to onerror as the library would: first failure ⇒ retry interval.
+      const retry = fireError(thrown);
+      expect(typeof retry).toBe('number');
+      expect(retry as number).toBeGreaterThan(0);
     });
   });
 

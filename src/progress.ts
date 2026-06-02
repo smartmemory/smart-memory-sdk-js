@@ -76,12 +76,22 @@ export interface SubscribeProgressOptions {
   onEvent: (event: ProgressEvent) => void;
 
   /**
-   * Called after maxRetries consecutive failures, or on a fatal (non-retriable) error.
-   * After this is called the subscription is dead — call close() is a no-op.
+   * Called when the subscription terminates without recovery. Fires on:
+   *   - maxRetries (3) consecutive transient failures,
+   *   - a non-retriable open status (401/403/404),
+   *   - a clean server-side stream close (the library does NOT reconnect after onclose).
+   * After this is called the subscription is dead and no further events arrive;
+   * close() becomes a no-op. To resume, call subscribeProgress again (e.g. with
+   * a fresh `since`/`runId`).
    */
   onError: (err: unknown) => void;
 
-  /** Called each time a non-fatal reconnect attempt is made (before maxRetries). */
+  /**
+   * Called before each non-fatal reconnect attempt (transient onerror, attempt
+   * < maxRetries). It is ONLY fired when the library will actually retry — never
+   * on a terminal path. A clean server close does NOT trigger onReconnect (the
+   * library has no reconnect after onclose); that surfaces via onError instead.
+   */
   onReconnect?: () => void;
 }
 
@@ -98,6 +108,15 @@ const SSE_PATH = '/memory/progress/stream';
 const MAX_RETRIES = 3;
 const RETRY_INTERVAL_MS = 1000;
 
+/**
+ * Status codes that are permanent for this subscription and must NOT be retried:
+ *   401 — token expired/invalid (retrying with the same header just fails again)
+ *   403 — caller lacks workspace membership
+ *   404 — run_id has scrolled out of the stream window (replay no longer possible)
+ * A retry storm on these wastes ~3s and masks the real cause from the consumer.
+ */
+const NON_RETRIABLE_STATUSES = new Set([401, 403, 404]);
+
 // ---------------------------------------------------------------------------
 // Implementation
 // ---------------------------------------------------------------------------
@@ -109,8 +128,10 @@ const RETRY_INTERVAL_MS = 1000;
  * Returns a { close() } handle. Call close() to tear down the connection.
  *
  * Auth: pass `token` for Bearer JWT or `apiKey` for X-API-Key.
- * Reconnect: automatically retries up to MAX_RETRIES (3) consecutive failures
- * with exponential-ish backoff. onError is called and retries stop after 3.
+ * Reconnect: automatically retries up to MAX_RETRIES (3) consecutive transient
+ * failures with linear backoff (1s, 2s, 3s), firing onReconnect before each.
+ * Terminal (no retry, onError fired): a non-retriable open status (401/403/404),
+ * a clean server-side stream close, or the 3rd consecutive transient failure.
  *
  * @param options - SubscribeProgressOptions
  * @returns ProgressSubscription
@@ -170,8 +191,24 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
         consecutiveFailures = 0;
         return;
       }
-      // Non-2xx: fatal — throw to trigger onerror with non-retriable path
-      throw new Error(`SSE connection failed: HTTP ${response.status}`);
+
+      const status = response.status;
+      const err = new Error(`SSE connection failed: HTTP ${status}`);
+
+      // Terminal 4xx (401/403/404): retrying with the same headers/run_id will
+      // just fail again. Tear down before throwing so fetch-event-source's catch
+      // sees an aborted controller and does NOT schedule another create().
+      // (onerror only stops retries via abort(); see onerror below.)
+      if (NON_RETRIABLE_STATUSES.has(status)) {
+        closed = true;
+        onError(err);
+        controller.abort();
+        throw err;
+      }
+
+      // Other non-2xx (e.g. 5xx, 429): transient — throw so onerror runs the
+      // normal retry/backoff path.
+      throw err;
     },
 
     onmessage(msg) {
@@ -193,35 +230,43 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
     },
 
     onerror(err) {
+      // A terminal path (close() or a non-retriable onopen status) already
+      // aborted. fetch-event-source still routes the resulting throw here, so
+      // swallow it: don't increment, don't fire onReconnect, don't reschedule.
       if (closed) return;
 
       consecutiveFailures += 1;
 
       if (consecutiveFailures >= MAX_RETRIES) {
-        // Fatal: stop retrying, notify caller
+        // Terminal: notify caller and stop retrying.
         onError(err);
-        controller.abort();
         closed = true;
-        // Returning null/undefined stops fetch-event-source from retrying
+        // NOTE: controller.abort() is load-bearing — it is the ONLY thing that
+        // stops fetch-event-source from retrying. The library computes
+        // `onerror?.(err) ?? retryInterval` and ALWAYS schedules another
+        // create() unless the request controller's signal is already aborted.
+        // Returning undefined here does NOT stop retries (it falls back to the
+        // default 1000ms interval); the abort below is what makes this terminal.
+        controller.abort();
         return;
       }
 
-      // Non-fatal: notify reconnect callback and return retry interval
+      // Non-fatal: notify reconnect callback and return the retry interval so
+      // fetch-event-source schedules the next create().
       onReconnect?.();
       return RETRY_INTERVAL_MS * consecutiveFailures;
     },
 
     onclose() {
-      // Server closed the connection cleanly — treat as transient for now
-      if (!closed) {
-        consecutiveFailures += 1;
-        if (consecutiveFailures >= MAX_RETRIES) {
-          onError(new Error('SSE connection closed by server'));
-          closed = true;
-        } else {
-          onReconnect?.();
-        }
-      }
+      // A clean server-side stream close is TERMINAL, not transient.
+      // fetch-event-source's onclose path is `onclose(); dispose(); resolve()`
+      // with NO setTimeout(create) — unlike onerror, there is no reconnect after
+      // onclose. Firing onReconnect here would lie to the consumer ("reconnecting…"
+      // while the stream is permanently dead). Surface it as a terminal error so
+      // the consumer can decide to re-subscribe (e.g. with a fresh run_id/since).
+      if (closed) return;
+      closed = true;
+      onError(new Error('SSE connection closed by server'));
     },
   });
 
