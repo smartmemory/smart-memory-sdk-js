@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.25 (1.4.25)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 
 ### Added (CORE-GRAPH-CANONICAL-DEDUP-1, 2026-06-03) — `dedupEntities()` (0.6.7)
 
