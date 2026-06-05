@@ -1,15 +1,21 @@
-name: Sync to service API change
+name: Sync to core release
 
-# Chain B (consumer): the service's API contract changed (OpenAPI snapshot diff) ->
-# repository_dispatch 'api-changed' lands here. Patch-bump package.json and push to
-# main; the existing publish.yml (on push: main) builds and publishes to npm.
+# The SDK joined the unified product line: core's VERSION is the single source of
+# truth and this package COPIES it verbatim on every core release, then ships at
+# that number. (The SDK does not pin or import core — it just tracks the shared
+# product version so all five packages always carry the identical number.)
 on:
   repository_dispatch:
-    types: [api-changed]
+    types: [core-released]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Product version to copy (e.g. 1.4.25)'
+        required: true
+        type: string
 
 concurrency:
-  group: sync-api
+  group: sync-core
   cancel-in-progress: false
 
 jobs:
@@ -26,33 +32,30 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
-      - name: Patch-bump package.json
+      - name: Copy product version into package.json
         id: bump
         env:
-          SERVICE_SHA: ${{ github.event.client_payload.service_sha }}
+          PRODUCT_VERSION: ${{ github.event.client_payload.version || github.event.inputs.version }}
         run: |
           set -euo pipefail
-          # Bump package.json only (do NOT touch package-lock; house policy).
+          # Set package.json version to the product version (do NOT touch package-lock; house policy).
           node - <<'JS'
           const fs = require('fs');
+          const v = (process.env.PRODUCT_VERSION || '').trim();
+          if (!/^\d+\.\d+\.\d+$/.test(v)) { console.error(`::error::Bad version '${v}'`); process.exit(1); }
           const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const [maj, min, pat] = p.version.split('.').map(Number);
-          const v = `${maj}.${min}.${pat + 1}`;
           p.version = v;
           fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `version=${v}\n`);
-          const sha = (process.env.SERVICE_SHA || '').slice(0, 7);
           if (fs.existsSync('CHANGELOG.md')) {
             let c = fs.readFileSync('CHANGELOG.md', 'utf8');
-            const entry = `\n### Changed (auto) — service API contract changed (${v})\n` +
-              `- Auto patch-bump triggered by smart-memory-service API change` +
-              `${sha ? ` (${sha})` : ''}. Review SDK coverage of new/changed fields.\n`;
+            const entry = `\n### Changed (auto, lockstep) — track product version ${v} (${v})\n` +
+              `- Version copied from the smartmemory-core release (single-source lockstep).\n`;
             if (c.includes('## [Unreleased]')) {
-              c = c.replace('## [Unreleased]', '## [Unreleased]' + entry);
-              fs.writeFileSync('CHANGELOG.md', c);
+              fs.writeFileSync('CHANGELOG.md', c.replace('## [Unreleased]', '## [Unreleased]' + entry));
             }
           }
-          console.log(`@smartmemory/sdk-js -> ${v}`);
+          console.log(`@smartmemory/sdk-js -> ${v} (copied)`);
           JS
 
       - name: Commit + push (triggers publish)
@@ -62,7 +65,11 @@ jobs:
           set -euo pipefail
           git config user.name "smartmem-dev[bot]"
           git config user.email "smartmem-dev@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Already at $V; nothing to do."
+            exit 0
+          fi
           git add package.json CHANGELOG.md 2>/dev/null || git add package.json
-          git commit -m "chore: bump to $V (service API contract changed)"
+          git commit -m "chore(version): track product version $V (single-source lockstep)"
           git push origin HEAD:main
           echo "✅ Pushed @smartmemory/sdk-js v$V (publish.yml will ship to npm)."
