@@ -113,6 +113,40 @@ describe('BaseAPI', () => {
       await expect(baseAPI.get('/memory/missing'))
         .rejects.toThrow(APIError);
     });
+
+    // Regression (BETA-NDA-1): a structured FastAPI `detail` (object) must not be
+    // coerced into the Error message — that rendered "[object Object]" on the NDA
+    // gate's 409 version_mismatch. The message must be a string; the full body
+    // must still be preserved on error.detail for callers (e.g. ndaGate.js reads
+    // error.detail.detail.code).
+    it('stringifies a structured object detail instead of "[object Object]"', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 409,
+        headers: { get: () => 'application/json' },
+        json: () => Promise.resolve({ detail: { code: 'version_mismatch', current_version: 'v1' } })
+      });
+
+      const err = await baseAPI.get('/memory/beta/nda/accept').catch((e) => e);
+      expect(err).toBeInstanceOf(APIError);
+      expect(typeof err.message).toBe('string');
+      expect(err.message).not.toBe('[object Object]');
+      expect(err.message).toBe('version_mismatch');
+      // Full body preserved for structured consumers.
+      expect(err.detail.detail.code).toBe('version_mismatch');
+    });
+
+    it('uses the first 422 validation message', async () => {
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: false,
+        status: 422,
+        headers: { get: () => 'application/json' },
+        json: () => Promise.resolve({ detail: [{ msg: 'field required', loc: ['body', 'x'] }] })
+      });
+
+      const err = await baseAPI.get('/memory/x').catch((e) => e);
+      expect(err.message).toBe('field required');
+    });
   });
 
   describe('401 refresh+retry', () => {

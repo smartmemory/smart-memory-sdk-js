@@ -117,9 +117,33 @@ export class BaseAPI {
     }
 
     return new APIError(
-      errorData.detail || errorData.message || `HTTP ${response.status}`,
+      this._extractMessage(errorData, response.status),
       response.status,
       errorData
     );
+  }
+
+  /**
+   * Coerce a FastAPI/JSON error body into a human-readable string.
+   *
+   * FastAPI's `detail` may be a plain string, a structured object
+   * (e.g. `{code, current_version}`), or an array of 422 validation errors.
+   * Passing a non-string straight to `new APIError(message)` makes the Error
+   * base coerce it to the literal `"[object Object]"` — which the BETA-NDA-1
+   * gate rendered to the user on a 409 version_mismatch. Always return a string;
+   * the full body is still preserved on `error.detail` (3rd APIError arg) so
+   * callers like ndaGate.js can read `error.detail.detail.code`.
+   * @private
+   */
+  _extractMessage(errorData, status) {
+    const detail = errorData?.detail;
+    if (typeof detail === 'string') return detail;
+    if (detail && typeof detail === 'object') {
+      if (typeof detail.message === 'string') return detail.message;
+      if (typeof detail.code === 'string') return detail.code;
+      if (Array.isArray(detail) && typeof detail[0]?.msg === 'string') return detail[0].msg;
+    }
+    if (typeof errorData?.message === 'string') return errorData.message;
+    return `HTTP ${status}`;
   }
 }
