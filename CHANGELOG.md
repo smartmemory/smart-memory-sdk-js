@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Added (ONTO-HITL-CONSUMER-1) — ontology HITL queue methods
+- `OntologyAPI.listHitl({status, kind, limit})` → `GET /memory/ontology/hitl` (kind omitted when null);
+  `OntologyAPI.resolveHitl(itemId, {action, note})` → `POST /memory/ontology/hitl/{id}/resolve`.
+  Tests: `tests/unit/api/OntologyHitlAPI.test.js` (4/4). Codex review clean.
+
 ### Changed (auto, lockstep) — track product version 1.4.32 (1.4.32)
 - Version copied from the smartmemory-core release (single-source lockstep).
 

@@ -463,4 +463,30 @@ export class OntologyAPI {
   async getUpdateStats({ history = false } = {}) {
     return this.api.get(`/memory/ontology/updates/stats?history=${history}`);
   }
+
+  // --- HITL queue consumer (ONTO-HITL-CONSUMER-1) ---------------------------
+
+  /**
+   * List ontology HITL queue items for the caller's workspace.
+   * @param {Object} [options]
+   * @param {('open'|'resolved')} [options.status='open']
+   * @param {string} [options.kind] missing_in_graph | missing_in_registry | name_conflict_unresolvable
+   * @param {number} [options.limit=50]
+   */
+  async listHitl({ status = 'open', kind = null, limit = 50 } = {}) {
+    const params = new URLSearchParams({ status, limit: String(limit) });
+    if (kind) params.set('kind', kind);
+    return this.api.get(`/memory/ontology/hitl?${params.toString()}`);
+  }
+
+  /**
+   * Resolve one ontology HITL queue item (open -> resolved).
+   * @param {string} itemId
+   * @param {Object} body
+   * @param {('accepted'|'dismissed'|'deferred')} body.action
+   * @param {string} [body.note]
+   */
+  async resolveHitl(itemId, { action, note = null }) {
+    return this.api.post(`/memory/ontology/hitl/${itemId}/resolve`, { action, note });
+  }
 }
