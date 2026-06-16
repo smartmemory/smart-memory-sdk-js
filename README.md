@@ -200,7 +200,7 @@ client.teams.removeMember(teamId, userId);
 client.profiles.list();
 client.profiles.get('default');
 client.profiles.getLLMKeys();
-client.profiles.updateLLMKeys({ openai: 'sk-...' });
+client.profiles.updateLLMKeys({ openai_key: 'sk-...', gemini_key: 'AIza...' });
 
 // Subscriptions
 client.subscriptions.getCurrent();

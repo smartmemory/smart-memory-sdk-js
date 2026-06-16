@@ -1,6 +1,12 @@
 # Changelog
 
 ## [Unreleased]
+### Added (CORE-LLM-GEMINI-1) — Gemini provider key
+- `ProfileAPI.updateLLMKeys()` documents and passes `gemini_key` through to
+  `PATCH /auth/llm-keys` (generic pass-through — no signature change). New pass-through
+  test in `tests/unit/api/DomainAPIs.test.js` (22/22); README example updated to the
+  canonical `*_key` field names.
+
 ### Added (ONTO-HITL-CONSUMER-1) — ontology HITL queue methods
 - `OntologyAPI.listHitl({status, kind, limit})` → `GET /memory/ontology/hitl` (kind omitted when null);
   `OntologyAPI.resolveHitl(itemId, {action, note})` → `POST /memory/ontology/hitl/{id}/resolve`.

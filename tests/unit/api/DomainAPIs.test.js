@@ -167,6 +167,14 @@ describe('ProfileAPI', () => {
 
     expect(api.patch).toHaveBeenCalledWith('/auth/llm-keys', { openai: 'sk-...' });
   });
+
+  it('should pass gemini_key through to update LLM keys', async () => {
+    const api = mockBaseAPI();
+    const profiles = new ProfileAPI(api);
+    await profiles.updateLLMKeys({ gemini_key: 'AIza...' });
+
+    expect(api.patch).toHaveBeenCalledWith('/auth/llm-keys', { gemini_key: 'AIza...' });
+  });
 });
 
 describe('SubscriptionAPI', () => {
