@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (lockstep) — track smartmemory-core==1.4.33 (1.4.33)
+- Version bumped to 1.4.33 to track the unified release line (core: CORE-RELATION-RULER-1 EntityRuler cold-start seed ROM). No SDK API change.
+
 ### Added (CORE-LLM-GEMINI-1) — Gemini provider key
 - `ProfileAPI.updateLLMKeys()` documents and passes `gemini_key` through to
   `PATCH /auth/llm-keys` (generic pass-through — no signature change). New pass-through
