@@ -107,6 +107,47 @@ export class DecisionAPI {
   }
 
   /**
+   * Create a new pending decision awaiting requirements to be resolved.
+   * @param {Object} params
+   * @param {string} params.content
+   * @param {Array} params.requirements - List of requirement objects
+   * @param {string} [params.domain]
+   * @param {string[]} [params.tags]
+   * @param {string} [params.agentId]
+   */
+  async createPending({ content, requirements, domain = null, tags = null, agentId = null }) {
+    return this.api.post('/memory/decisions/pending/create', {
+      content,
+      requirements,
+      domain,
+      tags,
+      agent_id: agentId
+    });
+  }
+
+  /**
+   * Resolve a requirement on a pending decision.
+   * @param {string} decisionId
+   * @param {Object} params
+   * @param {string} params.requirementId
+   * @param {string} params.memoryId
+   */
+  async resolveRequirement(decisionId, { requirementId, memoryId }) {
+    return this.api.post(`/memory/decisions/pending/${decisionId}/resolve`, {
+      requirement_id: requirementId,
+      memory_id: memoryId
+    });
+  }
+
+  /**
+   * Try to activate a pending decision when all requirements are resolved.
+   * @param {string} decisionId
+   */
+  async tryActivate(decisionId) {
+    return this.api.post(`/memory/decisions/pending/${decisionId}/activate`, {});
+  }
+
+  /**
    * Retrieve a decision by ID.
    * @param {string} decisionId
    */
