@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.36 (1.4.36)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Changed (lockstep) — track smartmemory-core==1.4.33 (1.4.33)
 - Version bumped to 1.4.33 to track the unified release line (core: CORE-RELATION-RULER-1 EntityRuler cold-start seed ROM). No SDK API change.
 
