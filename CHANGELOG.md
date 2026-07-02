@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-07-02) — URL contract tests across the API surface
+- Propagated the URL-asserting contract-test pattern (the guard that caught the 2026-07-02
+  path-drift 404s) across the remaining API classes: 320 lines of new assertions in
+  `tests/unit/api/{MemoryAPI,DomainAPIs,NewDomainAPIs}.test.js` pinning each client method
+  to the exact service path + verb (spot-verified against smart-memory-service routes).
+  No drift found in the covered methods. Suite: 383 passed.
+
 ### Changed (auto, lockstep) — track product version 1.4.36 (1.4.36)
 - Version copied from the smartmemory-core release (single-source lockstep).
 

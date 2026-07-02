@@ -106,6 +106,22 @@ describe('GraphAPI', () => {
     });
   });
 
+  it('should get graph health', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getHealth();
+
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/health');
+  });
+
+  it('should get inference rules', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getInferenceRules();
+
+    expect(api.get).toHaveBeenCalledWith('/memory/inference/rules');
+  });
+
   it('should run inference', async () => {
     const api = mockBaseAPI();
     const graph = new GraphAPI(api);
@@ -115,6 +131,69 @@ describe('GraphAPI', () => {
     expect(api.post).toHaveBeenCalledWith('/memory/inference', {
       dry_run: true
     });
+  });
+
+  it('should get full graph', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getFullGraph();
+    await graph.getFullGraph(25);
+
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/full');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/full?limit=25');
+  });
+
+  it('should get edges in bulk', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getEdgesBulk(['node-1', 'node-2']);
+
+    expect(api.post).toHaveBeenCalledWith('/memory/graph/edges', {
+      node_ids: ['node-1', 'node-2']
+    });
+  });
+
+  it('should get grounding status', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getGroundingStatus('node 1');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/nodes/node%201/grounding');
+  });
+
+  it('should update entity node', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.updateEntityNode('node 1', { label: 'Redis', entity_type: 'Technology' });
+
+    expect(api.patch).toHaveBeenCalledWith('/memory/graph/nodes/node%201', {
+      label: 'Redis',
+      entity_type: 'Technology'
+    });
+  });
+
+  it('should remove grounding', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.removeGrounding('node 1');
+
+    expect(api.delete).toHaveBeenCalledWith('/memory/graph/nodes/node%201/grounding');
+  });
+
+  it('should delete entity node', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.deleteEntityNode('node 1');
+
+    expect(api.delete).toHaveBeenCalledWith('/memory/graph/nodes/node%201');
+  });
+
+  it('should get links', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getLinks('item 1');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/item%201/links');
   });
 });
 

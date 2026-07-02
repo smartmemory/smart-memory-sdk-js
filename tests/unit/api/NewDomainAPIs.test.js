@@ -106,6 +106,45 @@ describe('DecisionAPI (new methods)', () => {
     expect(api.get).toHaveBeenCalledWith('/memory/decisions/search?topic=graph%20database&limit=10');
   });
 
+  it('should create a pending decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.createPending({
+      content: 'Choose queue provider',
+      requirements: [{ id: 'req-1', description: 'Benchmark Redis streams' }],
+      domain: 'infra',
+      tags: ['queue'],
+      agentId: 'agent-1'
+    });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/pending/create', {
+      content: 'Choose queue provider',
+      requirements: [{ id: 'req-1', description: 'Benchmark Redis streams' }],
+      domain: 'infra',
+      tags: ['queue'],
+      agent_id: 'agent-1'
+    });
+  });
+
+  it('should resolve a pending decision requirement', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.resolveRequirement('d-1', { requirementId: 'req-1', memoryId: 'mem-1' });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/pending/d-1/resolve', {
+      requirement_id: 'req-1',
+      memory_id: 'mem-1'
+    });
+  });
+
+  it('should try to activate a pending decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.tryActivate('d-1');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/pending/d-1/activate', {});
+  });
+
   it('should contradict a decision', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
@@ -1087,6 +1126,25 @@ describe('OntologyAPI', () => {
     await ontology.getUpdateStats({ history: true });
 
     expect(api.get).toHaveBeenCalledWith('/memory/ontology/updates/stats?history=true');
+  });
+
+  it('should list HITL queue items', async () => {
+    const api = mockBaseAPI();
+    const ontology = new OntologyAPI(api);
+    await ontology.listHitl({ status: 'resolved', kind: 'missing_in_graph', limit: 10 });
+
+    expect(api.get).toHaveBeenCalledWith('/memory/ontology/hitl?status=resolved&limit=10&kind=missing_in_graph');
+  });
+
+  it('should resolve a HITL queue item', async () => {
+    const api = mockBaseAPI();
+    const ontology = new OntologyAPI(api);
+    await ontology.resolveHitl('hitl-1', { action: 'accepted', note: 'Mapped to existing type' });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/ontology/hitl/hitl-1/resolve', {
+      action: 'accepted',
+      note: 'Mapped to existing type'
+    });
   });
 });
 

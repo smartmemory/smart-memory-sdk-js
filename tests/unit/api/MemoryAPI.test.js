@@ -54,6 +54,7 @@ describe('MemoryAPI', () => {
   it('list should build query string with params', async () => {
     await memoryAPI.list({ limit: 10, offset: 5, type: 'semantic' });
 
+    expect(baseAPI.get).toHaveBeenCalledWith('/memory/list?limit=10&offset=5&memory_type=semantic');
     const call = baseAPI.get.mock.calls[0][0];
     expect(call).toContain('/memory/list?');
     expect(call).toContain('limit=10');
@@ -215,6 +216,7 @@ describe('MemoryAPI', () => {
   it('getHistory should build temporal URL', async () => {
     await memoryAPI.getHistory('item-1', { limit: 50 });
 
+    expect(baseAPI.get).toHaveBeenCalledWith('/memory/temporal/item-1/history?limit=50');
     const call = baseAPI.get.mock.calls[0][0];
     expect(call).toContain('/memory/temporal/item-1/history?limit=50');
   });
@@ -222,6 +224,7 @@ describe('MemoryAPI', () => {
   it('runClustering should POST with params', async () => {
     await memoryAPI.runClustering(0.2, true);
 
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/clustering/run?distance_threshold=0.2&dry_run=true');
     const call = baseAPI.post.mock.calls[0][0];
     expect(call).toContain('distance_threshold=0.2');
     expect(call).toContain('dry_run=true');
@@ -318,6 +321,186 @@ describe('MemoryAPI', () => {
 
       const body = baseAPI.post.mock.calls.at(-1)[1];
       expect(body).not.toHaveProperty('query');
+    });
+  });
+
+  describe('endpoint paths', () => {
+    it('getLineage should GET exact lineage path', async () => {
+      await memoryAPI.getLineage('id-1');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/id-1/lineage');
+    });
+
+    it('getLinks should GET exact links path', async () => {
+      await memoryAPI.getLinks('id-1');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/id-1/links');
+    });
+
+    it('searchByMetadata should GET exact metadata lookup path', async () => {
+      await memoryAPI.searchByMetadata('source', 'chat', { memoryType: 'semantic' });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/by-metadata?metadata_key=source&metadata_value=chat&memory_type=semantic');
+    });
+
+    it('getNeighbors should GET exact neighbors path', async () => {
+      await memoryAPI.getNeighbors('id-1');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/id-1/neighbors');
+    });
+
+    it('ingestConversation should POST exact conversation ingest path and body', async () => {
+      await memoryAPI.ingestConversation([{ role: 'user', content: 'hello' }], {
+        conversationId: 'conv-1',
+        turnsPerChunk: 10
+      });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/conversation', {
+        turns: [{ role: 'user', content: 'hello' }],
+        turns_per_chunk: 10,
+        max_chunk_chars: 12000,
+        max_concurrent: 4,
+        conversation_id: 'conv-1'
+      });
+    });
+
+    it('ingestDocument should POST exact document ingest path and body', async () => {
+      await memoryAPI.ingestDocument('doc body', { title: 'Doc', source: 'upload' });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/document', {
+        content: 'doc body',
+        title: 'Doc',
+        source: 'upload'
+      });
+    });
+
+    it('codeIndex should POST exact code index path and body', async () => {
+      await memoryAPI.codeIndex('/repo', { repo: 'sdk', commit: 'abc123' });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/code/index', {
+        path: '/repo',
+        repo: 'sdk',
+        commit: 'abc123'
+      });
+    });
+
+    it('codeSearch should GET exact code search path', async () => {
+      await memoryAPI.codeSearch('MemoryAPI', { entityType: 'class', repo: 'sdk', limit: 5, semantic: true });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/search?query=MemoryAPI&limit=5&semantic=true&entity_type=class&repo=sdk');
+    });
+
+    it('codeContext should GET exact code context path', async () => {
+      await memoryAPI.codeContext('MemoryAPI', { repo: 'sdk' });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/context?entity_name=MemoryAPI&repo=sdk');
+    });
+
+    it('codeDeadCode should GET exact dead-code path', async () => {
+      await memoryAPI.codeDeadCode('smart memory/sdk');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/dead-code?repo=smart%20memory%2Fsdk');
+    });
+
+    it('codeDependencies should GET exact dependencies path', async () => {
+      await memoryAPI.codeDependencies('MemoryAPI', { direction: 'out', repo: 'sdk' });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/dependencies?entity_name=MemoryAPI&direction=out&repo=sdk');
+    });
+
+    it('getPlan should GET exact plan path', async () => {
+      await memoryAPI.getPlan('plan-1');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/plans/plan-1');
+    });
+
+    it('updatePlanTask should PATCH exact plan task path and body', async () => {
+      await memoryAPI.updatePlanTask('plan-1', { taskId: 'task-1', status: 'done' });
+
+      expect(baseAPI.patch).toHaveBeenCalledWith('/memory/plans/plan-1/task', {
+        task_id: 'task-1',
+        status: 'done'
+      });
+    });
+
+    it('completePlan should POST exact complete plan path and body', async () => {
+      await memoryAPI.completePlan('plan-1', { graduate: true });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/plans/plan-1/complete', {
+        graduate: true
+      });
+    });
+
+    it('failPlan should POST exact fail plan path and body', async () => {
+      await memoryAPI.failPlan('plan-1', 'blocked');
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/plans/plan-1/fail', {
+        reason: 'blocked'
+      });
+    });
+
+    it('enrich should POST exact enrich path and body', async () => {
+      await memoryAPI.enrich('item-1', ['grounding']);
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/item-1/enrich', {
+        item_id: 'item-1',
+        routines: ['grounding']
+      });
+    });
+
+    it('personalize should POST exact personalize path and body', async () => {
+      await memoryAPI.personalize({ role: 'dev' }, { tone: 'direct' });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/personalize', {
+        traits: { role: 'dev' },
+        preferences: { tone: 'direct' }
+      });
+    });
+
+    it('ground should POST exact ground path and body', async () => {
+      await memoryAPI.ground('item-1', 'https://example.com', { source: 'manual' });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/item-1/ground', {
+        item_id: 'item-1',
+        source_url: 'https://example.com',
+        validation: { source: 'manual' }
+      });
+    });
+
+    it('timeTravel should GET exact temporal-at path', async () => {
+      await memoryAPI.timeTravel('2026-01-01T00:00:00Z', { query: 'auth', limit: 10 });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/temporal/at/2026-01-01T00:00:00Z?limit=10&query=auth');
+    });
+
+    it('getItemAtTime should GET exact temporal item path', async () => {
+      await memoryAPI.getItemAtTime('item-1', '2026-01-01');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/temporal/item-1/at/2026-01-01');
+    });
+
+    it('getChanges should GET exact changes path', async () => {
+      await memoryAPI.getChanges('item-1', { since: '2026-01-01', until: '2026-01-02', changeType: 'update' });
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/temporal/item-1/changes?since=2026-01-01&until=2026-01-02&change_type=update');
+    });
+
+    it('compareVersions should POST exact compare path', async () => {
+      await memoryAPI.compareVersions('item-1', 1, 2);
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/temporal/item-1/compare?v1=1&v2=2');
+    });
+
+    it('rollback should POST exact rollback path', async () => {
+      await memoryAPI.rollback('item-1', { toVersion: 3 });
+
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/temporal/item-1/rollback?to_version=3');
+    });
+
+    it('getClusteringStats should GET exact clustering stats path', async () => {
+      await memoryAPI.getClusteringStats();
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/clustering/stats');
     });
   });
 });
