@@ -1162,7 +1162,7 @@ describe('ValidationAPI', () => {
     const validation = new ValidationAPI(api);
     await validation.validateItem('item-1');
 
-    expect(api.post).toHaveBeenCalledWith('/memory/validation/validate', {
+    expect(api.post).toHaveBeenCalledWith('/memory/validate', {
       item_id: 'item-1'
     });
   });
@@ -1172,7 +1172,7 @@ describe('ValidationAPI', () => {
     const validation = new ValidationAPI(api);
     await validation.runInference({ dryRun: true });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/validation/inference', {
+    expect(api.post).toHaveBeenCalledWith('/memory/inference', {
       dry_run: true
     });
   });
@@ -1182,7 +1182,7 @@ describe('ValidationAPI', () => {
     const validation = new ValidationAPI(api);
     await validation.getInferenceRules();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/validation/inference/rules');
+    expect(api.get).toHaveBeenCalledWith('/memory/inference/rules');
   });
 });
 

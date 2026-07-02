@@ -1,11 +1,11 @@
 /**
  * Validation API - Memory item validation, graph health, and inference engine.
  *
- * Covers all endpoints from validation.py:
+ * Covers all endpoints from validation.py (router has no prefix; auto-mounted under /memory):
  *   GET  /memory/graph/health
- *   POST /memory/validation/validate
- *   POST /memory/validation/inference
- *   GET  /memory/validation/inference/rules
+ *   POST /memory/validate
+ *   POST /memory/inference
+ *   GET  /memory/inference/rules
  */
 export class ValidationAPI {
   constructor(baseAPI) {
@@ -24,7 +24,7 @@ export class ValidationAPI {
    * @param {string} itemId
    */
   async validateItem(itemId) {
-    return this.api.post('/memory/validation/validate', {
+    return this.api.post('/memory/validate', {
       item_id: itemId
     });
   }
@@ -35,7 +35,7 @@ export class ValidationAPI {
    * @param {boolean} [options.dryRun=false]
    */
   async runInference({ dryRun = false } = {}) {
-    return this.api.post('/memory/validation/inference', {
+    return this.api.post('/memory/inference', {
       dry_run: dryRun
     });
   }
@@ -44,6 +44,6 @@ export class ValidationAPI {
    * List available inference rules.
    */
   async getInferenceRules() {
-    return this.api.get('/memory/validation/inference/rules');
+    return this.api.get('/memory/inference/rules');
   }
 }

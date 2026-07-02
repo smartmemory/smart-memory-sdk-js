@@ -109,10 +109,11 @@ describe('GraphAPI', () => {
   it('should run inference', async () => {
     const api = mockBaseAPI();
     const graph = new GraphAPI(api);
-    await graph.runInference(['transitivity']);
+    await graph.runInference({ dryRun: true });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/validation/inference', {
-      rule_names: ['transitivity']
+    // Route (validation.py RunInferenceRequest) accepts only dry_run — not rule_names.
+    expect(api.post).toHaveBeenCalledWith('/memory/inference', {
+      dry_run: true
     });
   });
 });

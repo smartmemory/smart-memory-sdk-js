@@ -46,12 +46,12 @@ export class GraphAPI {
   }
 
   async getInferenceRules() {
-    return this.api.get('/memory/validation/inference/rules');
+    return this.api.get('/memory/inference/rules');
   }
 
-  async runInference(ruleNames = []) {
-    return this.api.post('/memory/validation/inference', {
-      rule_names: ruleNames
+  async runInference({ dryRun = false } = {}) {
+    return this.api.post('/memory/inference', {
+      dry_run: dryRun
     });
   }
 
