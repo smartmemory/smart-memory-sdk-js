@@ -1,6 +1,14 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-07-03) — subscribeProgress cookie/SSO auth support (FIX-A)
+- `SubscribeProgressOptions.useCookieAuth?: boolean` — when `true` and no `token`/`apiKey`
+  is provided, `fetchEventSource` is called with `credentials: 'include'` so the browser
+  forwards session cookies (SSO environments). Token and apiKey continue to take precedence.
+  The SmartMemory service already sets `allow_credentials=true` and enumerates studio origins,
+  so credentialed SSE requests are accepted without a service change.
+- Unit tests in `tests/unit/progress/subscribeProgress.test.js` (7 assertions).
+
 ### Added (2026-07-02) — URL contract tests across the API surface
 - Propagated the URL-asserting contract-test pattern (the guard that caught the 2026-07-02
   path-drift 404s) across the remaining API classes: 320 lines of new assertions in

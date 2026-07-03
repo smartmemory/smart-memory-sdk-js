@@ -9,7 +9,9 @@
  *
  * Why @microsoft/fetch-event-source instead of native EventSource:
  *   Native EventSource cannot attach custom request headers (Authorization, X-API-Key).
- *   All SmartMemory API endpoints require header-based auth (no cookie auth).
+ *   Most SmartMemory API endpoints use header-based auth (Bearer JWT or X-API-Key).
+ *   When running under SSO/cookie auth, pass useCookieAuth: true — fetch-event-source
+ *   then sends credentials: 'include' so the browser's session cookie is forwarded.
  *   fetch-event-source wraps fetch() and exposes the full options object.
  *
  * Contract reference: progress-event-contract.json v1.3.0 — ClientSDKMethod.js
@@ -87,6 +89,17 @@ export interface SubscribeProgressOptions {
   onError: (err: unknown) => void;
 
   /**
+   * When true, sets `credentials: 'include'` on the underlying fetchEventSource
+   * call so the browser forwards session cookies (SSO / cookie-auth environments).
+   * Only enable this when you cannot provide a Bearer token or API key (e.g. the
+   * app authenticates entirely via HttpOnly session cookies). Token/apiKey auth
+   * takes precedence — useCookieAuth is ignored if token or apiKey is provided.
+   * Requires the server CORS policy to allow credentials from the calling origin
+   * (the SmartMemory service sets allow_credentials=true and enumerates origins).
+   */
+  useCookieAuth?: boolean;
+
+  /**
    * Called before each non-fatal reconnect attempt (transient onerror, attempt
    * < maxRetries). It is ONLY fired when the library will actually retry — never
    * on a terminal path. A clean server close does NOT trigger onReconnect (the
@@ -146,6 +159,7 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
     runId,
     fromSeq,
     since,
+    useCookieAuth = false,
     onEvent,
     onError,
     onReconnect,
@@ -184,6 +198,7 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
     headers,
     signal: controller.signal,
     openWhenHidden: true,
+    ...(useCookieAuth && !token && !apiKey ? { credentials: 'include' as const } : {}),
 
     async onopen(response) {
       if (response.ok) {
