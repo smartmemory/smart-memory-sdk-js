@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.37 (1.4.37)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Added (2026-07-02) — URL contract tests across the API surface
 - Propagated the URL-asserting contract-test pattern (the guard that caught the 2026-07-02
   path-drift 404s) across the remaining API classes: 320 lines of new assertions in
