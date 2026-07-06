@@ -1,0 +1,66 @@
+name: Reconcile npm artifact
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '@smartmemory/sdk-js version to publish if missing'
+        required: true
+        type: string
+      source_ref:
+        description: 'Git ref to build from; use a release tag or commit when one exists'
+        required: false
+        type: string
+        default: 'main'
+
+concurrency:
+  group: reconcile-npm-${{ github.event.inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate version
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const version = (process.env.VERSION || '').trim();
+          if (!/^\d+\.\d+\.\d+$/.test(version)) {
+            console.error(`::error::Bad version '${version}'`);
+            process.exit(1);
+          }
+          console.log(`Reconciling @smartmemory/sdk-js ${version}`);
+          JS
+
+      - name: Check npm
+        id: npm
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          if npm view "@smartmemory/sdk-js@$VERSION" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "@smartmemory/sdk-js@$VERSION already exists on npm"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "@smartmemory/sdk-js@$VERSION is missing on npm"
+          fi
+
+      - name: Dispatch publish workflow
+        if: steps.npm.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          VERSION: ${{ github.event.inputs.version }}
+          SOURCE_REF: ${{ github.event.inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          gh workflow run publish.yml \
+            --ref "$SOURCE_REF" \
+            -f version="$VERSION"
+          echo "Dispatched publish.yml for @smartmemory/sdk-js $VERSION from $SOURCE_REF"

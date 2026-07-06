@@ -1,6 +1,28 @@
 # Changelog
 
 ## [Unreleased]
+
+### Changed (auto, lockstep) — track product version 1.4.44 (1.4.44)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.43 (1.4.43)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.42 (1.4.42)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.40 (1.4.40)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.39 (1.4.39)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.38 (1.4.38)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
+### Changed (auto, lockstep) — track product version 1.4.37 (1.4.37)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Added (2026-07-03) — subscribeProgress cookie/SSO auth support (FIX-A)
 - `SubscribeProgressOptions.useCookieAuth?: boolean` — when `true` and no `token`/`apiKey`
   is provided, `fetchEventSource` is called with `credentials: 'include'` so the browser

@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional package version override for artifact reconciliation'
+        required: false
+        type: string
+        default: ''
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.ref }}"
@@ -27,6 +33,25 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Override version for reconciliation
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
+        env:
+          PACKAGE_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          set -euo pipefail
+          node - <<'JS'
+          const fs = require('fs');
+          const version = (process.env.PACKAGE_VERSION || '').trim();
+          if (!/^\d+\.\d+\.\d+$/.test(version)) {
+            console.error(`::error::Bad version '${version}'`);
+            process.exit(1);
+          }
+          const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          p.version = version;
+          fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
+          console.log(`Publishing @smartmemory/sdk-js ${version} from this ref without committing package.json`);
+          JS
 
       - name: Lint
         run: npm run lint

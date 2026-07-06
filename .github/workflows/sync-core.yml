@@ -58,18 +58,22 @@ jobs:
           console.log(`@smartmemory/sdk-js -> ${v} (copied)`);
           JS
 
-      - name: Commit + push (triggers publish)
+      - name: Commit, push, publish
         env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
           V: ${{ steps.bump.outputs.version }}
         run: |
           set -euo pipefail
           git config user.name "smartmem-dev[bot]"
           git config user.email "smartmem-dev@users.noreply.github.com"
           if git diff --quiet; then
-            echo "Already at $V; nothing to do."
-            exit 0
+            echo "Already at $V; no version commit needed."
+          else
+            git add package.json CHANGELOG.md 2>/dev/null || git add package.json
+            git commit -m "chore(version): track product version $V (single-source lockstep)"
+            git push origin HEAD:main
           fi
-          git add package.json CHANGELOG.md 2>/dev/null || git add package.json
-          git commit -m "chore(version): track product version $V (single-source lockstep)"
-          git push origin HEAD:main
-          echo "✅ Pushed @smartmemory/sdk-js v$V (publish.yml will ship to npm)."
+
+          # Reruns must repair missing npm artifacts even when package.json already matched.
+          gh workflow run publish.yml --ref main
+          echo "✅ Ensured @smartmemory/sdk-js v$V publish.yml dispatch."
