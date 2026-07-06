@@ -61,6 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           gh workflow run publish.yml \
+            --repo "$GITHUB_REPOSITORY" \
             --ref "$SOURCE_REF" \
             -f version="$VERSION"
           echo "Dispatched publish.yml for @smartmemory/sdk-js $VERSION from $SOURCE_REF"
