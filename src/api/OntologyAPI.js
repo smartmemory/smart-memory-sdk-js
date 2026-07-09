@@ -42,6 +42,16 @@
  *   GET  /memory/ontology/updates/status
  *   GET  /memory/ontology/updates/history
  *   GET  /memory/ontology/updates/stats
+ *   --- ONTO-CRUD-1 read / audit / migration surface (ontology_crud.py) ---
+ *   GET  /memory/ontology/types
+ *   GET  /memory/ontology/types/{type_id}
+ *   GET  /memory/ontology/types/{type_id}/audit
+ *   GET  /memory/ontology/relations
+ *   GET  /memory/ontology/relations/{relation_id}
+ *   GET  /memory/ontology/relations/{relation_id}/audit
+ *   GET  /memory/ontology/audit
+ *   GET  /memory/ontology/packs/{pack_id}/audit
+ *   POST /memory/ontology/types/{from_id}/migrate-to/{to_id}
  */
 export class OntologyAPI {
   constructor(baseAPI) {
@@ -488,5 +498,128 @@ export class OntologyAPI {
    */
   async resolveHitl(itemId, { action, note = null }) {
     return this.api.post(`/memory/ontology/hitl/${itemId}/resolve`, { action, note });
+  }
+
+  // --- ONTO-CRUD-1 read / audit / migration surface -------------------------
+
+  /**
+   * List ontology types, keyset-paginated.
+   * @param {Object} [options]
+   * @param {string} [options.tier] working|proposed|confirmed|retired
+   * @param {string} [options.layer] public|domain|private
+   * @param {string} [options.packId] filter by originating pack id
+   * @param {boolean} [options.hasIri] only types with (or without) an IRI
+   * @param {number} [options.limit=100]
+   * @param {string} [options.cursor] opaque keyset continuation token
+   */
+  async listTypes({ tier, layer, packId, hasIri, limit = 100, cursor } = {}) {
+    const query = { limit: String(limit) };
+    if (tier !== undefined) query.tier = tier;
+    if (layer !== undefined) query.layer = layer;
+    if (packId !== undefined) query.pack_id = packId;
+    if (hasIri !== undefined) query.has_iri = String(hasIri);
+    if (cursor !== undefined) query.cursor = cursor;
+    const qs = new URLSearchParams(query).toString();
+    return this.api.get(`/memory/ontology/types${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * List ontology relation types, keyset-paginated. Mirror of `listTypes`.
+   * @param {Object} [options]
+   * @param {string} [options.tier] working|proposed|confirmed|retired
+   * @param {string} [options.layer] public|domain|private
+   * @param {string} [options.packId] filter by originating pack id
+   * @param {boolean} [options.hasIri] only relations with (or without) an IRI
+   * @param {number} [options.limit=100]
+   * @param {string} [options.cursor] opaque keyset continuation token
+   */
+  async listRelations({ tier, layer, packId, hasIri, limit = 100, cursor } = {}) {
+    const query = { limit: String(limit) };
+    if (tier !== undefined) query.tier = tier;
+    if (layer !== undefined) query.layer = layer;
+    if (packId !== undefined) query.pack_id = packId;
+    if (hasIri !== undefined) query.has_iri = String(hasIri);
+    if (cursor !== undefined) query.cursor = cursor;
+    const qs = new URLSearchParams(query).toString();
+    return this.api.get(`/memory/ontology/relations${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * Resolve a single ontology type by iri/qid/name.
+   * @param {string} typeId
+   */
+  async getType(typeId) {
+    return this.api.get(`/memory/ontology/types/${encodeURIComponent(typeId)}`);
+  }
+
+  /**
+   * Resolve a single ontology relation type by its identity (iri -> pid -> name).
+   * @param {string} relationId
+   */
+  async getRelation(relationId) {
+    return this.api.get(`/memory/ontology/relations/${encodeURIComponent(relationId)}`);
+  }
+
+  /**
+   * Cross-entity, newest-first ontology audit feed.
+   * @param {Object} [options]
+   * @param {string} [options.actor]
+   * @param {string} [options.action] e.g. migrate, retire
+   * @param {string} [options.since] full ISO-8601 lower bound (inclusive)
+   * @param {string} [options.until] full ISO-8601 upper bound (inclusive)
+   * @param {number} [options.limit=200]
+   */
+  async listAudit({ actor, action, since, until, limit = 200 } = {}) {
+    const query = { limit: String(limit) };
+    if (actor !== undefined) query.actor = actor;
+    if (action !== undefined) query.action = action;
+    if (since !== undefined) query.since = since;
+    if (until !== undefined) query.until = until;
+    const qs = new URLSearchParams(query).toString();
+    return this.api.get(`/memory/ontology/audit${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * Full append-only audit trail for one ontology type (oldest-first).
+   * @param {string} typeId
+   */
+  async getTypeAudit(typeId) {
+    return this.api.get(`/memory/ontology/types/${encodeURIComponent(typeId)}/audit`);
+  }
+
+  /**
+   * Full append-only audit trail for one ontology relation (oldest-first).
+   * @param {string} relationId
+   */
+  async getRelationAudit(relationId) {
+    return this.api.get(`/memory/ontology/relations/${encodeURIComponent(relationId)}/audit`);
+  }
+
+  /**
+   * Full append-only audit trail for a pack (oldest-first), optionally version-scoped.
+   * @param {string} packId
+   * @param {Object} [options]
+   * @param {string} [options.packVersion] scope to one installed version; omit for all
+   */
+  async getPackAudit(packId, { packVersion = null } = {}) {
+    const query = {};
+    if (packVersion !== null) query.pack_version = packVersion;
+    const qs = new URLSearchParams(query).toString();
+    return this.api.get(`/memory/ontology/packs/${encodeURIComponent(packId)}/audit${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * Reclassify every instance of `fromId` onto `toId`. Both types stay live.
+   * @param {string} fromId
+   * @param {string} toId
+   * @param {Object} params
+   * @param {string} params.reason why the migration is being performed (audit evidence)
+   * @param {number} [params.batchSize=500] instance edges rewritten per chunk
+   */
+  async migrateTypeInstances(fromId, toId, { reason, batchSize = 500 }) {
+    return this.api.post(
+      `/memory/ontology/types/${encodeURIComponent(fromId)}/migrate-to/${encodeURIComponent(toId)}`,
+      { reason, batch_size: batchSize }
+    );
   }
 }

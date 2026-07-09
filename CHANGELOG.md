@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-07-09) — ontology type/relation read, audit, and migration methods (ONTO-CRUD-1)
+- `OntologyAPI` gains 9 methods over the `ontology_crud.py` HTTP surface: `listTypes`,
+  `listRelations`, `getType`, `getRelation`, `listAudit`, `getTypeAudit`, `getRelationAudit`,
+  `getPackAudit`, `migrateTypeInstances`.
+- Tests in `tests/unit/api/OntologyCrudAPI.test.js` cover the happy path for all 9 methods plus
+  404/400 error propagation.
+
 ### Changed (auto, lockstep) — track product version 1.4.44 (1.4.44)
 - Version copied from the smartmemory-core release (single-source lockstep).
 
