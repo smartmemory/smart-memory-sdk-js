@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-07-09) — ONTO-HITL-CURATE-1 SDK wrappers
+- `OntologyAPI` gains wrappers for the ontology curation queue HTTP surface: `listReviewQueue`,
+  `approveReviewType`, `rejectReviewType`, `mergeReviewType`, `editPromoteReviewType`,
+  `assignReviewer`, `bulkReviewAction`.
+- Tests in `tests/unit/api/OntologyCurateAPI.test.js` cover exact queue URLs, params, bodies,
+  URL-encoded type ids, and bulk mixed reports.
+
 ### Added (2026-07-09) — ontology type/relation read, audit, and migration methods (ONTO-CRUD-1)
 - `OntologyAPI` gains 9 methods over the `ontology_crud.py` HTTP surface: `listTypes`,
   `listRelations`, `getType`, `getRelation`, `listAudit`, `getTypeAudit`, `getRelationAudit`,

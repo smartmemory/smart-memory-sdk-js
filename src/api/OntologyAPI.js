@@ -1,7 +1,7 @@
 /**
  * Ontology API - Registry management, inference, enrichment, grounding, templates, patterns.
  *
- * Covers all endpoints from ontology.py, ontology_layers.py, and ontology_update.py:
+ * Covers all endpoints from ontology.py, ontology_layers.py, ontology_update.py, and ontology_curate.py:
  *   POST /memory/ontology/inference/run
  *   GET  /memory/ontology/registries
  *   POST /memory/ontology/registries
@@ -52,6 +52,14 @@
  *   GET  /memory/ontology/audit
  *   GET  /memory/ontology/packs/{pack_id}/audit
  *   POST /memory/ontology/types/{from_id}/migrate-to/{to_id}
+ *   --- ONTO-HITL-CURATE-1 curation queue surface (ontology_curate.py) ---
+ *   GET  /memory/ontology/queue
+ *   POST /memory/ontology/queue/{id}/approve
+ *   POST /memory/ontology/queue/{id}/reject
+ *   POST /memory/ontology/queue/{id}/merge
+ *   POST /memory/ontology/queue/{id}/edit-promote
+ *   POST /memory/ontology/queue/{id}/assign
+ *   POST /memory/ontology/queue/bulk
  */
 export class OntologyAPI {
   constructor(baseAPI) {
@@ -621,5 +629,99 @@ export class OntologyAPI {
       `/memory/ontology/types/${encodeURIComponent(fromId)}/migrate-to/${encodeURIComponent(toId)}`,
       { reason, batch_size: batchSize }
     );
+  }
+
+  // --- ONTO-HITL-CURATE-1 curation queue surface ---------------------------
+
+  /**
+   * List ontology review queue items, keyset-paginated.
+   * @param {Object} [options]
+   * @param {string} [options.tier] working|proposed
+   * @param {string} [options.assignee] filter by review assignee
+   * @param {string} [options.source] filter by source string
+   * @param {number} [options.limit=100]
+   * @param {string} [options.cursor] opaque keyset continuation token
+   */
+  async listReviewQueue({ tier, assignee, source, limit = 100, cursor } = {}) {
+    const query = { limit: String(limit) };
+    if (tier !== undefined) query.tier = tier;
+    if (assignee !== undefined) query.assignee = assignee;
+    if (source !== undefined) query.source = source;
+    if (cursor !== undefined) query.cursor = cursor;
+    const qs = new URLSearchParams(query).toString();
+    return this.api.get(`/memory/ontology/queue${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * Approve one ontology review type.
+   * @param {string} typeId private-layer ontology type name
+   * @param {Object} [options]
+   * @param {string} [options.expectedTier] optional optimistic tier precondition
+   */
+  async approveReviewType(typeId, { expectedTier } = {}) {
+    const body = {};
+    if (expectedTier !== undefined) body.expected_tier = expectedTier;
+    return this.api.post(`/memory/ontology/queue/${encodeURIComponent(typeId)}/approve`, body);
+  }
+
+  /**
+   * Reject one ontology review type.
+   * @param {string} typeId private-layer ontology type name
+   * @param {Object} [options]
+   * @param {string} [options.expectedTier] optional optimistic tier precondition
+   */
+  async rejectReviewType(typeId, { expectedTier } = {}) {
+    const body = {};
+    if (expectedTier !== undefined) body.expected_tier = expectedTier;
+    return this.api.post(`/memory/ontology/queue/${encodeURIComponent(typeId)}/reject`, body);
+  }
+
+  /**
+   * Merge one ontology review type into another type.
+   * @param {string} typeId private-layer ontology type name being reviewed
+   * @param {string} intoId destination type identifier
+   * @param {Object} [options]
+   * @param {string} [options.expectedTier] optional optimistic tier precondition
+   */
+  async mergeReviewType(typeId, intoId, { expectedTier } = {}) {
+    const body = { into_id: intoId };
+    if (expectedTier !== undefined) body.expected_tier = expectedTier;
+    return this.api.post(`/memory/ontology/queue/${encodeURIComponent(typeId)}/merge`, body);
+  }
+
+  /**
+   * Edit and promote one ontology review type.
+   * @param {string} typeId private-layer ontology type name being reviewed
+   * @param {Object} edits edit payload accepted by the service
+   * @param {Object} [options]
+   * @param {string} [options.expectedTier] optional optimistic tier precondition
+   */
+  async editPromoteReviewType(typeId, edits, { expectedTier } = {}) {
+    const body = { edits };
+    if (expectedTier !== undefined) body.expected_tier = expectedTier;
+    return this.api.post(`/memory/ontology/queue/${encodeURIComponent(typeId)}/edit-promote`, body);
+  }
+
+  /**
+   * Assign or clear the reviewer for one ontology review type.
+   * @param {string} typeId private-layer ontology type name being reviewed
+   * @param {string|null} assignee reviewer identifier, or null to clear assignment
+   */
+  async assignReviewer(typeId, assignee) {
+    return this.api.post(`/memory/ontology/queue/${encodeURIComponent(typeId)}/assign`, { assignee });
+  }
+
+  /**
+   * Apply a curation action to many ontology review types.
+   * @param {string} action approve|reject|merge|edit_promote|assign
+   * @param {string[]} ids private-layer ontology type names to process
+   * @param {Object} [options]
+   * @param {Object} [options.params] action-specific params
+   * @param {string} [options.expectedTier] optional optimistic tier precondition
+   */
+  async bulkReviewAction(action, ids, { params, expectedTier } = {}) {
+    const body = { action, ids, params: params === undefined ? {} : params };
+    if (expectedTier !== undefined) body.expected_tier = expectedTier;
+    return this.api.post('/memory/ontology/queue/bulk', body);
   }
 }
