@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.45 (1.4.45)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Added (2026-07-09) — ONTO-HITL-CURATE-1 SDK wrappers
 - `OntologyAPI` gains wrappers for the ontology curation queue HTTP surface: `listReviewQueue`,
   `approveReviewType`, `rejectReviewType`, `mergeReviewType`, `editPromoteReviewType`,
