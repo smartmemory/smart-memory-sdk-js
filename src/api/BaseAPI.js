@@ -1,5 +1,9 @@
 import { APIError } from '../errors/APIError.js';
 
+function isFormData(body) {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 export class BaseAPI {
   /**
    * @param {import('../auth/AuthCore.js').AuthCore} authCore
@@ -22,7 +26,7 @@ export class BaseAPI {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
-      'Content-Type': 'application/json',
+      ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
       ...this.auth.getAuthHeaders(options.headers)
     };
 
@@ -36,7 +40,7 @@ export class BaseAPI {
           await this.auth.refreshToken();
 
           const retryHeaders = {
-            'Content-Type': 'application/json',
+            ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
             ...this.auth.getAuthHeaders(options.headers)
           };
           response = await this.fetchFn(
@@ -78,6 +82,57 @@ export class BaseAPI {
       ...options,
       method: 'POST',
       body: JSON.stringify(data)
+    });
+  }
+
+  async requestBinary(endpoint, options = {}) {
+    const url = `${this.baseURL}${endpoint}`;
+    const headers = {
+      ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
+      ...this.auth.getAuthHeaders(options.headers)
+    };
+    const config = this.auth.getRequestOptions({ ...options, headers });
+
+    try {
+      let response = await this.fetchFn(url, config);
+
+      if (response.status === 401 && !options.__isRetry) {
+        try {
+          await this.auth.refreshToken();
+          const retryHeaders = {
+            ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
+            ...this.auth.getAuthHeaders(options.headers)
+          };
+          response = await this.fetchFn(
+            url,
+            this.auth.getRequestOptions({ ...config, headers: retryHeaders, __isRetry: true })
+          );
+        } catch {
+          // Refresh failed — fall through to 401 handling below
+        }
+      }
+
+      if (response.status === 401) {
+        this.auth.clearLocalAuth?.();
+        throw new APIError('Authentication required', 401, 'auth_expired');
+      }
+
+      if (!response.ok) {
+        throw await this._handleError(response);
+      }
+
+      return await response.arrayBuffer();
+    } catch (error) {
+      if (error instanceof APIError) throw error;
+      throw new APIError(error.message, 0, 'network_error');
+    }
+  }
+
+  async postForm(endpoint, formData, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: 'POST',
+      body: formData
     });
   }
 

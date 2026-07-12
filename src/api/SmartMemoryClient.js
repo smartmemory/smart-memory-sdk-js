@@ -36,6 +36,7 @@ export class SmartMemoryClient {
   constructor(config) {
     this.auth = new AuthCore(config);
     const baseAPI = new BaseAPI(this.auth, { fetchFn: config.fetchFn });
+    this._api = baseAPI;
 
     this.memories = new MemoryAPI(baseAPI);
     this.decisions = new DecisionAPI(baseAPI);
@@ -73,5 +74,27 @@ export class SmartMemoryClient {
 
   getTeamId() {
     return this.auth.tokenManager.getTeamId();
+  }
+
+  /**
+   * Export the current workspace as a gzipped OKF bundle.
+   * @returns {Promise<ArrayBuffer>}
+   */
+  async exportOkf() {
+    return this._api.requestBinary('/memory/okf/export', { method: 'GET' });
+  }
+
+  /**
+   * Import a gzipped OKF bundle into the current workspace.
+   * @param {Blob | ArrayBuffer | Uint8Array} archive
+   * @returns {Promise<{ imported: number, failed: number, workspace_id: string }>}
+   */
+  async importOkf(archive) {
+    const bundle = archive instanceof Blob
+      ? archive
+      : new Blob([archive], { type: 'application/gzip' });
+    const formData = new FormData();
+    formData.append('file', bundle, 'smartmemory-okf-import.tar.gz');
+    return this._api.postForm('/memory/okf/import', formData);
   }
 }
