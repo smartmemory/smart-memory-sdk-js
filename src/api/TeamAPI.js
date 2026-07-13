@@ -3,17 +3,20 @@ export class TeamAPI {
     this.api = baseAPI;
   }
 
-  async list() {
-    return this.api.get('/memory/teams');
+  async list({ includeSystem = false } = {}) {
+    const suffix = includeSystem ? '?include_system=true' : '';
+    return this.api.get(`/memory/teams${suffix}`);
   }
 
-  async create({ name, description = null, dataClassification = 'internal', costCenter = null }) {
-    return this.api.post('/memory/teams', {
+  async create({ name, description = null, dataClassification = 'internal', costCenter = null, isSystem = false }) {
+    const body = {
       name,
       description,
       data_classification: dataClassification,
       cost_center: costCenter
-    });
+    };
+    if (isSystem) body.is_system = true;
+    return this.api.post('/memory/teams', body);
   }
 
   async get(teamId) {

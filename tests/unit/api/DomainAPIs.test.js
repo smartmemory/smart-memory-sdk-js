@@ -222,6 +222,23 @@ describe('TeamAPI', () => {
     });
   });
 
+  it('should create and reveal system teams only when explicitly requested', async () => {
+    const api = mockBaseAPI();
+    const teams = new TeamAPI(api);
+
+    await teams.create({ name: 'Maya', isSystem: true });
+    expect(api.post).toHaveBeenCalledWith('/memory/teams', {
+      name: 'Maya',
+      description: null,
+      data_classification: 'internal',
+      cost_center: null,
+      is_system: true
+    });
+
+    await teams.list({ includeSystem: true });
+    expect(api.get).toHaveBeenCalledWith('/memory/teams?include_system=true');
+  });
+
   it('should remove member', async () => {
     const api = mockBaseAPI();
     const teams = new TeamAPI(api);

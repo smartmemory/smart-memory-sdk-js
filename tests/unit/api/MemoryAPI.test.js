@@ -76,6 +76,22 @@ describe('MemoryAPI', () => {
     expect(baseAPI.patch).toHaveBeenCalledWith('/memory/id-1', { content: 'updated' });
   });
 
+  it('supersede should POST an append-only replacement contract', async () => {
+    await memoryAPI.supersede('old-id', {
+      content: 'Revised view',
+      memoryType: 'opinion',
+      metadata: { maya_self_origin: 'experience' },
+      reason: 'New evidence'
+    });
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/old-id/supersede', {
+      content: 'Revised view',
+      memory_type: 'opinion',
+      metadata: { maya_self_origin: 'experience' },
+      reason: 'New evidence'
+    });
+  });
+
   it('delete should call DELETE /memory/:id', async () => {
     await memoryAPI.delete('id-1');
     expect(baseAPI.delete).toHaveBeenCalledWith('/memory/id-1');
