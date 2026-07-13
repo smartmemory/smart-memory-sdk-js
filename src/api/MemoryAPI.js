@@ -46,6 +46,15 @@ export class MemoryAPI {
     return this.api.patch(`/memory/${id}`, updates);
   }
 
+  async supersede(id, { content, memoryType, metadata = {}, reason }) {
+    return this.api.post(`/memory/${id}/supersede`, {
+      content,
+      memory_type: memoryType,
+      metadata,
+      reason
+    });
+  }
+
   async delete(id) {
     return this.api.delete(`/memory/${id}`);
   }
