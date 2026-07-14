@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.48 (1.4.48)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Added (2026-07-13) — MAYA-SELF-1 system teams and supersession
 - `TeamAPI.create()` accepts `isSystem`, `TeamAPI.list()` accepts `includeSystem`, and
   `MemoryAPI.supersede()` calls the append-only supersession endpoint. Defaults preserve the existing
