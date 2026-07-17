@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Changed (auto, lockstep) — track product version 1.4.49 (1.4.49)
+- Version copied from the smartmemory-core release (single-source lockstep).
+
 ### Changed (auto, lockstep) — track product version 1.4.48 (1.4.48)
 - Version copied from the smartmemory-core release (single-source lockstep).
 
