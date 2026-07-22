@@ -49,7 +49,11 @@ vi.mock('../../src/api/SmartMemoryClient.js', () => ({
 }));
 
 import * as analytics from '../../src/react/analytics/index.js';
-import { normalizeEnvironment } from '../../src/react/analytics/config.js';
+import {
+  normalizeEnvironment,
+  sanitizeCapturedEvent,
+  stripUrlDetails,
+} from '../../src/react/analytics/config.js';
 import { SmartMemoryProvider } from '../../src/react/SmartMemoryProvider.jsx';
 import { useAuthState } from '../../src/react/useAuthState.js';
 
@@ -95,15 +99,32 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
     expect(config.options).toEqual(expect.objectContaining({
       api_host: 'https://us.i.posthog.com',
       autocapture: false,
-      capture_exceptions: true,
+      capture_exceptions: false,
       capture_pageview: 'history_change',
       cross_subdomain_cookie: true,
       defaults: '2025-05-24',
       disable_session_recording: false,
       mask_all_text: true,
       mask_all_element_attributes: true,
-      session_recording: { maskAllInputs: true },
+      session_recording: { maskAllInputs: true, maskTextSelector: '*' },
     }));
+
+    // Regression guards for the three privacy defects found in adversarial
+    // review (2026-07-22). Each of these is a channel that bypasses the
+    // product-event allowlist entirely, so they are asserted explicitly
+    // rather than left to the objectContaining above.
+
+    // 1. Replay masking must come from session_recording. The top-level
+    //    mask_all_text flag is only read by autocapture, which is disabled,
+    //    so on its own it masks nothing in a replay.
+    expect(config.options.session_recording.maskTextSelector).toBe('*');
+
+    // 2. Exception autocapture ships raw messages and stacks around our
+    //    sanitized captureException seam.
+    expect(config.options.capture_exceptions).toBe(false);
+
+    // 3. Every event must pass through the URL scrubber.
+    expect(config.options.before_send).toBe(sanitizeCapturedEvent);
 
     config.options.loaded(posthogMock);
 
@@ -112,6 +133,41 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
       app: 'web',
       environment: 'production',
     });
+  });
+
+  it('strips query strings and fragments from every URL-bearing property', () => {
+    const scrubbed = sanitizeCapturedEvent({
+      event: '$pageview',
+      properties: {
+        $current_url: 'https://app.smartmemory.ai/Memories?id=memory-private-47#frag',
+        $referrer: 'https://app.smartmemory.ai/Search?q=secret+query',
+        $pathname: '/Memories',
+        workspace_id: 'team_abc',
+        $set: { $initial_current_url: 'https://viewer.smartmemory.ai/?run=run-private-9' },
+      },
+    });
+
+    expect(scrubbed.properties.$current_url).toBe('https://app.smartmemory.ai/Memories');
+    expect(scrubbed.properties.$referrer).toBe('https://app.smartmemory.ai/Search');
+    expect(scrubbed.properties.$set.$initial_current_url).toBe('https://viewer.smartmemory.ai/');
+
+    // Non-URL properties are untouched.
+    expect(scrubbed.properties.$pathname).toBe('/Memories');
+    expect(scrubbed.properties.workspace_id).toBe('team_abc');
+
+    // No identifier survives anywhere in the serialized event.
+    const serialized = JSON.stringify(scrubbed);
+    for (const secret of ['memory-private-47', 'secret+query', 'run-private-9']) {
+      expect(serialized).not.toContain(secret);
+    }
+  });
+
+  it('drops an unparseable URL rather than forwarding it, and tolerates odd shapes', () => {
+    expect(stripUrlDetails('http://[not a url')).toBeNull();
+    expect(stripUrlDetails('/relative/path')).toBe('/relative/path');
+    expect(stripUrlDetails(undefined)).toBeUndefined();
+    expect(sanitizeCapturedEvent(null)).toBeNull();
+    expect(sanitizeCapturedEvent({ event: '$pageview' }).properties).toBeUndefined();
   });
 
   it('normalizes deployment modes to production, development, or test', () => {

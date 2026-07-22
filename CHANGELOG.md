@@ -1,6 +1,32 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed (2026-07-22) — PLAT-ANALYTICS-1 privacy blockers (adversarial review)
+
+Three channels bypassed the product-event allowlist entirely, so the strict payload
+posture the feature was built around did not hold in practice.
+
+- **Session replay was recording unmasked text.** The config set top-level `mask_all_text`
+  and `mask_all_element_attributes`, but posthog-js reads those only in `autocapture.js`
+  and `dead-clicks-autocapture.js` — and autocapture is off. The replay recorder resolves
+  masking solely from `session_recording.{maskAllInputs, maskTextSelector, blockSelector}`,
+  so rendered memory content, search results, and chat text were serialized into
+  `$snapshot` in the clear. Now sets `session_recording.maskTextSelector: '*'`. The
+  top-level flags are kept as defense in depth for the autocapture surfaces, which remote
+  config can switch on.
+- **Exception autocapture bypassed the sanitized seam.** `capture_exceptions: true` hooked
+  `window.onerror` and `unhandledrejection` and shipped raw messages, stacks, and
+  filenames, never passing through `captureException` (which strips exactly those). An
+  error whose message was built from a search query or memory content was sent verbatim.
+  Now `false`; explicit capture only.
+- **Every event carried the full URL including its query string.** PostHog attaches
+  `$current_url` / `$referrer` (and `$initial_*` variants) automatically, outside the
+  allowlist. Our routes put record identifiers in the query — `/Memories?id=<item_id>`
+  and the viewer's `/?run=<run_id>` — so memory and run IDs rode along on every pageview,
+  identify, product event, and replay snapshot. Adds a `before_send` hook that strips the
+  query string and fragment from every URL-bearing property, recursing into `$set` /
+  `$set_once`. An unparseable URL is dropped rather than forwarded.
+
 ### Fixed (2026-07-22) — PLAT-ANALYTICS-1 S6 identify/workspace ordering
 - `AnalyticsIdentity` now registers the active `workspace_id` super-property *before* calling
   `identify()`. PostHog reads super-properties when it builds the outgoing payload, so the
