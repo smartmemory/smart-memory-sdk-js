@@ -101,6 +101,11 @@ export function createAnalyticsConfig({ app, apiKey, apiHost }) {
         maskAllInputs: true,
         maskTextSelector: '*',
       },
+      // The PostHog project has consoleLogRecordingEnabled: true server-side, which
+      // pipes console output into the replay. Apps log raw payloads while debugging
+      // (Maya logs recalled memory content), so that is a content channel masking
+      // does not cover. Pin it off from the client, which takes precedence.
+      enable_recording_console_log: false,
       // $current_url / $referrer and their $initial_* variants are attached by
       // PostHog to every event, replay snapshot, and identify — outside the
       // product-event allowlist. Strip query strings and fragments so record

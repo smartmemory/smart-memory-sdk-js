@@ -19,6 +19,12 @@ posture the feature was built around did not hold in practice.
   filenames, never passing through `captureException` (which strips exactly those). An
   error whose message was built from a search query or memory content was sent verbatim.
   Now `false`; explicit capture only.
+- **Console output was being recorded into replays.** The production PostHog project
+  returns `sessionRecording.consoleLogRecordingEnabled: true` in its remote config, and
+  posthog-js resolves the setting as `client ?? server` — so leaving it unset silently
+  inherited `true`. Apps log raw payloads while debugging (Maya logs recalled memory
+  content), and console capture is not covered by text masking. Now pinned
+  `enable_recording_console_log: false` from the client, which takes precedence.
 - **Every event carried the full URL including its query string.** PostHog attaches
   `$current_url` / `$referrer` (and `$initial_*` variants) automatically, outside the
   allowlist. Our routes put record identifiers in the query — `/Memories?id=<item_id>`
