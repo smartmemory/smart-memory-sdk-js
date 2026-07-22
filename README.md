@@ -79,6 +79,40 @@ function Dashboard() {
 }
 ```
 
+### Browser analytics (optional)
+
+The analytics entry point is browser-only and intentionally separate from the core and React bindings. Install its optional `posthog-js` peer only in apps that use analytics:
+
+```bash
+npm install posthog-js
+```
+
+```jsx
+import { PostHogProvider } from 'posthog-js/react';
+import {
+  AnalyticsIdentity,
+  createAnalyticsConfig,
+} from '@smartmemory/sdk-js/react/analytics';
+
+const analytics = createAnalyticsConfig({
+  app: 'web',
+  apiKey: import.meta.env.VITE_PUBLIC_POSTHOG_KEY,
+  apiHost: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+});
+
+// Keep the existing child passthrough when analytics.apiKey is null.
+const root = analytics.apiKey
+  ? <PostHogProvider apiKey={analytics.apiKey} options={analytics.options}><App /></PostHogProvider>
+  : <App />;
+
+function IdentityAdapter() {
+  const { user, isAuthenticated, workspaceId } = useAuth();
+  return <AnalyticsIdentity {...{ user, isAuthenticated, workspaceId }} />;
+}
+```
+
+This subpath also exports `captureProductEvent`, `captureException`, and `resetAnalytics`. It is not re-exported from `@smartmemory/sdk-js/react`, so non-browser consumers never load PostHog.
+
 ## Entry Points
 
 | Import | Contents |
@@ -86,6 +120,7 @@ function Dashboard() {
 | `@smartmemory/sdk-js` | SmartMemoryClient, AuthCore, TokenManager, all domain APIs, APIError |
 | `@smartmemory/sdk-js/core` | Everything above + BaseAPI, RefreshManager, SSOManager (internal access) |
 | `@smartmemory/sdk-js/react` | SmartMemoryProvider, useAuth, useAuthState, useAuthActions, useSmartMemory, AuthWrapper |
+| `@smartmemory/sdk-js/react/analytics` | Browser-only strict PostHog config, identity, product-event, exception, and reset helpers (optional `posthog-js` peer) |
 | `@smartmemory/sdk-js/fetch` | createAuthFetch, installInterceptor |
 
 ## Configuration

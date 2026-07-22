@@ -112,7 +112,8 @@ export class AuthCore {
       isAuthenticated: this.isAuthenticated(),
       user: this.currentUser,
       token: this.currentToken,
-      tenantId: this.tokenManager.getTenantId()
+      tenantId: this.tokenManager.getTenantId(),
+      workspaceId: this.tokenManager.getTeamId()
     };
 
     this.listeners.forEach(listener => {

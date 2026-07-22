@@ -16,6 +16,7 @@ export function SmartMemoryProvider({ children, ...config }) {
     user: client.auth.getCurrentUser(),
     token: client.auth.getCurrentToken(),
     tenantId: client.auth.getTenantId(),
+    workspaceId: client.auth.tokenManager.getTeamId(),
     loading: false,
     error: null
   });
@@ -27,7 +28,8 @@ export function SmartMemoryProvider({ children, ...config }) {
         isAuthenticated: state.isAuthenticated,
         user: state.user,
         token: state.token,
-        tenantId: state.tenantId
+        tenantId: state.tenantId,
+        workspaceId: state.workspaceId
       }));
     });
     return unsubscribe;
