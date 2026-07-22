@@ -8,13 +8,14 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.js'),
         core: resolve(__dirname, 'src/core.js'),
         react: resolve(__dirname, 'src/react/index.js'),
+        'react/analytics': resolve(__dirname, 'src/react/analytics/index.js'),
         fetch: resolve(__dirname, 'src/fetch/index.js'),
         progress: resolve(__dirname, 'src/progress.ts')
       },
       formats: ['es']
     },
     rollupOptions: {
-      external: ['react', 'react-dom']
+      external: ['posthog-js', 'react', 'react-dom']
     }
   },
   test: {
