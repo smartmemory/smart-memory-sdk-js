@@ -99,7 +99,10 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
       capture_pageview: 'history_change',
       cross_subdomain_cookie: true,
       defaults: '2025-05-24',
-      disable_session_recording: true,
+      disable_session_recording: false,
+      mask_all_text: true,
+      mask_all_element_attributes: true,
+      session_recording: { maskAllInputs: true },
     }));
 
     config.options.loaded(posthogMock);
@@ -129,7 +132,8 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
     expect(config.apiKey).toBeNull();
     expect(config.options).toEqual(expect.objectContaining({
       autocapture: false,
-      disable_session_recording: true,
+      mask_all_text: true,
+      mask_all_element_attributes: true,
     }));
     expect(posthogMock.init).not.toHaveBeenCalled();
     expect(posthogMock.register).not.toHaveBeenCalled();

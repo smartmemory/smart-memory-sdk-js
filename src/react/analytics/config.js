@@ -30,7 +30,16 @@ export function createAnalyticsConfig({ app, apiKey, apiHost }) {
       capture_pageview: 'history_change',
       cross_subdomain_cookie: true,
       defaults: '2025-05-24',
-      disable_session_recording: true,
+      // Session replay is ON but fully masked (D3 revision 2026-07-22):
+      // layout/navigation are visible, memory content, search queries, and
+      // chat text are not. mask_all_text is the load-bearing flag — replays
+      // must never contain user-authored text.
+      disable_session_recording: false,
+      mask_all_text: true,
+      mask_all_element_attributes: true,
+      session_recording: {
+        maskAllInputs: true,
+      },
       loaded: (client) => {
         if (!normalizedApiKey || typeof client?.register !== 'function') {
           return;
