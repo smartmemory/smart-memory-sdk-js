@@ -126,6 +126,12 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
     // 3. Every event must pass through the URL scrubber.
     expect(config.options.before_send).toBe(sanitizeCapturedEvent);
 
+    // 4. The PostHog project enables console-log recording server-side, which
+    //    pipes console output into the replay where masking does not reach it.
+    //    posthog-js resolves this as (client ?? server), so false must be
+    //    explicit — omitting it silently inherits the server's `true`.
+    expect(config.options.enable_recording_console_log).toBe(false);
+
     config.options.loaded(posthogMock);
 
     expect(posthogMock.register).toHaveBeenCalledTimes(1);
