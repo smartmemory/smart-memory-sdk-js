@@ -2,8 +2,9 @@
 
 ## [Unreleased]
 ### Added (2026-07-22) — PLAT-ANALYTICS-1 S2 shared browser analytics
-- Added the optional `@smartmemory/sdk-js/react/analytics` subpath with strict event-only PostHog
-  configuration, normalized identity/workspace handling, contract-generated product-event allowlists,
+- Added the optional `@smartmemory/sdk-js/react/analytics` subpath with a masked-replay PostHog
+  configuration (autocapture off, session replay on with full text/attribute/input masking),
+  normalized identity/workspace handling, contract-generated product-event allowlists,
   sanitized exception capture, and synchronous reset.
 - React auth state now exposes the active token-manager `workspaceId` to consumers.
 
