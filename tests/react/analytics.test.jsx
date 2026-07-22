@@ -167,6 +167,9 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
     expect(posthogMock.register).not.toHaveBeenCalledWith({
       workspace_id: 'workspace-stale',
     });
+    expect(posthogMock.register.mock.invocationCallOrder[0]).toBeLessThan(
+      posthogMock.identify.mock.invocationCallOrder[0],
+    );
   });
 
   it('re-identifies when any identity property or active workspace changes', () => {
