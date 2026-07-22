@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed (2026-07-22) — PLAT-ANALYTICS-1 S6 identify/workspace ordering
+- `AnalyticsIdentity` now registers the active `workspace_id` super-property *before* calling
+  `identify()`. PostHog reads super-properties when it builds the outgoing payload, so the
+  previous order let an `$identify` event carry the prior/default workspace during an
+  organization switch. Found by the S6 network-level E2E assertion; unit coverage now asserts
+  invocation order rather than just that both calls happened.
+
 ### Added (2026-07-22) — PLAT-ANALYTICS-1 S2 shared browser analytics
 - Added the optional `@smartmemory/sdk-js/react/analytics` subpath with a masked-replay PostHog
   configuration (autocapture off, session replay on with full text/attribute/input masking),

@@ -26,17 +26,20 @@ export function AnalyticsIdentity({ user, isAuthenticated, workspaceId }) {
         return;
       }
 
-      client.identify?.(userId, {
-        email,
-        plan,
-        tenant_id: tenantId,
-      });
-
       if (workspaceId) {
         client.register?.({ workspace_id: workspaceId });
       } else {
         client.unregister?.('workspace_id');
       }
+
+      // Super-properties are read when identify builds its network payload.
+      // Register the active workspace first so $identify cannot carry the
+      // previous/default workspace during an organization switch.
+      client.identify?.(userId, {
+        email,
+        plan,
+        tenant_id: tenantId,
+      });
     } catch {
       // Identity analytics is best-effort and must never break authentication.
     }
