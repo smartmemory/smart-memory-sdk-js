@@ -223,9 +223,12 @@ export class DecisionAPI {
   /**
    * Find existing decisions that may conflict with this one.
    * @param {string} decisionId
+   * @param {number} [minContest=0] - Minimum pairwise contest severity (0..1).
    */
-  async findConflicts(decisionId) {
-    return this.api.post(`/memory/decisions/${decisionId}/conflicts`);
+  async findConflicts(decisionId, minContest = 0) {
+    return this.api.post(
+      `/memory/decisions/${decisionId}/conflicts?min_contest=${encodeURIComponent(minContest)}`
+    );
   }
 
   // --- Legacy reasoning proxies (kept for backward compatibility) ---

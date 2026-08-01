@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { DecisionAPI } from '../../../src/api/DecisionAPI.js';
 import { GraphAPI } from '../../../src/api/GraphAPI.js';
 import { TeamAPI } from '../../../src/api/TeamAPI.js';
@@ -55,6 +55,32 @@ describe('DecisionAPI', () => {
     expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/reinforce', {
       evidence_id: 'ev-42'
     });
+  });
+
+  it('should search decisions by topic', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.search('routing', 10);
+
+    expect(api.get).toHaveBeenCalledWith('/memory/decisions/search?topic=routing&limit=10');
+  });
+
+  it('should contradict a decision', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.contradict('d-1', 'ev-42');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/contradict', {
+      evidence_id: 'ev-42'
+    });
+  });
+
+  it('should find conflicts with the supplied contest threshold', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.findConflicts('d-1', 0.6);
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/conflicts?min_contest=0.6');
   });
 
   it('should supersede a decision', async () => {
@@ -143,13 +169,37 @@ describe('GraphAPI', () => {
     expect(api.get).toHaveBeenCalledWith('/memory/graph/full?limit=25');
   });
 
+  it('should find a shortest graph path', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.findShortestPath('node 1', 'node/2', 3);
+
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/path?start_id=node%201&end_id=node%2F2&max_hops=3');
+  });
+
   it('should get edges in bulk', async () => {
     const api = mockBaseAPI();
     const graph = new GraphAPI(api);
-    await graph.getEdgesBulk(['node-1', 'node-2']);
+    await graph.getEdgesBulk(['node-1', 'node-2'], { includeProperties: true });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/graph/edges', {
+    expect(api.post).toHaveBeenCalledWith('/memory/graph/edges?include_properties=true', {
       node_ids: ['node-1', 'node-2']
+    });
+  });
+
+  it('should bulk upsert graph nodes and edges', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.bulkUpsert({
+      nodes: [{ item_id: 'node-1', label: 'Person', properties: { name: 'Ada' } }],
+      edges: [{ source_id: 'node-1', target_id: 'node-2', edge_type: 'KNOWS' }],
+      deletePrefix: 'import:'
+    });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/graph/bulk', {
+      nodes: [{ item_id: 'node-1', label: 'Person', properties: { name: 'Ada' } }],
+      edges: [{ source_id: 'node-1', target_id: 'node-2', edge_type: 'KNOWS' }],
+      delete_prefix: 'import:'
     });
   });
 

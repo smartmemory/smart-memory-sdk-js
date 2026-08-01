@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-08-01) — GRAPH-API-1b: graph/decision wrapper parity
+- `GraphAPI.bulkUpsert` (batched node+edge upsert) added; `getEdgesBulk` gains
+  `includeProperties`; `DecisionAPI.findConflicts` gains `minContest`. All seven
+  graph/decision routes now covered by mocked tests.
+
 ### Fixed (2026-07-22) — PLAT-ANALYTICS-1 privacy blockers (adversarial review)
 
 Three channels bypassed the product-event allowlist entirely, so the strict payload
