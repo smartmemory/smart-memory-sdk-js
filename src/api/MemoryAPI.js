@@ -147,8 +147,12 @@ export class MemoryAPI {
     return this.api.get(`/memory/${id}/links`);
   }
 
-  async searchByMetadata(metadataKey, metadataValue, { memoryType = null } = {}) {
-    const params = new URLSearchParams({ metadata_key: metadataKey, metadata_value: metadataValue });
+  async searchByMetadata(metadataKey, metadataValue, { memoryType = null, limit = 25 } = {}) {
+    const params = new URLSearchParams({
+      metadata_key: metadataKey,
+      metadata_value: metadataValue,
+      limit,
+    });
     if (memoryType) params.append('memory_type', memoryType);
     return this.api.get(`/memory/by-metadata?${params}`);
   }
