@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-08-02) — MAYA-SAID-1
+- search_by_metadata gains limit param (route already supported it)
+
 ### Added (2026-08-01) — GRAPH-API-1b: graph/decision wrapper parity
 - `GraphAPI.bulkUpsert` (batched node+edge upsert) added; `getEdgesBulk` gains
   `includeProperties`; `DecisionAPI.findConflicts` gains `minContest`. All seven

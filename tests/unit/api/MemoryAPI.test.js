@@ -356,7 +356,13 @@ describe('MemoryAPI', () => {
     it('searchByMetadata should GET exact metadata lookup path', async () => {
       await memoryAPI.searchByMetadata('source', 'chat', { memoryType: 'semantic' });
 
-      expect(baseAPI.get).toHaveBeenCalledWith('/memory/by-metadata?metadata_key=source&metadata_value=chat&memory_type=semantic');
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/by-metadata?metadata_key=source&metadata_value=chat&limit=25&memory_type=semantic');
+    });
+
+    it('searchByMetadata should include default limit=25 when omitted', async () => {
+      await memoryAPI.searchByMetadata('source', 'chat');
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/by-metadata?metadata_key=source&metadata_value=chat&limit=25');
     });
 
     it('getNeighbors should GET exact neighbors path', async () => {
