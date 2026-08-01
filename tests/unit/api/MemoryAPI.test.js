@@ -42,6 +42,21 @@ describe('MemoryAPI', () => {
     expect(body).not.toHaveProperty('conversation_context');
   });
 
+  it('create should pass retrievedContextIds through as snake_case (GRAPH-API-1i)', async () => {
+    await memoryAPI.create({ content: 'test', retrievedContextIds: ['ctx-1', 'ctx-2'] });
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.retrieved_context_ids).toEqual(['ctx-1', 'ctx-2']);
+  });
+
+  it('create should omit retrieved_context_ids when absent or empty (GRAPH-API-1i)', async () => {
+    await memoryAPI.create({ content: 'test' });
+    expect(baseAPI.post.mock.calls.at(-1)[1]).not.toHaveProperty('retrieved_context_ids');
+
+    await memoryAPI.create({ content: 'test', retrievedContextIds: [] });
+    expect(baseAPI.post.mock.calls.at(-1)[1]).not.toHaveProperty('retrieved_context_ids');
+  });
+
   it('get should normalize item_id to id', async () => {
     baseAPI.get.mockResolvedValue({ item_id: 'abc', content: 'hello' });
 

@@ -1,6 +1,16 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-08-02) — GRAPH-API-1i: `MemoryAPI.create` accepts `retrievedContextIds`
+- Python-SDK parity for the CORE-DECISION-OUTCOME-1 D4 field: `retrievedContextIds`
+  (camelCase option) is sent as the `retrieved_context_ids` snake_case wire field, and
+  omitted from the body when absent or empty.
+
+### Fixed (2026-08-02) — stale `DecisionAPI.findConflicts` assertion
+- GRAPH-API-1b gave `findConflicts` a `minContest` param that is always sent
+  (`?min_contest=0` by default); its test still asserted the bare URL and had been
+  failing since. Assertion corrected and an explicit-value case added.
+
 ### Added (2026-08-02) — MAYA-SAID-1
 - search_by_metadata gains limit param (route already supported it)
 
