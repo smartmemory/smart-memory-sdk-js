@@ -80,8 +80,24 @@ export class GraphAPI {
    * Fetch edges for multiple node IDs in bulk.
    * @param {string[]} nodeIds
    */
-  async getEdgesBulk(nodeIds) {
-    return this.api.post('/memory/graph/edges', { node_ids: nodeIds });
+  async getEdgesBulk(nodeIds, { includeProperties = false } = {}) {
+    const suffix = includeProperties ? '?include_properties=true' : '';
+    return this.api.post(`/memory/graph/edges${suffix}`, { node_ids: nodeIds });
+  }
+
+  /**
+   * Bulk upsert graph nodes and edges, optionally replacing a node-ID prefix.
+   * @param {Object} [params]
+   * @param {Array<Object>} [params.nodes=[]] - Nodes with item_id, label, and properties.
+   * @param {Array<Object>} [params.edges=[]] - Edges with source_id, target_id, edge_type, and properties.
+   * @param {string|null} [params.deletePrefix=null] - Scoped node-ID prefix to delete before writing.
+   */
+  async bulkUpsert({ nodes = [], edges = [], deletePrefix = null } = {}) {
+    const body = { nodes, edges };
+    if (deletePrefix !== null) {
+      body.delete_prefix = deletePrefix;
+    }
+    return this.api.post('/memory/graph/bulk', body);
   }
 
   /**
