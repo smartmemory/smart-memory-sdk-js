@@ -176,7 +176,17 @@ describe('DecisionAPI (new methods)', () => {
     const decisions = new DecisionAPI(api);
     await decisions.findConflicts('d-1');
 
-    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/conflicts');
+    // GRAPH-API-1b gave findConflicts a minContest param, defaulting to 0 and
+    // always sent; this assertion was not updated with it.
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/conflicts?min_contest=0');
+  });
+
+  it('should forward an explicit minContest to findConflicts', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.findConflicts('d-1', 3);
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/conflicts?min_contest=3');
   });
 
   it('should get fuzzy confidence', async () => {
