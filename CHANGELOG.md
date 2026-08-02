@@ -1,10 +1,11 @@
 # Changelog
 
 ## [Unreleased]
-### Added (2026-08-02) — GRAPH-API-1i: `MemoryAPI.create` accepts `retrievedContextIds`
-- Python-SDK parity for the CORE-DECISION-OUTCOME-1 D4 field: `retrievedContextIds`
-  (camelCase option) is sent as the `retrieved_context_ids` snake_case wire field, and
-  omitted from the body when absent or empty.
+### Changed (2026-08-02) — GRAPH-API-1i `retrievedContextIds` option added, then removed same day
+- `MemoryAPI.create` briefly accepted a `retrievedContextIds` option. Removed after
+  review: provenance travels inside `metadata`, which persists and lifts onto the
+  server-side typed field — the dedicated option duplicated that path for zero
+  consumers. Net change versus the last release: none.
 
 ### Fixed (2026-08-02) — stale `DecisionAPI.findConflicts` assertion
 - GRAPH-API-1b gave `findConflicts` a `minContest` param that is always sent

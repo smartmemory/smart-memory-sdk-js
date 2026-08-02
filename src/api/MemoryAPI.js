@@ -6,6 +6,10 @@ export class MemoryAPI {
   /**
    * Create a memory item.
    *
+   * Provenance like `retrieved_context_ids` travels inside `metadata` — the storage
+   * layer lifts it onto the server-side MemoryItem; no dedicated option exists
+   * (GRAPH-API-1i wire field added then removed 2026-08-02).
+   *
    * @param {Object} options
    * @param {string} options.content - Memory content
    * @param {string} [options.memoryType='semantic'] - Memory type
@@ -13,10 +17,6 @@ export class MemoryAPI {
    * @param {boolean} [options.usePipeline=true] - Run the full extraction pipeline
    * @param {string} [options.profileName] - Pipeline profile, routed server-side
    * @param {Object} [options.conversationContext] - Conversation-aware extraction context
-   * @param {string[]} [options.retrievedContextIds] - CORE-DECISION-OUTCOME-1 D4:
-   *   item_ids of the memory items retrieved as context for the work that produced
-   *   this item. Omitted from the body when empty; the server defaults it to [].
-   *   Added in PLAT-GRAPH-API-1i for parity with the Python SDK.
    */
   async create({
     content,
@@ -25,7 +25,6 @@ export class MemoryAPI {
     usePipeline = true,
     profileName = null,
     conversationContext = null,
-    retrievedContextIds = null,
   }) {
     const body = {
       content,
@@ -36,9 +35,6 @@ export class MemoryAPI {
     };
     if (conversationContext !== null && conversationContext !== undefined) {
       body.conversation_context = conversationContext;
-    }
-    if (Array.isArray(retrievedContextIds) && retrievedContextIds.length > 0) {
-      body.retrieved_context_ids = retrievedContextIds;
     }
     return this.api.post('/memory/add', body);
   }
