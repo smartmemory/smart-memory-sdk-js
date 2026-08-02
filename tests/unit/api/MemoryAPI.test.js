@@ -70,6 +70,51 @@ describe('MemoryAPI', () => {
     expect(call).toContain('offset=0');
   });
 
+  it('list should omit metadata filter params when not supplied', async () => {
+    await memoryAPI.list({ limit: 10 });
+
+    const call = baseAPI.get.mock.calls[0][0];
+    expect(call).not.toContain('metadata_key');
+    expect(call).not.toContain('metadata_value');
+  });
+
+  it('list should send metadata filter params when supplied', async () => {
+    await memoryAPI.list({ metadataKey: 'bot_topic', metadataValue: 'ml-research' });
+
+    expect(baseAPI.get).toHaveBeenCalledWith(
+      '/memory/list?limit=50&offset=0&metadata_key=bot_topic&metadata_value=ml-research'
+    );
+  });
+
+  it('list should send a dotted metadata key unchanged', async () => {
+    // Translation to the flattened storage separator happens server-side.
+    await memoryAPI.list({ metadataKey: 'profile.tier', metadataValue: 'pro' });
+
+    const call = baseAPI.get.mock.calls[0][0];
+    expect(call).toContain('metadata_key=profile.tier');
+  });
+
+  it('list should URL-encode metadata values containing reserved characters', async () => {
+    // The whole point of using URLSearchParams: a raw concatenation would let
+    // these characters split the query string and silently change the request.
+    await memoryAPI.list({ metadataKey: 'topic', metadataValue: 'a&b=c d#e' });
+
+    const call = baseAPI.get.mock.calls[0][0];
+    expect(call).toContain('metadata_value=a%26b%3Dc+d%23e');
+
+    const query = new URLSearchParams(call.split('?')[1]);
+    expect(query.get('metadata_value')).toBe('a&b=c d#e');
+    expect(query.get('limit')).toBe('50');
+  });
+
+  it('list should URL-encode non-ASCII metadata values', async () => {
+    await memoryAPI.list({ metadataKey: 'topic', metadataValue: 'café ☕' });
+
+    const call = baseAPI.get.mock.calls[0][0];
+    const query = new URLSearchParams(call.split('?')[1]);
+    expect(query.get('metadata_value')).toBe('café ☕');
+  });
+
   it('update should only include defined fields', async () => {
     await memoryAPI.update('id-1', { content: 'updated' });
 
