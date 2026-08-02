@@ -74,10 +74,41 @@ export class MemoryAPI {
     return this.api.delete(`/memory/${id}`);
   }
 
-  async list({ limit = 50, offset = 0, type = null } = {}) {
-    let url = `/memory/list?limit=${limit}&offset=${offset}`;
-    if (type) url += `&memory_type=${type}`;
-    return this.api.get(url);
+  /**
+   * List memory items, optionally filtered by an exact metadata match.
+   *
+   * @param {object} [options]
+   * @param {number} [options.limit=50]
+   * @param {number} [options.offset=0]
+   * @param {string|null} [options.type=null] - NOTE: sent as `memory_type`, which the
+   *   `/memory/list` route does not declare and therefore ignores. Pre-existing; kept as-is
+   *   so nothing silently changes behaviour for callers already passing it.
+   * @param {string|null} [options.metadataKey=null] - GRAPH-API-1l. Metadata key to filter
+   *   on. Nested keys use dot syntax (`profile.tier`). Must be paired with `metadataValue`;
+   *   sending only one half is a 422.
+   * @param {string|null} [options.metadataValue=null] - Value the key must equal.
+   * @returns {Promise<{items: object[], total: number, limit: number, offset: number}>}
+   *   `total` counts the filtered set, so it drives pagination directly.
+   */
+  async list({
+    limit = 50,
+    offset = 0,
+    type = null,
+    metadataKey = null,
+    metadataValue = null,
+  } = {}) {
+    // URLSearchParams, not string concatenation: a metadata value may legitimately
+    // contain `&`, `=`, `#`, spaces, or non-ASCII, all of which would corrupt a
+    // hand-built query string. Mirrors searchByMetadata below.
+    const params = new URLSearchParams({ limit, offset });
+    if (type) params.append('memory_type', type);
+    if (metadataKey !== null && metadataKey !== undefined) {
+      params.append('metadata_key', metadataKey);
+    }
+    if (metadataValue !== null && metadataValue !== undefined) {
+      params.append('metadata_value', metadataValue);
+    }
+    return this.api.get(`/memory/list?${params}`);
   }
 
   /**
@@ -162,6 +193,15 @@ export class MemoryAPI {
     return this.api.get(`/memory/${id}/links`);
   }
 
+  /**
+   * Find memory items by exact metadata match.
+   *
+   * @deprecated GRAPH-API-1l — use {@link MemoryAPI#list} with `metadataKey` /
+   *   `metadataValue` instead. It applies the same filter but adds pagination and an
+   *   exact `total`. This method still works and its behaviour is unchanged; the two
+   *   endpoints return slightly different item shapes, so migrate deliberately rather
+   *   than by find-and-replace.
+   */
   async searchByMetadata(metadataKey, metadataValue, { memoryType = null, limit = 25 } = {}) {
     const params = new URLSearchParams({
       metadata_key: metadataKey,

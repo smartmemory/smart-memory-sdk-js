@@ -1,6 +1,26 @@
 # Changelog
 
 ## [Unreleased]
+### Added (2026-08-02) — GRAPH-API-1l: metadata filters on `MemoryAPI.list()`
+- `list()` accepts `metadataKey` / `metadataValue` for an exact metadata match, mapped to the
+  `metadata_key` / `metadata_value` query params. Nested keys use dot syntax (`profile.tier`)
+  and are sent unchanged. Omitted from the query string entirely when not supplied — the route
+  validates them as a both-or-neither pair, so sending one alone is a 422.
+- `total` in the response counts the filtered set, so it drives pagination directly.
+
+### Fixed (2026-08-02) — GRAPH-API-1l: `list()` now URL-encodes its query string
+- `list()` built its query string by raw concatenation, so a value containing `&`, `=`, `#`, a
+  space, or non-ASCII would have corrupted the request. It now uses `URLSearchParams`, matching
+  `searchByMetadata()`. This became load-bearing with user-supplied metadata values, which are
+  far more likely to contain reserved characters than a numeric limit or offset.
+- The pre-existing quirk where `list({type})` sends a `memory_type` param that `/memory/list`
+  does not declare (and therefore ignores) is **deliberately unchanged** — silently altering it
+  mid-feature would be a behaviour change nobody asked for.
+
+### Deprecated (2026-08-02) — GRAPH-API-1l: `searchByMetadata()`
+- JSDoc `@deprecated` pointing at `list()`. No behaviour change; the two endpoints return
+  slightly different item shapes, so migrate deliberately.
+
 ### Changed (2026-08-02) — GRAPH-API-1i `retrievedContextIds` option added, then removed same day
 - `MemoryAPI.create` briefly accepted a `retrievedContextIds` option. Removed after
   review: provenance travels inside `metadata`, which persists and lifts onto the
