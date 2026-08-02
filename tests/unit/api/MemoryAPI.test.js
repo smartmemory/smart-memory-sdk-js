@@ -90,8 +90,12 @@ describe('MemoryAPI', () => {
     // Translation to the flattened storage separator happens server-side.
     await memoryAPI.list({ metadataKey: 'profile.tier', metadataValue: 'pro' });
 
+    // Parse rather than substring-match: `toContain('metadata_key=profile.tier')`
+    // is also satisfied by `metadata_key=profile.tier_extra`.
     const call = baseAPI.get.mock.calls[0][0];
-    expect(call).toContain('metadata_key=profile.tier');
+    const query = new URLSearchParams(call.split('?')[1]);
+    expect(query.get('metadata_key')).toBe('profile.tier');
+    expect(query.get('metadata_value')).toBe('pro');
   });
 
   it('list should URL-encode metadata values containing reserved characters', async () => {
