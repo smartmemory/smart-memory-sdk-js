@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [1.4.57] - 2026-08-02
+Version copied verbatim from `smart-memory-core/VERSION` per the release sync chain — core is the
+only dial. The SDK had been lagging at 1.4.53 while core advanced to 1.4.57; this release
+resynchronises it. Published manually (org CI is down).
+
 ### Added (2026-08-02) — GRAPH-API-1l: metadata filters on `MemoryAPI.list()`
 - `list()` accepts `metadataKey` / `metadataValue` for an exact metadata match, mapped to the
   `metadata_key` / `metadata_value` query params. Nested keys use dot syntax (`profile.tier`)
