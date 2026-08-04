@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.59] - 2026-08-04
+
 ### Added (2026-08-04) — as-of search + explain (PLAT-AUDITABLE-MEMORY-1 T11)
 - `MemoryAPI.search()` gains `asOfDate` (`as_of_date`; string or Date,
   serialized to ISO) and `includeSuperseded` (`include_superseded`) —
