@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added (2026-08-04) — as-of search + explain (PLAT-AUDITABLE-MEMORY-1 T11)
+- `MemoryAPI.search()` gains `asOfDate` (`as_of_date`; string or Date,
+  serialized to ISO) and `includeSuperseded` (`include_superseded`) —
+  transaction-time travel per the search contract.
+- New `MemoryAPI.explain(memoryId)` → `GET /memory/{id}/explain`: the
+  single-call audit answer (explain-contract shape). `chain_verified` of
+  `null` means nothing to verify, not a tamper warning.
+
 ## [1.4.57] - 2026-08-02
 Version copied verbatim from `smart-memory-core/VERSION` per the release sync chain — core is the
 only dial. The SDK had been lagging at 1.4.53 while core advanced to 1.4.57; this release
