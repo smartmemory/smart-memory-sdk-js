@@ -157,6 +157,53 @@ describe('MemoryAPI', () => {
     });
   });
 
+  // PLAT-AUDITABLE-MEMORY-1 — as-of recall params + explain.
+  it('search should map asOfDate/includeSuperseded to snake_case body fields', async () => {
+    await memoryAPI.search('q', { asOfDate: '2026-01-01T00:00:00+00:00', includeSuperseded: true });
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.as_of_date).toBe('2026-01-01T00:00:00+00:00');
+    expect(body.include_superseded).toBe(true);
+  });
+
+  it('search should serialize a Date asOfDate to ISO', async () => {
+    await memoryAPI.search('q', { asOfDate: new Date(Date.UTC(2026, 0, 1)) });
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.as_of_date).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('search should omit as-of params when not set', async () => {
+    await memoryAPI.search('q');
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body).not.toHaveProperty('as_of_date');
+    expect(body).not.toHaveProperty('include_superseded');
+  });
+
+  it('explain should GET /memory/{id}/explain and pass the body through', async () => {
+    const payload = {
+      item: { id: 'm1' },
+      versions: [],
+      supersession: [],
+      lineage_roots: ['m1'],
+      decision_provenance: { self: null, citing_decisions: [] },
+      status_flags: { has_version_chain: false, resolution_errors: [] },
+      chain_verified: null
+    };
+    baseAPI.get.mockResolvedValue(payload);
+
+    const result = await memoryAPI.explain('m1');
+
+    expect(baseAPI.get).toHaveBeenCalledWith('/memory/m1/explain');
+    expect(result).toEqual(payload);
+  });
+
+  it('explain should URL-encode the memory id', async () => {
+    await memoryAPI.explain('id with/slash');
+    expect(baseAPI.get).toHaveBeenCalledWith('/memory/id%20with%2Fslash/explain');
+  });
+
   // CORE-EXPERTISE-1 Phase 4a — expertise flag toggles typed-dict response shape.
   it('search should pass expertise=true through to body', async () => {
     baseAPI.post.mockResolvedValueOnce({

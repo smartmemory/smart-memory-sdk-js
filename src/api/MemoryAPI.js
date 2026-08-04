@@ -128,6 +128,11 @@ export class MemoryAPI {
    * @param {boolean} [options.consolidationFirst=false] - When true (NEURO-1d), surface a
    *   consolidated summary above the scattered source memories it consolidates — best for
    *   synthesis queries. Opt-in; implies includeConsolidated.
+   * @param {string|Date|null} [options.asOfDate=null] - Transaction-time travel
+   *   (PLAT-AUDITABLE-MEMORY-1): return what the system believed at this
+   *   ISO-8601 instant. Date objects serialize to ISO automatically.
+   * @param {boolean} [options.includeSuperseded=false] - Keep superseded items
+   *   visible in results (PLAT-AUDITABLE-MEMORY-1).
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
@@ -140,7 +145,7 @@ export class MemoryAPI {
    *   present only under `cite: true`. Pre-LINEAGE-1 callers who indexed into a
    *   bare array must read `response.results` instead.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, includeSuperseded = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
@@ -153,7 +158,27 @@ export class MemoryAPI {
     if (includeReference) body.include_reference = true;
     if (includeConsolidated) body.include_consolidated = true; // CORE-CONSOLIDATE-1
     if (consolidationFirst) body.consolidation_first = true;   // NEURO-1d: surface summaries above their sources
+    // PLAT-AUDITABLE-MEMORY-1: transaction-time travel. Date objects serialize to ISO.
+    if (asOfDate) body.as_of_date = asOfDate instanceof Date ? asOfDate.toISOString() : asOfDate;
+    if (includeSuperseded) body.include_superseded = true;
     return this.api.post('/memory/search', body);
+  }
+
+  /**
+   * Get the complete audit answer for one memory (PLAT-AUDITABLE-MEMORY-1).
+   *
+   * Returns the explain-contract shape: identity + origin tier, every belief
+   * the system held over time (with chain hashes), supersession in both
+   * directions, lineage roots, decision provenance, and chain verification.
+   * A `chain_verified` of `null` means nothing to verify (legacy or
+   * unversioned) — it is NOT a tamper warning.
+   *
+   * @param {string} memoryId - Memory item ID.
+   * @returns {Promise<object>} Explain response
+   *   (docs/features/PLAT-AUDITABLE-MEMORY-1/explain-contract.json).
+   */
+  async explain(memoryId) {
+    return this.api.get(`/memory/${encodeURIComponent(memoryId)}/explain`);
   }
 
   async getWorkingContext(sessionId, query, { k = 20, maxTokens = null, strategy = null } = {}) {
