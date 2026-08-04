@@ -131,6 +131,11 @@ export class MemoryAPI {
    * @param {string|Date|null} [options.asOfDate=null] - Transaction-time travel
    *   (PLAT-AUDITABLE-MEMORY-1): return what the system believed at this
    *   ISO-8601 instant. Date objects serialize to ISO automatically.
+   * @param {boolean} [options.asOfStrict=false] - Only meaningful with asOfDate
+   *   (PLAT-AUDITABLE-MEMORY-1 gap #2). Default returns results that could not be
+   *   resolved, each carrying `as_of_resolution: 'unresolved'`, and summarises them
+   *   in the envelope's `as_of_diagnostics`. When true the request fails with 422
+   *   instead, for callers who would rather have no answer than a partial history.
    * @param {boolean} [options.includeSuperseded=false] - Keep superseded items
    *   visible in results (PLAT-AUDITABLE-MEMORY-1).
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
@@ -143,9 +148,13 @@ export class MemoryAPI {
    *   carries `GroupRootStub`s for any lineage root_id referenced by some
    *   result's `lineage_roots` but not itself in `results`; `citations` is
    *   present only under `cite: true`. Pre-LINEAGE-1 callers who indexed into a
-   *   bare array must read `response.results` instead.
+   *   bare array must read `response.results` instead. When `asOfDate` is set the
+   *   envelope also carries `as_of_diagnostics` ({as_of, policy, unresolved_count,
+   *   unresolved_item_ids, note}) and every result carries `as_of_resolution`. A
+   *   result marked `'unresolved'` is PRESENT-DAY content and must not be rendered
+   *   as a historical belief.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, includeSuperseded = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
@@ -160,6 +169,7 @@ export class MemoryAPI {
     if (consolidationFirst) body.consolidation_first = true;   // NEURO-1d: surface summaries above their sources
     // PLAT-AUDITABLE-MEMORY-1: transaction-time travel. Date objects serialize to ISO.
     if (asOfDate) body.as_of_date = asOfDate instanceof Date ? asOfDate.toISOString() : asOfDate;
+    if (asOfStrict) body.as_of_strict = true; // gap #2: 422 rather than a partial history
     if (includeSuperseded) body.include_superseded = true;
     return this.api.post('/memory/search', body);
   }
