@@ -185,6 +185,9 @@ client.memories.delete(id);
 client.memories.list({ limit: 50, offset: 0, type: 'semantic' });
 client.memories.search('query', { topK: 5, enableHybrid: true });
 client.memories.searchAdvanced('query', { algorithm: 'query_traversal' });
+// Time travel and provenance (auditable memory)
+client.memories.search('query', { asOfDate: '2026-06-01T00:00:00Z', includeSuperseded: true });
+client.memories.explain(memoryId); // origin, version audit, supersession lineage, chain verification
 client.memories.ingest('content', { extractorName: 'llm' });
 client.memories.getSummary();
 client.memories.link(sourceId, targetId, 'RELATED');
