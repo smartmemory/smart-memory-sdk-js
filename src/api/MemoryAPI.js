@@ -138,6 +138,11 @@ export class MemoryAPI {
    *   instead, for callers who would rather have no answer than a partial history.
    * @param {boolean} [options.includeSuperseded=false] - Keep superseded items
    *   visible in results (PLAT-AUDITABLE-MEMORY-1).
+   * @param {boolean} [options.includeRetracted=false] - Keep retracted items visible
+   *   in results (CORE-RETRACTED-RECALL-1). A retracted belief was withdrawn outright
+   *   with no replacement, so it is a separate lifecycle state from superseded and is
+   *   NOT covered by includeSuperseded. Both are inert when asOfDate is set, which
+   *   retains those rows regardless.
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
@@ -154,7 +159,7 @@ export class MemoryAPI {
    *   result marked `'unresolved'` is PRESENT-DAY content and must not be rendered
    *   as a historical belief.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
@@ -171,6 +176,7 @@ export class MemoryAPI {
     if (asOfDate) body.as_of_date = asOfDate instanceof Date ? asOfDate.toISOString() : asOfDate;
     if (asOfStrict) body.as_of_strict = true; // gap #2: 422 rather than a partial history
     if (includeSuperseded) body.include_superseded = true;
+    if (includeRetracted) body.include_retracted = true; // CORE-RETRACTED-RECALL-1
     return this.api.post('/memory/search', body);
   }
 
