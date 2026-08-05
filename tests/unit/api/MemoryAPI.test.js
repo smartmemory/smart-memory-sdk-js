@@ -42,6 +42,50 @@ describe('MemoryAPI', () => {
     expect(body).not.toHaveProperty('conversation_context');
   });
 
+  // ── SVC-EMBED-CONTROL-1 ────────────────────────────────────────────────
+  it('create should omit embed when not provided', async () => {
+    // The additive guarantee: an omitted option must not appear on the wire at
+    // all. Sending embed:null would be a different request, and the server's
+    // precedence check (`if embed is not None`) should never see the key.
+    await memoryAPI.create({ content: 'test' });
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body).not.toHaveProperty('embed');
+  });
+
+  it('create should forward embed:false to suppress embedding', async () => {
+    await memoryAPI.create({ content: 'test', usePipeline: false, embed: false });
+    expect(baseAPI.post.mock.calls.at(-1)[1].embed).toBe(false);
+  });
+
+  it('create should forward embed:true to force embedding', async () => {
+    await memoryAPI.create({ content: 'test', usePipeline: false, embed: true });
+    expect(baseAPI.post.mock.calls.at(-1)[1].embed).toBe(true);
+  });
+
+  // ── SVC-SUPERSEDE-LINK-1 ───────────────────────────────────────────────
+  it('supersedeLink should POST to /memory/{id}/supersede-link with the new id', async () => {
+    await memoryAPI.supersedeLink('old-1', 'new-1', 'because');
+
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/old-1/supersede-link', {
+      new_item_id: 'new-1',
+      reason: 'because'
+    });
+  });
+
+  it('supersedeLink should default reason to null', async () => {
+    await memoryAPI.supersedeLink('old-1', 'new-1');
+    expect(baseAPI.post.mock.calls.at(-1)[1].reason).toBeNull();
+  });
+
+  it('supersedeLink should url-encode nothing it should not, and stay distinct from supersede', async () => {
+    // The two routes differ by path only; a copy-paste that pointed
+    // supersedeLink at /supersede would silently create a duplicate record.
+    await memoryAPI.supersedeLink('old-1', 'new-1');
+    const url = baseAPI.post.mock.calls.at(-1)[0];
+    expect(url).toBe('/memory/old-1/supersede-link');
+    expect(url).not.toMatch(/\/supersede$/);
+  });
+
   it('get should normalize item_id to id', async () => {
     baseAPI.get.mockResolvedValue({ item_id: 'abc', content: 'hello' });
 
