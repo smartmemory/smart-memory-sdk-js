@@ -34,6 +34,7 @@ export { ArchiveAPI } from './api/ArchiveAPI.js';
 export { ZettelkastenAPI } from './api/ZettelkastenAPI.js';
 export { ProcedureMatchAPI } from './api/ProcedureMatchAPI.js';
 export { ProcedureCandidateAPI } from './api/ProcedureCandidateAPI.js';
+export { LockAPI } from './api/LockAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';

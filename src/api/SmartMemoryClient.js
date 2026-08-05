@@ -27,6 +27,7 @@ import { ProcedureMatchAPI } from './ProcedureMatchAPI.js';
 import { ProcedureCandidateAPI } from './ProcedureCandidateAPI.js';
 import { ProcedureDriftAPI } from './ProcedureDriftAPI.js';
 import { SummaryAPI } from './SummaryAPI.js';
+import { LockAPI } from './LockAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -65,6 +66,7 @@ export class SmartMemoryClient {
     this.procedureCandidates = new ProcedureCandidateAPI(baseAPI);
     this.procedureDrift = new ProcedureDriftAPI(baseAPI);
     this.summaries = new SummaryAPI(baseAPI);
+    this.locks = new LockAPI(baseAPI);
   }
 
   setTeamId(teamId) {
