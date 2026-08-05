@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Added (2026-08-05) — embed control + supersede-link (SVC-EMBED-CONTROL-1, SVC-SUPERSEDE-LINK-1)
+
+- `memory.create()` accepts `embed: true | false`. Sent only when set, so an
+  omitted option is byte-identical to the previous request. Valid only with
+  `usePipeline: false`; the service answers 400 for the combination.
+- New `memory.supersedeLink(id, newItemId, reason?)` relates two records that
+  already exist, complementing `supersede()` which creates the replacement.
+- Detect supersession by reading `superseded` / `superseded_by` /
+  `superseded_at` off the OLD record. The newer record carries no marker by
+  design, so never scan for inbound links.
+
 ### Added (2026-08-05) — SVC-LEASE-1 lease client surface
 
 - New `LockAPI`, exposed as `client.locks` and from the package entry point:

@@ -17,6 +17,11 @@ export class MemoryAPI {
    * @param {boolean} [options.usePipeline=true] - Run the full extraction pipeline
    * @param {string} [options.profileName] - Pipeline profile, routed server-side
    * @param {Object} [options.conversationContext] - Conversation-aware extraction context
+   * @param {boolean} [options.embed] - SVC-EMBED-CONTROL-1 embedding override.
+   *   `true` forces an embedding, `false` suppresses one, omitted leaves existing
+   *   behaviour untouched. **Only valid with `usePipeline: false`** — the server
+   *   answers 400 for the combination rather than silently ignoring it, because
+   *   the ingestion pipeline has no per-item override.
    */
   async create({
     content,
@@ -25,6 +30,7 @@ export class MemoryAPI {
     usePipeline = true,
     profileName = null,
     conversationContext = null,
+    embed = null,
   }) {
     const body = {
       content,
@@ -35,6 +41,11 @@ export class MemoryAPI {
     };
     if (conversationContext !== null && conversationContext !== undefined) {
       body.conversation_context = conversationContext;
+    }
+    // Send only when set, so an omitted option is byte-identical to the
+    // pre-SVC-EMBED-CONTROL-1 request.
+    if (embed !== null && embed !== undefined) {
+      body.embed = embed;
     }
     return this.api.post('/memory/add', body);
   }
@@ -66,6 +77,29 @@ export class MemoryAPI {
       content,
       memory_type: memoryType,
       metadata,
+      reason
+    });
+  }
+
+  /**
+   * Link two ALREADY-STORED items as a supersession (SVC-SUPERSEDE-LINK-1).
+   *
+   * Use this when both records exist. Use {@link supersede} instead when the
+   * replacement still has to be created from content.
+   *
+   * The write stamps the OLD record with `superseded`, `superseded_by` and
+   * `superseded_at`. Detect supersession by reading those off a recalled record —
+   * the newer record carries no marker, so never scan for inbound links.
+   *
+   * @param {string} id - The OLD item (the one being superseded)
+   * @param {string} newItemId - The NEW item; must already exist and be in scope
+   * @param {string} [reason] - Optional human-readable reason
+   * @throws 400 if `newItemId` equals `id`; 404 if either item is missing *or*
+   *   out of scope (deliberately indistinguishable); 409 if the store declined.
+   */
+  async supersedeLink(id, newItemId, reason = null) {
+    return this.api.post(`/memory/${id}/supersede-link`, {
+      new_item_id: newItemId,
       reason
     });
   }
