@@ -2,7 +2,15 @@
 
 ## [Unreleased]
 
-## [Unreleased]
+### Added (2026-08-05) — SVC-LEASE-1 lease client surface
+
+- New `LockAPI`, exposed as `client.locks` and from the package entry point:
+  `acquire()`, `renew()`, and `release()` wrap the scoped renewable lease routes.
+- Recognised ownership conflicts are normal control flow (`null` for acquire/renew,
+  `false` for release); validation, quota, coordinator, and network failures raise
+  so an unknown coordinator outcome cannot be mistaken for a known one.
+- A 409 is control flow only when its `detail.reason` is the one the call models;
+  an unexpected reason, or a 409 with no parseable detail, raises.
 
 ### Added (2026-08-05) — `includeRetracted` on `search()` (CORE-RETRACTED-RECALL-1)
 
