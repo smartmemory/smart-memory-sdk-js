@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Added (2026-08-05) — `includeRetracted` on `search()` (CORE-RETRACTED-RECALL-1)
+
+- `MemoryAPI.search()` gains `includeRetracted` (`include_retracted`), sent only when
+  true so unset params stay absent from the body rather than serializing as null.
+- Sibling of `includeSuperseded` and not covered by it: a retracted belief was
+  withdrawn with no replacement. **Retracted items are hidden by default as of this
+  release**; pass `includeRetracted: true` to see them.
+
 ## [1.4.59] - 2026-08-04
 
 ### Added (2026-08-04) — as-of search + explain (PLAT-AUDITABLE-MEMORY-1 T11)
