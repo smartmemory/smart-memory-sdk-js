@@ -35,6 +35,7 @@ export { ZettelkastenAPI } from './api/ZettelkastenAPI.js';
 export { ProcedureMatchAPI } from './api/ProcedureMatchAPI.js';
 export { ProcedureCandidateAPI } from './api/ProcedureCandidateAPI.js';
 export { LockAPI } from './api/LockAPI.js';
+export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';

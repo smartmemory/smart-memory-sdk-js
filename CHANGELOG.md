@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added (2026-08-05) — SVC-ALLOC-1 sequence client surface
+
+- New `SequenceAPI`, exposed as `client.sequences` and from the package entry
+  point: `allocate(name, {floor, count})` and `peek(name)`.
+- `allocate()` throws on every non-2xx and never returns a sentinel. There is no
+  benign failure for an allocator — a `null` on 503 would let a caller mistake
+  coordinator failure for a value.
+- `peek()` returns `null` only for a 404. A 503 throws.
+- `floor: 0` is sent rather than dropped; it is falsy but meaningful.
+- Do not wrap these calls in a lease — that is the point. The lease remains
+  required for read-modify-write.
+
 ### Added (2026-08-05) — embed control + supersede-link (SVC-EMBED-CONTROL-1, SVC-SUPERSEDE-LINK-1)
 
 - `memory.create()` accepts `embed: true | false`. Sent only when set, so an
