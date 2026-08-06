@@ -538,7 +538,9 @@ export class OntologyAPI {
    *
    * `kind: 'record'` declares a concrete record type: items may then be
    * written with `memory_type=name` through the add and structured-ingest
-   * surfaces, schema-checked against `propertiesSchema` (WARNING mode in P1).
+   * surfaces, schema-checked against `propertiesSchema` (STRICT by default —
+   * violations refuse with a structured 400; the server-side literal-"false"
+   * env kill-switch downgrades to WARNING).
    * Field names/enums are pinned by `memory-type-contract.json`.
    *
    * @param {string} name class name — for kind='record' this IS the memory_type
