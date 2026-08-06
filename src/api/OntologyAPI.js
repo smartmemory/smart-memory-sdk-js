@@ -760,12 +760,37 @@ export class OntologyAPI {
    * @param {Object} params
    * @param {string} params.reason why the migration is being performed (audit evidence)
    * @param {number} [params.batchSize=500] instance edges rewritten per chunk
+   * @param {('refuse'|'skip')} [params.onViolation='refuse'] record migrations:
+   * strict preflight or migrate valid items and report skipped ids. Ignored for entities.
+   * @returns {Promise<Object>} Always includes moved_item_ids, skipped_items,
+   * vector_metadata_updated, vector_metadata_missing, vector_metadata_failed and
+   * searchable_mismatch_count alongside the original fields. They are additive with
+   * defaults, so an entity migration returns them empty/zero rather than omitting
+   * them — callers never branch on kind to read a response.
    */
-  async migrateTypeInstances(fromId, toId, { reason, batchSize = 500 }) {
+  async migrateTypeInstances(fromId, toId, { reason, batchSize = 500, onViolation = 'refuse' }) {
+    const body = { reason, batch_size: batchSize };
+    // Keep the established entity migration request shape when the server's
+    // default strict-preflight behavior is selected.
+    if (onViolation !== 'refuse') body.on_violation = onViolation;
     return this.api.post(
       `/memory/ontology/types/${encodeURIComponent(fromId)}/migrate-to/${encodeURIComponent(toId)}`,
-      { reason, batch_size: batchSize }
+      body
     );
+  }
+
+  /**
+   * Retire this workspace's own confirmed record class.
+   * Deliberately narrow: the server refuses (400) unless the type resolves to the
+   * workspace's PRIVATE layer AND is kind 'record'. Public and pack classes are
+   * shared vocabulary — retiring `decision` would disable a built-in memory type
+   * for the whole workspace. Entity classes use the curation queue instead.
+   * @param {string} typeId ontology type identifier
+   * @param {string} reason audit evidence for the retirement
+   * @returns {Promise<{ok: boolean}>}
+   */
+  async retireType(typeId, reason) {
+    return this.api.post(`/memory/ontology/types/${encodeURIComponent(typeId)}/retire`, { reason });
   }
 
   // --- ONTO-HITL-CURATE-1 curation queue surface ---------------------------

@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Added — CORE-MEMTYPE-DECLARE-1 P4: record lifecycle client surface
+
+- `OntologyAPI.migrateTypeInstances(..., { onViolation: 'refuse'|'skip' })`
+  supports record schema preflight/skip behavior and returns the additive
+  record migration report fields. The default is omitted on the wire so
+  existing entity migration requests remain byte-compatible.
+- `OntologyAPI.retireType(typeId, reason)` retires this workspace's OWN
+  confirmed record class. The server refuses with 400 unless the type resolves
+  to the private layer and is kind 'record' — public and pack classes are shared
+  vocabulary and are not retirable here.
+
 ### Added — CORE-MEMTYPE-DECLARE-1 P1: declare surface
 
 - `OntologyAPI.declareType(name, {kind, propertiesSchema, requiredProperties,
