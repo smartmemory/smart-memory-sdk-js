@@ -131,6 +131,42 @@ describe('OntologyAPI CRUD read/audit/migration (ONTO-CRUD-1)', () => {
     });
   });
 
+  it('migrateTypeInstances sends skip mode and returns the record report shape', async () => {
+    const api = mockBaseAPI();
+    api.post.mockResolvedValue({
+      from_name: 'A',
+      into_name: 'B',
+      instances_migrated: 1,
+      batches: 1,
+      notes: [],
+      moved_item_ids: ['item-1'],
+      skipped_items: { 'item-2': ['priority: expected integer'] },
+      vector_metadata_updated: 1,
+      vector_metadata_missing: 0,
+      vector_metadata_failed: 0,
+      searchable_mismatch_count: 1
+    });
+
+    const result = await new OntologyAPI(api).migrateTypeInstances('A', 'B', {
+      reason: 'repair',
+      onViolation: 'skip'
+    });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/ontology/types/A/migrate-to/B', {
+      reason: 'repair',
+      batch_size: 500,
+      on_violation: 'skip'
+    });
+    expect(result).toMatchObject({
+      moved_item_ids: ['item-1'],
+      skipped_items: { 'item-2': ['priority: expected integer'] },
+      vector_metadata_updated: 1,
+      vector_metadata_missing: 0,
+      vector_metadata_failed: 0,
+      searchable_mismatch_count: 1
+    });
+  });
+
   it('migrateTypeInstances propagates a 400 self-migration error', async () => {
     const api = mockBaseAPI();
     api.post = vi.fn().mockRejectedValue({ status: 400 });

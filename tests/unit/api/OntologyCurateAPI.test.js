@@ -43,6 +43,14 @@ describe('OntologyAPI curation queue (ONTO-HITL-CURATE-1)', () => {
     expect(api.post).toHaveBeenCalledWith('/memory/ontology/queue/Needs%20Review/reject', {});
   });
 
+  it('retireType retires a confirmed private record class', async () => {
+    const api = mockBaseAPI();
+    await new OntologyAPI(api).retireType('confirmed/private', 'superseded');
+    expect(api.post).toHaveBeenCalledWith('/memory/ontology/types/confirmed%2Fprivate/retire', {
+      reason: 'superseded'
+    });
+  });
+
   it('mergeReviewType posts into_id and expected_tier', async () => {
     const api = mockBaseAPI();
     await new OntologyAPI(api).mergeReviewType('Candidate', 'Canonical', {
