@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### Fixed — `MemoryAPI` interpolated caller-supplied item ids into paths RAW
+
+- Ten methods built their URL as `` `/memory/${id}/...` `` with no encoding:
+  `get`, `update`, `delete`, `supersede`, `supersedeLink`, `getLineage`,
+  `getLinks`, `getNeighbors`, `enrich`, `ground`. All now use
+  `encodeURIComponent`, matching `explain()`, which already did — which is what
+  marks this as an oversight rather than a convention.
+- **Why it matters:** an item id is caller data. `get('a/../../evil')` addressed
+  `/memory/a/../../evil` and walked out of the route it was aiming at. Even
+  without a hostile caller, any id legitimately containing `/` silently missed
+  its item instead of being looked up.
+- Transparent to correct callers: FastAPI percent-decodes path params, so an id
+  containing `:` or a space reaches the server unchanged.
+- Found while pointing `forge/compose` at this SDK — its own client encodes, and
+  the mismatch was what stopped it adopting `client.memories.*` for the
+  id-addressed routes.
+- Regression cover: `tests/unit/api/MemoryAPI.test.js`, one case per method
+  (10 of the 11 fail without the fix; `explain` passes either way).
+
 ## [1.4.60] - 2026-08-06
 
 ### Added (2026-08-05) — SVC-ALLOC-1 sequence client surface
