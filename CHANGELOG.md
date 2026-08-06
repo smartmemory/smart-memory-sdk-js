@@ -8,7 +8,9 @@
   storageStrategy, storageSearchable, tier, ...})` →
   `POST /memory/ontology/types`. `kind: 'record'` declares a concrete record
   type; items with `memory_type=name` are then accepted by the add and
-  structured-ingest surfaces with schema checks (WARNING mode in P1).
+  structured-ingest surfaces with schema checks (STRICT by default —
+  violations refused with a structured 400; server-side kill-switch
+  downgrades to WARNING).
 - `OntologyAPI.declareRelation(name, {domain, range, cardinality, ...})` →
   `POST /memory/ontology/relations` (declare-only in P1).
 - `OntologyAPI.listTypes` gains the `kind` filter.
