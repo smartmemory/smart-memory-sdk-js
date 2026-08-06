@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.60] - 2026-08-06
+
 ### Added (2026-08-05) — SVC-ALLOC-1 sequence client surface
 
 - New `SequenceAPI`, exposed as `client.sequences` and from the package entry
