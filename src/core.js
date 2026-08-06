@@ -21,6 +21,9 @@ export { AuthAPI } from './api/AuthAPI.js';
 export { AgentAPI } from './api/AgentAPI.js';
 export { UsageAPI } from './api/UsageAPI.js';
 export { InsightsAPI } from './api/InsightsAPI.js';
+// CORE-MEMTYPE-DECLARE-1: declare surface (declareType/declareRelation) must be
+// reachable from the core entry too (SequenceAPI/LockAPI dual-export precedent).
+export { OntologyAPI } from './api/OntologyAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
