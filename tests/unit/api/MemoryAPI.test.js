@@ -666,3 +666,44 @@ describe('MemoryAPI', () => {
     });
   });
 });
+
+describe('MemoryAPI — item ids are URL-encoded (SDK-PATH-ENCODE-1)', () => {
+  let baseAPI;
+  let memoryAPI;
+
+  beforeEach(() => {
+    baseAPI = {
+      get: vi.fn().mockResolvedValue({}),
+      post: vi.fn().mockResolvedValue({}),
+      put: vi.fn().mockResolvedValue({}),
+      patch: vi.fn().mockResolvedValue({}),
+      delete: vi.fn().mockResolvedValue(null)
+    };
+    memoryAPI = new MemoryAPI(baseAPI);
+  });
+
+  // An item id is caller data. Interpolated raw, one containing a slash walks
+  // out of /memory/{id} and addresses a different route entirely — `../../` is
+  // the obvious case, but so is any id that legitimately contains a slash, which
+  // would silently 404 instead of being looked up. `explain()` already encoded;
+  // these did not, which is what makes it an oversight rather than a convention.
+  const EVIL = 'a/../../evil';
+  const ENCODED = 'a%2F..%2F..%2Fevil';
+
+  it.each([
+    ['get', () => memoryAPI.get(EVIL), 'get', `/memory/${ENCODED}`],
+    ['update', () => memoryAPI.update(EVIL, { content: 'x' }), 'patch', `/memory/${ENCODED}`],
+    ['delete', () => memoryAPI.delete(EVIL), 'delete', `/memory/${ENCODED}`],
+    ['supersede', () => memoryAPI.supersede(EVIL, { content: 'x' }), 'post', `/memory/${ENCODED}/supersede`],
+    ['supersedeLink', () => memoryAPI.supersedeLink(EVIL, 'new'), 'post', `/memory/${ENCODED}/supersede-link`],
+    ['getLineage', () => memoryAPI.getLineage(EVIL), 'get', `/memory/${ENCODED}/lineage`],
+    ['getLinks', () => memoryAPI.getLinks(EVIL), 'get', `/memory/${ENCODED}/links`],
+    ['getNeighbors', () => memoryAPI.getNeighbors(EVIL), 'get', `/memory/${ENCODED}/neighbors`],
+    ['explain', () => memoryAPI.explain(EVIL), 'get', `/memory/${ENCODED}/explain`],
+    ['enrich', () => memoryAPI.enrich(EVIL), 'post', `/memory/${ENCODED}/enrich`],
+    ['ground', () => memoryAPI.ground(EVIL, 'https://example.test'), 'post', `/memory/${ENCODED}/ground`]
+  ])('%s encodes the id into a single path segment', async (_name, call, method, expected) => {
+    await call();
+    expect(baseAPI[method].mock.calls.at(-1)[0]).toBe(expected);
+  });
+});

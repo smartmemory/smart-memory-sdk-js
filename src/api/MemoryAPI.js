@@ -51,7 +51,7 @@ export class MemoryAPI {
   }
 
   async get(id) {
-    const response = await this.api.get(`/memory/${id}`);
+    const response = await this.api.get(`/memory/${encodeURIComponent(id)}`);
     return { ...response, id: response.item_id || response.id };
   }
 
@@ -69,11 +69,11 @@ export class MemoryAPI {
    *   (preserving memory_type and node_category).
    */
   async update(id, updates) {
-    return this.api.patch(`/memory/${id}`, updates);
+    return this.api.patch(`/memory/${encodeURIComponent(id)}`, updates);
   }
 
   async supersede(id, { content, memoryType, metadata = {}, reason }) {
-    return this.api.post(`/memory/${id}/supersede`, {
+    return this.api.post(`/memory/${encodeURIComponent(id)}/supersede`, {
       content,
       memory_type: memoryType,
       metadata,
@@ -98,14 +98,14 @@ export class MemoryAPI {
    *   out of scope (deliberately indistinguishable); 409 if the store declined.
    */
   async supersedeLink(id, newItemId, reason = null) {
-    return this.api.post(`/memory/${id}/supersede-link`, {
+    return this.api.post(`/memory/${encodeURIComponent(id)}/supersede-link`, {
       new_item_id: newItemId,
       reason
     });
   }
 
   async delete(id) {
-    return this.api.delete(`/memory/${id}`);
+    return this.api.delete(`/memory/${encodeURIComponent(id)}`);
   }
 
   /**
@@ -261,11 +261,11 @@ export class MemoryAPI {
   }
 
   async getLineage(id) {
-    return this.api.get(`/memory/${id}/lineage`);
+    return this.api.get(`/memory/${encodeURIComponent(id)}/lineage`);
   }
 
   async getLinks(id) {
-    return this.api.get(`/memory/${id}/links`);
+    return this.api.get(`/memory/${encodeURIComponent(id)}/links`);
   }
 
   /**
@@ -288,7 +288,7 @@ export class MemoryAPI {
   }
 
   async getNeighbors(id) {
-    return this.api.get(`/memory/${id}/neighbors`);
+    return this.api.get(`/memory/${encodeURIComponent(id)}/neighbors`);
   }
 
   async getSummary() {
@@ -369,7 +369,7 @@ export class MemoryAPI {
   }
 
   async enrich(itemId, routines = []) {
-    return this.api.post(`/memory/${itemId}/enrich`, {
+    return this.api.post(`/memory/${encodeURIComponent(itemId)}/enrich`, {
       item_id: itemId,
       routines
     });
@@ -398,7 +398,7 @@ export class MemoryAPI {
   }
 
   async ground(itemId, sourceUrl, validation = null) {
-    return this.api.post(`/memory/${itemId}/ground`, {
+    return this.api.post(`/memory/${encodeURIComponent(itemId)}/ground`, {
       item_id: itemId,
       source_url: sourceUrl,
       validation
