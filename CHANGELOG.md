@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added — CORE-MEMTYPE-DECLARE-1 P1: declare surface
+
+- `OntologyAPI.declareType(name, {kind, propertiesSchema, requiredProperties,
+  storageStrategy, storageSearchable, tier, ...})` →
+  `POST /memory/ontology/types`. `kind: 'record'` declares a concrete record
+  type; items with `memory_type=name` are then accepted by the add and
+  structured-ingest surfaces with schema checks (WARNING mode in P1).
+- `OntologyAPI.declareRelation(name, {domain, range, cardinality, ...})` →
+  `POST /memory/ontology/relations` (declare-only in P1).
+- `OntologyAPI.listTypes` gains the `kind` filter.
+- `OntologyAPI` is now exported from the `core` entry too (dual-export rule —
+  it was index-only).
+
 ### Fixed — `MemoryAPI` interpolated caller-supplied item ids into paths RAW
 
 - Ten methods built their URL as `` `/memory/${id}/...` `` with no encoding:

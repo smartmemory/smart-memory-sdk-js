@@ -517,18 +517,153 @@ export class OntologyAPI {
    * @param {string} [options.layer] public|domain|private
    * @param {string} [options.packId] filter by originating pack id
    * @param {boolean} [options.hasIri] only types with (or without) an IRI
+   * @param {string} [options.kind] entity | record (CORE-MEMTYPE-DECLARE-1)
    * @param {number} [options.limit=100]
    * @param {string} [options.cursor] opaque keyset continuation token
    */
-  async listTypes({ tier, layer, packId, hasIri, limit = 100, cursor } = {}) {
+  async listTypes({ tier, layer, packId, hasIri, kind, limit = 100, cursor } = {}) {
     const query = { limit: String(limit) };
     if (tier !== undefined) query.tier = tier;
     if (layer !== undefined) query.layer = layer;
     if (packId !== undefined) query.pack_id = packId;
     if (hasIri !== undefined) query.has_iri = String(hasIri);
+    if (kind !== undefined) query.kind = kind;
     if (cursor !== undefined) query.cursor = cursor;
     const qs = new URLSearchParams(query).toString();
     return this.api.get(`/memory/ontology/types${qs ? '?' + qs : ''}`);
+  }
+
+  /**
+   * Declare an ontology class (CORE-MEMTYPE-DECLARE-1).
+   *
+   * `kind: 'record'` declares a concrete record type: items may then be
+   * written with `memory_type=name` through the add and structured-ingest
+   * surfaces, schema-checked against `propertiesSchema` (WARNING mode in P1).
+   * Field names/enums are pinned by `memory-type-contract.json`.
+   *
+   * @param {string} name class name — for kind='record' this IS the memory_type
+   * @param {Object} [options]
+   * @param {('entity'|'record')} [options.kind='entity']
+   * @param {Object} [options.propertiesSchema] field name -> {type, of?, default?, indexed?, append_only?}
+   * @param {string[]} [options.requiredProperties]
+   * @param {('full'|'indexed'|'append')} [options.storageStrategy] record classes only
+   * @param {boolean} [options.storageSearchable] record classes only
+   * @param {string} [options.iri]
+   * @param {string} [options.wikidataQid]
+   * @param {string} [options.displayName]
+   * @param {string} [options.definition]
+   * @param {string} [options.description]
+   * @param {string[]} [options.aliases]
+   * @param {string[]} [options.examples]
+   * @param {string[]} [options.parentTypes]
+   * @param {string} [options.tier='confirmed'] 'working' routes through review
+   * @returns {Promise<Object>} the created type projection (incl. kind + storage facet)
+   * @throws 400 invalid schema/tier/kind/strategy; 409 built-in shadowing or identity conflict
+   */
+  async declareType(
+    name,
+    {
+      kind = 'entity',
+      propertiesSchema,
+      requiredProperties,
+      storageStrategy,
+      storageSearchable,
+      iri,
+      wikidataQid,
+      displayName,
+      definition,
+      description,
+      aliases,
+      examples,
+      parentTypes,
+      tier = 'confirmed',
+    } = {}
+  ) {
+    const body = { name, kind, tier };
+    if (propertiesSchema !== undefined) body.properties_schema = propertiesSchema;
+    if (requiredProperties !== undefined) body.required_properties = requiredProperties;
+    if (storageStrategy !== undefined) body.storage_strategy = storageStrategy;
+    if (storageSearchable !== undefined) body.storage_searchable = storageSearchable;
+    if (iri !== undefined) body.iri = iri;
+    if (wikidataQid !== undefined) body.wikidata_qid = wikidataQid;
+    if (displayName !== undefined) body.display_name = displayName;
+    if (definition !== undefined) body.definition = definition;
+    if (description !== undefined) body.description = description;
+    if (aliases !== undefined) body.aliases = aliases;
+    if (examples !== undefined) body.examples = examples;
+    if (parentTypes !== undefined) body.parent_types = parentTypes;
+    return this.api.post('/memory/ontology/types', body);
+  }
+
+  /**
+   * Declare an ontology relation (CORE-MEMTYPE-DECLARE-1; declare-only in P1).
+   * Record links use record-class domain/range; edge validation is P3.
+   *
+   * @param {string} name
+   * @param {Object} [options]
+   * @param {string[]} [options.domain]
+   * @param {string[]} [options.range]
+   * @param {string} [options.inverseOf]
+   * @param {('1:1'|'1:N'|'N:N')} [options.cardinality]
+   * @param {boolean} [options.temporal]
+   * @param {Object} [options.propertiesSchema]
+   * @param {boolean} [options.transitive]
+   * @param {boolean} [options.symmetric]
+   * @param {boolean} [options.reflexive]
+   * @param {string[]} [options.parentRelations]
+   * @param {string} [options.iri]
+   * @param {string} [options.wikidataPid]
+   * @param {string} [options.displayName]
+   * @param {string} [options.definition]
+   * @param {string} [options.description]
+   * @param {string[]} [options.aliases]
+   * @param {string[]} [options.examples]
+   * @param {string} [options.tier='confirmed']
+   * @returns {Promise<Object>} the created relation projection
+   * @throws 400 invalid tier; 409 identity-slot conflict
+   */
+  async declareRelation(
+    name,
+    {
+      domain,
+      range,
+      inverseOf,
+      cardinality,
+      temporal,
+      propertiesSchema,
+      transitive,
+      symmetric,
+      reflexive,
+      parentRelations,
+      iri,
+      wikidataPid,
+      displayName,
+      definition,
+      description,
+      aliases,
+      examples,
+      tier = 'confirmed',
+    } = {}
+  ) {
+    const body = { name, tier };
+    if (domain !== undefined) body.domain = domain;
+    if (range !== undefined) body.range = range;
+    if (inverseOf !== undefined) body.inverse_of = inverseOf;
+    if (cardinality !== undefined) body.cardinality = cardinality;
+    if (temporal !== undefined) body.temporal = temporal;
+    if (propertiesSchema !== undefined) body.properties_schema = propertiesSchema;
+    if (transitive !== undefined) body.transitive = transitive;
+    if (symmetric !== undefined) body.symmetric = symmetric;
+    if (reflexive !== undefined) body.reflexive = reflexive;
+    if (parentRelations !== undefined) body.parent_relations = parentRelations;
+    if (iri !== undefined) body.iri = iri;
+    if (wikidataPid !== undefined) body.wikidata_pid = wikidataPid;
+    if (displayName !== undefined) body.display_name = displayName;
+    if (definition !== undefined) body.definition = definition;
+    if (description !== undefined) body.description = description;
+    if (aliases !== undefined) body.aliases = aliases;
+    if (examples !== undefined) body.examples = examples;
+    return this.api.post('/memory/ontology/relations', body);
   }
 
   /**
