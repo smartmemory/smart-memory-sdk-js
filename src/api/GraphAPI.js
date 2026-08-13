@@ -23,13 +23,33 @@
  * @property {string} user_id - Echoed scope context.
  */
 
+/**
+ * Graph read/write surface.
+ *
+ * ## Cancellation
+ *
+ * Every **read** below takes an optional `{ signal }` and forwards it to `fetch`, so a
+ * caller whose results went stale can cancel in flight rather than merely ignore the
+ * response. An aborted read rejects with the standard `AbortError` (not an `APIError`),
+ * so `err.name === 'AbortError'` is the check.
+ *
+ * The **writes** deliberately take no signal. Aborting a mutation only stops the client
+ * from reading the response — the server may well have applied it — so a cancelled write
+ * leaves the caller unable to say whether it happened. Offering a signal there would
+ * advertise a guarantee HTTP cannot make.
+ */
 export class GraphAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
   }
 
-  async getNeighbors(itemId) {
-    return this.api.get(`/memory/${itemId}/neighbors`);
+  /**
+   * Fetch a memory item's graph neighbours.
+   * @param {string} itemId
+   * @param {{ signal?: AbortSignal }} [options]
+   */
+  async getNeighbors(itemId, options = {}) {
+    return this.api.get(`/memory/${encodeURIComponent(itemId)}/neighbors`, options);
   }
 
   async addEdge(sourceId, targetId, relationType, properties = {}) {
@@ -41,12 +61,14 @@ export class GraphAPI {
     });
   }
 
-  async getHealth() {
-    return this.api.get('/memory/graph/health');
+  /** @param {{ signal?: AbortSignal }} [options] */
+  async getHealth(options = {}) {
+    return this.api.get('/memory/graph/health', options);
   }
 
-  async getInferenceRules() {
-    return this.api.get('/memory/inference/rules');
+  /** @param {{ signal?: AbortSignal }} [options] */
+  async getInferenceRules(options = {}) {
+    return this.api.get('/memory/inference/rules', options);
   }
 
   async runInference({ dryRun = false } = {}) {
@@ -60,29 +82,34 @@ export class GraphAPI {
    * @param {string} startId
    * @param {string} endId
    * @param {number} [maxHops=5]
+   * @param {{ signal?: AbortSignal }} [options]
    */
-  async findShortestPath(startId, endId, maxHops = 5) {
-    return this.api.get(`/memory/graph/path?start_id=${encodeURIComponent(startId)}&end_id=${encodeURIComponent(endId)}&max_hops=${maxHops}`);
+  async findShortestPath(startId, endId, maxHops = 5, options = {}) {
+    return this.api.get(`/memory/graph/path?start_id=${encodeURIComponent(startId)}&end_id=${encodeURIComponent(endId)}&max_hops=${maxHops}`, options);
   }
 
   /**
    * Fetch the full knowledge graph.
    * @param {number} [limit] - Optional client hint; backend enforces hard cap.
+   * @param {{ signal?: AbortSignal }} [options]
    */
-  async getFullGraph(limit) {
+  async getFullGraph(limit, options = {}) {
     if (limit == null) {
-      return this.api.get('/memory/graph/full');
+      return this.api.get('/memory/graph/full', options);
     }
-    return this.api.get(`/memory/graph/full?limit=${encodeURIComponent(limit)}`);
+    return this.api.get(`/memory/graph/full?limit=${encodeURIComponent(limit)}`, options);
   }
 
   /**
    * Fetch edges for multiple node IDs in bulk.
+   *
+   * A POST, but a read — it mutates nothing, so unlike the writes below it takes a signal.
    * @param {string[]} nodeIds
+   * @param {{ includeProperties?: boolean, signal?: AbortSignal }} [options]
    */
-  async getEdgesBulk(nodeIds, { includeProperties = false } = {}) {
+  async getEdgesBulk(nodeIds, { includeProperties = false, signal } = {}) {
     const suffix = includeProperties ? '?include_properties=true' : '';
-    return this.api.post(`/memory/graph/edges${suffix}`, { node_ids: nodeIds });
+    return this.api.post(`/memory/graph/edges${suffix}`, { node_ids: nodeIds }, signal ? { signal } : {});
   }
 
   /**
@@ -103,9 +130,10 @@ export class GraphAPI {
   /**
    * Get Wikipedia grounding status for an entity node.
    * @param {string} nodeId
+   * @param {{ signal?: AbortSignal }} [options]
    */
-  async getGroundingStatus(nodeId) {
-    return this.api.get(`/memory/graph/nodes/${encodeURIComponent(nodeId)}/grounding`);
+  async getGroundingStatus(nodeId, options = {}) {
+    return this.api.get(`/memory/graph/nodes/${encodeURIComponent(nodeId)}/grounding`, options);
   }
 
   /**
@@ -136,9 +164,10 @@ export class GraphAPI {
   /**
    * Get links for a memory item.
    * @param {string} itemId
+   * @param {{ signal?: AbortSignal }} [options]
    */
-  async getLinks(itemId) {
-    return this.api.get(`/memory/${encodeURIComponent(itemId)}/links`);
+  async getLinks(itemId, options = {}) {
+    return this.api.get(`/memory/${encodeURIComponent(itemId)}/links`, options);
   }
 
   /**

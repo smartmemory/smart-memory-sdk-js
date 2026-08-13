@@ -211,7 +211,8 @@ describe('GraphAPI (findShortestPath)', () => {
     await graph.findShortestPath('node-a', 'node-b');
 
     expect(api.get).toHaveBeenCalledWith(
-      '/memory/graph/path?start_id=node-a&end_id=node-b&max_hops=5'
+      '/memory/graph/path?start_id=node-a&end_id=node-b&max_hops=5',
+      {}
     );
   });
 
@@ -221,7 +222,8 @@ describe('GraphAPI (findShortestPath)', () => {
     await graph.findShortestPath('node-a', 'node-b', 3);
 
     expect(api.get).toHaveBeenCalledWith(
-      '/memory/graph/path?start_id=node-a&end_id=node-b&max_hops=3'
+      '/memory/graph/path?start_id=node-a&end_id=node-b&max_hops=3',
+      {}
     );
   });
 
@@ -231,7 +233,8 @@ describe('GraphAPI (findShortestPath)', () => {
     await graph.findShortestPath('a/b', 'c d');
 
     expect(api.get).toHaveBeenCalledWith(
-      '/memory/graph/path?start_id=a%2Fb&end_id=c%20d&max_hops=5'
+      '/memory/graph/path?start_id=a%2Fb&end_id=c%20d&max_hops=5',
+      {}
     );
   });
 });

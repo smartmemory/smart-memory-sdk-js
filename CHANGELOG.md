@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added — cancellable graph reads
+
+- Every `GraphAPI` read (`getNeighbors`, `getHealth`, `getInferenceRules`,
+  `getFullGraph`, `findShortestPath`, `getGroundingStatus`, `getLinks`, and the
+  POST-but-read `getEdgesBulk`) accepts an optional `{ signal }` and forwards it
+  to `fetch`, so a caller whose results went stale can cancel in flight.
+  Writes deliberately take no signal: aborting a mutation stops the client
+  reading the response, not the server applying it.
+- `BaseAPI.request` / `requestBinary` rethrow `AbortError` untouched instead of
+  wrapping it in `APIError(..., 'network_error')`, so a cancellation is not
+  reported to users as a network failure. Check `err.name === 'AbortError'`.
+- `GraphAPI.getNeighbors` now URL-encodes the item id.
+
 ### Added — CORE-MEMTYPE-DECLARE-1 P4: record lifecycle client surface
 
 - `OntologyAPI.migrateTypeInstances(..., { onViolation: 'refuse'|'skip' })`
