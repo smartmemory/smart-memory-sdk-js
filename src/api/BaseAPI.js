@@ -4,6 +4,23 @@ function isFormData(body) {
   return typeof FormData !== 'undefined' && body instanceof FormData;
 }
 
+/**
+ * True when a thrown value is `fetch` reporting that the caller aborted the request.
+ *
+ * An abort is not a failure — it is the caller getting what it asked for — so it must
+ * stay distinguishable from a genuine network fault. Wrapping it in
+ * `APIError(..., 'network_error')` (which is what every other throw here becomes) would
+ * force callers to report their own cancellations to the user as errors. Abort errors are
+ * therefore rethrown untouched, so consumers can use the standard `err.name === 'AbortError'`
+ * idiom rather than a SmartMemory-specific one.
+ *
+ * `DOMException` is not referenced by name: Node's undici throws a plain `DOMException`
+ * polyfill and jsdom throws its own, so the `name` check is the portable test.
+ */
+function isAbortError(error) {
+  return error?.name === 'AbortError';
+}
+
 export class BaseAPI {
   /**
    * @param {import('../auth/AuthCore.js').AuthCore} authCore
@@ -23,6 +40,16 @@ export class BaseAPI {
     return this._customFetchFn || globalThis.fetch.bind(globalThis);
   }
 
+  /**
+   * Issue an authenticated request.
+   *
+   * `options` is forwarded to `fetch` (via `AuthCore.getRequestOptions`), so any standard
+   * `RequestInit` key applies — notably `signal`, which cancels an in-flight request.
+   * An aborted request rejects with the original `AbortError`, not an `APIError`.
+   *
+   * @param {string} endpoint - Path appended to the client's base URL.
+   * @param {RequestInit & { signal?: AbortSignal }} [options]
+   */
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
@@ -69,6 +96,7 @@ export class BaseAPI {
       return await response.json();
     } catch (error) {
       if (error instanceof APIError) throw error;
+      if (isAbortError(error)) throw error;
       throw new APIError(error.message, 0, 'network_error');
     }
   }
@@ -124,6 +152,7 @@ export class BaseAPI {
       return await response.arrayBuffer();
     } catch (error) {
       if (error instanceof APIError) throw error;
+      if (isAbortError(error)) throw error;
       throw new APIError(error.message, 0, 'network_error');
     }
   }

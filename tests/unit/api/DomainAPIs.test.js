@@ -116,7 +116,15 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.getNeighbors('item-1');
 
-    expect(api.get).toHaveBeenCalledWith('/memory/item-1/neighbors');
+    expect(api.get).toHaveBeenCalledWith('/memory/item-1/neighbors', {});
+  });
+
+  it('should encode the item id when getting neighbors', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    await graph.getNeighbors('item/1 a');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/item%2F1%20a/neighbors', {});
   });
 
   it('should add edge', async () => {
@@ -137,7 +145,7 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.getHealth();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/graph/health');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/health', {});
   });
 
   it('should get inference rules', async () => {
@@ -145,7 +153,7 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.getInferenceRules();
 
-    expect(api.get).toHaveBeenCalledWith('/memory/inference/rules');
+    expect(api.get).toHaveBeenCalledWith('/memory/inference/rules', {});
   });
 
   it('should run inference', async () => {
@@ -165,8 +173,8 @@ describe('GraphAPI', () => {
     await graph.getFullGraph();
     await graph.getFullGraph(25);
 
-    expect(api.get).toHaveBeenCalledWith('/memory/graph/full');
-    expect(api.get).toHaveBeenCalledWith('/memory/graph/full?limit=25');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/full', {});
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/full?limit=25', {});
   });
 
   it('should find a shortest graph path', async () => {
@@ -174,7 +182,7 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.findShortestPath('node 1', 'node/2', 3);
 
-    expect(api.get).toHaveBeenCalledWith('/memory/graph/path?start_id=node%201&end_id=node%2F2&max_hops=3');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/path?start_id=node%201&end_id=node%2F2&max_hops=3', {});
   });
 
   it('should get edges in bulk', async () => {
@@ -184,7 +192,7 @@ describe('GraphAPI', () => {
 
     expect(api.post).toHaveBeenCalledWith('/memory/graph/edges?include_properties=true', {
       node_ids: ['node-1', 'node-2']
-    });
+    }, {});
   });
 
   it('should bulk upsert graph nodes and edges', async () => {
@@ -208,7 +216,7 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.getGroundingStatus('node 1');
 
-    expect(api.get).toHaveBeenCalledWith('/memory/graph/nodes/node%201/grounding');
+    expect(api.get).toHaveBeenCalledWith('/memory/graph/nodes/node%201/grounding', {});
   });
 
   it('should update entity node', async () => {
@@ -243,7 +251,62 @@ describe('GraphAPI', () => {
     const graph = new GraphAPI(api);
     await graph.getLinks('item 1');
 
-    expect(api.get).toHaveBeenCalledWith('/memory/item%201/links');
+    expect(api.get).toHaveBeenCalledWith('/memory/item%201/links', {});
+  });
+
+  // Cancellation: reads forward an AbortSignal so a caller whose results went stale can
+  // cancel in flight rather than merely ignore the response.
+  it('should forward an abort signal on every graph read', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    const { signal } = new AbortController();
+
+    await graph.getNeighbors('item-1', { signal });
+    await graph.getHealth({ signal });
+    await graph.getInferenceRules({ signal });
+    await graph.getFullGraph(10, { signal });
+    await graph.findShortestPath('a', 'b', 2, { signal });
+    await graph.getGroundingStatus('node-1', { signal });
+    await graph.getLinks('item-1', { signal });
+
+    // Every GET carried the signal — none silently dropped it.
+    expect(api.get).toHaveBeenCalledTimes(7);
+    for (const call of api.get.mock.calls) {
+      expect(call[1]).toEqual({ signal });
+    }
+  });
+
+  it('should forward an abort signal on the bulk edge read without leaking its own options', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    const { signal } = new AbortController();
+
+    await graph.getEdgesBulk(['node-1'], { includeProperties: true, signal });
+
+    // includeProperties is a URL concern and must not reach fetch as a RequestInit key.
+    expect(api.post).toHaveBeenCalledWith(
+      '/memory/graph/edges?include_properties=true',
+      { node_ids: ['node-1'] },
+      { signal }
+    );
+  });
+
+  // Writes deliberately take no signal: aborting a mutation stops the client reading the
+  // response, not the server applying it, so the caller could not say whether it happened.
+  it('should not accept a signal on graph writes', async () => {
+    const api = mockBaseAPI();
+    const graph = new GraphAPI(api);
+    const { signal } = new AbortController();
+
+    await graph.addEdge('src', 'tgt', 'RELATED');
+    await graph.bulkUpsert({ nodes: [{ item_id: 'n-1' }] });
+    await graph.updateEntityNode('node-1', { label: 'Redis' });
+
+    for (const call of [...api.post.mock.calls, ...api.patch.mock.calls]) {
+      expect(JSON.stringify(call)).not.toContain('signal');
+    }
+    // The signal object exists but was never plumbed anywhere.
+    expect(signal.aborted).toBe(false);
   });
 });
 
