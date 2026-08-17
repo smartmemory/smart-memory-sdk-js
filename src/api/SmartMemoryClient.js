@@ -29,6 +29,7 @@ import { ProcedureDriftAPI } from './ProcedureDriftAPI.js';
 import { SummaryAPI } from './SummaryAPI.js';
 import { LockAPI } from './LockAPI.js';
 import { SequenceAPI } from './SequenceAPI.js';
+import { RecallAPI } from './RecallAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -69,6 +70,7 @@ export class SmartMemoryClient {
     this.summaries = new SummaryAPI(baseAPI);
     this.locks = new LockAPI(baseAPI);
     this.sequences = new SequenceAPI(baseAPI);
+    this.recall = new RecallAPI(baseAPI);
   }
 
   setTeamId(teamId) {

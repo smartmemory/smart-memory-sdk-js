@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Fixed — `client.recall.pack` threw on `sections: null` (CORE-RECALL-BUDGET-1)
+
+- `null` and `undefined` are now treated identically for both `query` and `sections` and
+  omitted from the wire body. `sections: null` previously reached `null.map(...)` and
+  threw — and `null` is exactly what a caller gets from `JSON.parse`, a default-valued
+  config object, or a spread options object. Omitting also matches the Python SDK and the
+  MCP remote backend, so one body shape reaches the route from every client.
+
+### Added — CORE-RECALL-BUDGET-1: budgeted recall pack client surface
+
+- New `RecallAPI` sub-API, attached as `client.recall`. One method,
+  `pack({ budgetTokens, query?, sections? })`, POSTs to `/memory/recall/pack`
+  and resolves the `RecallPack` object (`{ block, manifest }`). `budgetTokens`
+  maps to wire `budget_tokens`; `sections` entries accept either wire-shape
+  `cap_tokens` or camelCase `capTokens` and are normalized to `cap_tokens` on
+  the wire. `query` and `sections` are omitted from the request body when
+  not provided.
+
 ### Added — cancellable graph reads
 
 - Every `GraphAPI` read (`getNeighbors`, `getHealth`, `getInferenceRules`,
