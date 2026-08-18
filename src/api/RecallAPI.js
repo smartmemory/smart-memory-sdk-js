@@ -25,7 +25,8 @@ export class RecallAPI {
    * @param {string} [params.preset] Named section set, used instead of
    *   `sections`. `'wakeup'` is the session-start L1 card (active plan, anchors,
    *   workspace topics, last-session headline) — pass it with a small budget
-   *   (~200 tokens); the default sections go degenerate at that size. Passing
+   *   (~300 tokens); the default sections go degenerate at that size, and the card
+   *   is content-bounded so a typical workspace renders far under it. Passing
    *   both `preset` and `sections` is rejected with a 400.
    *
    * `null` and `undefined` are treated identically for both optional params and
