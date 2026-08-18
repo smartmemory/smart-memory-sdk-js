@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — `client.recall.pack({ preset })` (CORE-RECALL-BUDGET-1 Phase 5)
+
+- `preset: 'wakeup'` returns the L1 session-start card. `null` and `undefined` are treated
+  identically and omitted from the wire body, consistent with `query` and `sections`.
+
 ### Fixed — `client.recall.pack` threw on `sections: null` (CORE-RECALL-BUDGET-1)
 
 - `null` and `undefined` are now treated identically for both `query` and `sections` and
