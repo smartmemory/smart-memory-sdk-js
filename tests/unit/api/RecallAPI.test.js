@@ -38,6 +38,29 @@ describe('RecallAPI', () => {
     });
   });
 
+  it('pack forwards the wakeup preset', async () => {
+    await api.pack({ budgetTokens: 200, preset: 'wakeup' });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/recall/pack', {
+      budget_tokens: 200,
+      preset: 'wakeup',
+    });
+  });
+
+  it('pack omits preset when not provided', async () => {
+    await api.pack({ budgetTokens: 2000, query: 'auth' });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/recall/pack', {
+      budget_tokens: 2000,
+      query: 'auth',
+    });
+  });
+
+  it('pack treats a null preset as omitted', async () => {
+    await api.pack({ budgetTokens: 2000, preset: null });
+    expect(baseAPI.post).toHaveBeenCalledWith('/memory/recall/pack', {
+      budget_tokens: 2000,
+    });
+  });
+
   it('pack treats null sections like undefined instead of throwing', async () => {
     // `sections: null` used to reach `null.map(...)` and throw. null is what you get
     // from JSON.parse, a default-valued config object, or a spread options object.

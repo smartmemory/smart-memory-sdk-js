@@ -22,6 +22,11 @@ export class RecallAPI {
    *   list/order/caps. Each entry is `{ name, cap_tokens }` on the wire;
    *   callers may pass either `cap_tokens` or camelCase `capTokens` and it
    *   will be normalized to `cap_tokens`.
+   * @param {string} [params.preset] Named section set, used instead of
+   *   `sections`. `'wakeup'` is the session-start L1 card (active plan, anchors,
+   *   workspace topics, last-session headline) — pass it with a small budget
+   *   (~200 tokens); the default sections go degenerate at that size. Passing
+   *   both `preset` and `sections` is rejected with a 400.
    *
    * `null` and `undefined` are treated identically for both optional params and
    * omitted from the wire body. `null` is what you get from `JSON.parse`, from a
@@ -31,7 +36,7 @@ export class RecallAPI {
    * body shape reaches the route from every client.
    * @returns {Promise<Object>} RecallPack — `{ block, manifest }`.
    */
-  async pack({ budgetTokens, query, sections } = {}) {
+  async pack({ budgetTokens, query, sections, preset } = {}) {
     const body = { budget_tokens: budgetTokens };
     if (query !== undefined && query !== null) body.query = query;
     if (sections !== undefined && sections !== null) {
@@ -40,6 +45,7 @@ export class RecallAPI {
         cap_tokens: capTokensSnake !== undefined ? capTokensSnake : capTokens,
       }));
     }
+    if (preset !== undefined && preset !== null) body.preset = preset;
     return this.api.post('/memory/recall/pack', body);
   }
 }
