@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed — recommended wake-up budget ~200 -> ~300 (CORE-TOKEN-ESTIMATOR-UNDERCOUNT-1)
+
+- `client.recall.pack({ preset: 'wakeup' })` guidance updated. The card is
+  content-bounded (~70 real tokens); the headroom is for verbose workspaces.
+
 ### Added — `client.recall.pack({ preset })` (CORE-RECALL-BUDGET-1 Phase 5)
 
 - `preset: 'wakeup'` returns the L1 session-start card. `null` and `undefined` are treated
