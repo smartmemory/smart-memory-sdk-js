@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added — `importChatExport()` / `chatExportFormats()` (DIST-CHAT-IMPORT-1)
+
+`memory.importChatExport(file, { sourceFormat, maxConversations })` uploads a ChatGPT or
+Claude export (a `File`/`Blob` — the vendor `.zip` or its `conversations.json`) as multipart
+form data and returns `{ source_format, conversations_imported, conversations_failed,
+turns_imported, items_created, warnings }`. `memory.chatExportFormats()` lists both vendors
+and how to obtain each export.
+
+**Always check `warnings`.** The import is synchronous and capped at 25 conversations by
+default, so a partial import returns 200 with the shortfall named — treating the response as
+a plain success silently drops the rest of the archive.
+
+
 ### Changed — recommended wake-up budget ~200 -> ~300 (CORE-TOKEN-ESTIMATOR-UNDERCOUNT-1)
 
 - `client.recall.pack({ preset: 'wakeup' })` guidance updated. The card is
