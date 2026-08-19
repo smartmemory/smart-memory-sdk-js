@@ -314,6 +314,39 @@ export class MemoryAPI {
     return this.api.post('/memory/ingest/document', body);
   }
 
+  /**
+   * Import a ChatGPT or Claude conversation export (DIST-CHAT-IMPORT-1).
+   *
+   * Conversations run through the normal conversation pipeline, so entities and
+   * relations are extracted exactly as for a live conversation. Items land with
+   * origin `import:chatgpt_export` / `import:claude_export` — tier 1, so they are
+   * recallable, and dedupe-eligible, so re-uploading a later export updates the
+   * overlap rather than duplicating it.
+   *
+   * @param {Blob|File} file - The vendor .zip as downloaded, or its conversations.json.
+   * @param {object}  [options]
+   * @param {string}  [options.sourceFormat='auto'] - 'auto' | 'chatgpt' | 'claude'.
+   * @param {number}  [options.maxConversations=25] - Cap on conversations ingested (1-200).
+   *   The import is synchronous and each conversation runs the full pipeline, so this
+   *   bound is real. Longest conversations are kept first.
+   * @returns {Promise<object>} `{ source_format, conversations_imported,
+   *   conversations_failed, turns_imported, items_created, warnings }`. Always check
+   *   `warnings` — a non-empty list means something was capped, skipped, or degraded
+   *   even though the call succeeded.
+   */
+  async importChatExport(file, { sourceFormat = 'auto', maxConversations = 25 } = {}) {
+    const body = new FormData();
+    body.append('file', file, file.name || 'conversations.json');
+    body.append('source_format', sourceFormat);
+    body.append('max_conversations', String(maxConversations));
+    return this.api.post('/memory/import/chat-export', body);
+  }
+
+  /** List supported chat-export formats and how a user obtains each export. */
+  async chatExportFormats() {
+    return this.api.get('/memory/import/chat-export/formats');
+  }
+
   async codeIndex(path, { repo = null, commit = null } = {}) {
     const body = { path };
     if (repo) body.repo = repo;

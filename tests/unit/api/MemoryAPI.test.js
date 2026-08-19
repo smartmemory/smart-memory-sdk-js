@@ -526,6 +526,34 @@ describe('MemoryAPI', () => {
       });
     });
 
+    it('importChatExport should POST multipart form data to the chat-export path', async () => {
+      const file = new File([JSON.stringify([])], 'export.zip', { type: 'application/zip' });
+      await memoryAPI.importChatExport(file, { sourceFormat: 'claude', maxConversations: 5 });
+
+      expect(baseAPI.post).toHaveBeenCalledTimes(1);
+      const [path, body] = baseAPI.post.mock.calls[0];
+      expect(path).toBe('/memory/import/chat-export');
+      expect(body).toBeInstanceOf(FormData);
+      expect(body.get('source_format')).toBe('claude');
+      expect(body.get('max_conversations')).toBe('5');
+      expect(body.get('file')).toBeTruthy();
+    });
+
+    it('importChatExport should default to auto-detection and a 25-conversation cap', async () => {
+      const file = new File(['[]'], 'conversations.json', { type: 'application/json' });
+      await memoryAPI.importChatExport(file);
+
+      const [, body] = baseAPI.post.mock.calls[0];
+      expect(body.get('source_format')).toBe('auto');
+      expect(body.get('max_conversations')).toBe('25');
+    });
+
+    it('chatExportFormats should GET the exact formats path', async () => {
+      await memoryAPI.chatExportFormats();
+
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/import/chat-export/formats');
+    });
+
     it('ingestDocument should POST exact document ingest path and body', async () => {
       await memoryAPI.ingestDocument('doc body', { title: 'Doc', source: 'upload' });
 
