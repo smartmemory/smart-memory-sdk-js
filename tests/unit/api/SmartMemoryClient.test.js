@@ -40,6 +40,7 @@ describe('SmartMemoryClient', () => {
     expect(client.procedureDrift).toBeDefined();
     expect(client.locks).toBeDefined();
     expect(client.sequences).toBeDefined();
+    expect(client.policy).toBeDefined();
   });
 
   it('should work in SSO mode', () => {
