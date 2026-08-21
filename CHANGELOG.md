@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — `client.policy` policy-exchange API (GOV-STRATUM-SEAM-1 P1)
+
+- `client.policy.getBundle({ workflow, domain, statuses })` calls
+  `GET /memory/policy/bundle`; status values are encoded as repeatable query
+  parameters and default to `active`.
+- `client.policy.recordEnforcementEvent(event)` posts the contract event
+  unchanged to `POST /memory/policy/events` and returns its idempotency result.
+
 ### Added — `importChatExport()` / `chatExportFormats()` (DIST-CHAT-IMPORT-1)
 
 `memory.importChatExport(file, { sourceFormat, maxConversations })` uploads a ChatGPT or
