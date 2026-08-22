@@ -210,6 +210,25 @@ describe('MemoryAPI', () => {
     expect(body.include_superseded).toBe(true);
   });
 
+  // CORE-ARCHIVED-RECALL-1 — the third lifecycle-visibility flag.
+  it('search should map includeArchived to include_archived', async () => {
+    await memoryAPI.search('q', { includeArchived: true });
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.include_archived).toBe(true);
+  });
+
+  it('search should omit every lifecycle flag when false', async () => {
+    // Send-only-when-true: keeps the body minimal, and keeps an older server
+    // that predates a flag from rejecting an unknown field.
+    await memoryAPI.search('q');
+
+    const body = baseAPI.post.mock.calls.at(-1)[1];
+    expect(body.include_superseded).toBeUndefined();
+    expect(body.include_retracted).toBeUndefined();
+    expect(body.include_archived).toBeUndefined();
+  });
+
   it('search should serialize a Date asOfDate to ISO', async () => {
     await memoryAPI.search('q', { asOfDate: new Date(Date.UTC(2026, 0, 1)) });
 

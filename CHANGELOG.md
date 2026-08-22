@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added (2026-08-22) — `includeArchived` on `search()` (CORE-ARCHIVED-RECALL-1)
+
+- `search()` accepts `includeArchived` (mapped to `include_archived`), sent only
+  when true like the other lifecycle flags — which also keeps an older server
+  that predates the field from rejecting the request.
+- Third sibling of `includeSuperseded` / `includeRetracted`. An archived item is
+  one the decay/prune evolvers retired, or the source an episodic-to-semantic
+  promotion replaced. It has no replacement and no version chain, so it is not
+  covered by either of the other two. Inert under `asOfDate`.
+- **The default changed behaviour rather than preserving it.** Before
+  CORE-ARCHIVED-RECALL-1 the server read `archived` on no search path at all, so
+  archived items came back ranked exactly like live ones. UI that wants to show
+  them (an audit or maintenance view) must now pass `includeArchived: true`.
+
+
 ### Added — `client.policy` policy-exchange API (GOV-STRATUM-SEAM-1 P1)
 
 - `client.policy.getBundle({ workflow, domain, statuses })` calls
