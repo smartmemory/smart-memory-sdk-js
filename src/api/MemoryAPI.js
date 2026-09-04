@@ -185,6 +185,8 @@ export class MemoryAPI {
    *   default CHANGED behaviour rather than preserving it — before
    *   CORE-ARCHIVED-RECALL-1 the server read `archived` on no search path at all, so
    *   archived items were returned ranked exactly like live ones.
+   * @param {boolean} [options.excludeSpeculative=false] - Exclude speculative
+   *   memories from results. Sent as `exclude_speculative` only when true.
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
@@ -201,7 +203,7 @@ export class MemoryAPI {
    *   result marked `'unresolved'` is PRESENT-DAY content and must not be rendered
    *   as a historical belief.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
@@ -220,6 +222,7 @@ export class MemoryAPI {
     if (includeSuperseded) body.include_superseded = true;
     if (includeRetracted) body.include_retracted = true; // CORE-RETRACTED-RECALL-1
     if (includeArchived) body.include_archived = true;   // CORE-ARCHIVED-RECALL-1
+    if (excludeSpeculative) body.exclude_speculative = true;
     return this.api.post('/memory/search', body);
   }
 
