@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.86] - 2026-09-04
+
 ### Added (2026-09-04) — `memories.ask()` (DIST-LITE-9)
 
 - `client.memories.ask(question, { limit = 5, reasoning = true })` calls
