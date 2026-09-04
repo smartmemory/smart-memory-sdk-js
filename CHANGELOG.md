@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added (2026-09-04) — `memories.ask()` (DIST-LITE-9)
+
+- `client.memories.ask(question, { limit = 5, reasoning = true })` calls
+  `POST /memory/ask` and resolves to `{answer, reasoning, evidence, relations}`.
+- `reasoning` is omitted at its default so this SDK, the Python client and the lite
+  daemon send an identical body.
+- Relation rows carry `source_id` / `target_id`; combine them as
+  `${source_id}->${target_id}:${type}` to address the edge in a graph view.
+- Rejects rather than resolving to a fallback answer when the server's LLM cannot answer.
+
 ### Added (2026-08-22) — `includeArchived` on `search()` (CORE-ARCHIVED-RECALL-1)
 
 - `search()` accepts `includeArchived` (mapped to `include_archived`), sent only
