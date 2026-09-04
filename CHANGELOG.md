@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — `excludeSpeculative` on `search()`
+
+- `search()` accepts `excludeSpeculative`, mapped to `exclude_speculative` and
+  sent only when true.
+
 ## [1.4.86] - 2026-09-04
 
 ### Added (2026-09-04) — `memories.ask()` (DIST-LITE-9)

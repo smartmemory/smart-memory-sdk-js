@@ -218,6 +218,14 @@ describe('MemoryAPI', () => {
     expect(body.include_archived).toBe(true);
   });
 
+  it('search should omit excludeSpeculative by default and map it when true', async () => {
+    await memoryAPI.search('q');
+    expect(baseAPI.post.mock.calls.at(-1)[1].exclude_speculative).toBeUndefined();
+
+    await memoryAPI.search('q', { excludeSpeculative: true });
+    expect(baseAPI.post.mock.calls.at(-1)[1].exclude_speculative).toBe(true);
+  });
+
   it('search should omit every lifecycle flag when false', async () => {
     // Send-only-when-true: keeps the body minimal, and keeps an older server
     // that predates a flag from rejecting an unknown field.
