@@ -106,6 +106,29 @@ describe('MemoryAPI', () => {
     expect(call).toContain('memory_type=semantic');
   });
 
+  it.each([
+    ['', true, ''],
+    [null, false, null],
+    [undefined, false, null],
+  ])('matches Python list type presence for %s', async (type, present, value) => {
+    await memoryAPI.list({ type });
+    const params = new URLSearchParams(baseAPI.get.mock.calls[0][0].split('?')[1]);
+    expect(params.has('memory_type')).toBe(present);
+    expect(params.get('memory_type')).toBe(value);
+  });
+
+  it('list combines type and metadata filters and preserves the filtered total', async () => {
+    const page = { items: [{ item_id: 'typed' }], total: 3, limit: 1, offset: 2 };
+    baseAPI.get.mockResolvedValue(page);
+    const result = await memoryAPI.list({ type: 'custom_record', metadataKey: 'topic', metadataValue: 'a&b', limit: 1, offset: 2 });
+    const params = new URL(baseAPI.get.mock.calls[0][0], 'http://localhost').searchParams;
+    expect(params.get('memory_type')).toBe('custom_record');
+    expect(params.get('metadata_key')).toBe('topic');
+    expect(params.get('metadata_value')).toBe('a&b');
+    expect(params.get('offset')).toBe('2');
+    expect(result).toEqual(page);
+  });
+
   it('list should use defaults when no params provided', async () => {
     await memoryAPI.list();
 

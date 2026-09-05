@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- fix(memory): document the now-enforced list type filter and test combined type/metadata filters with filtered pagination totals.
+
 ### Added — `excludeSpeculative` on `search()`
 
 - `search()` accepts `excludeSpeculative`, mapped to `exclude_speculative` and
