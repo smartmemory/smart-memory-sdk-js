@@ -114,9 +114,8 @@ export class MemoryAPI {
    * @param {object} [options]
    * @param {number} [options.limit=50]
    * @param {number} [options.offset=0]
-   * @param {string|null} [options.type=null] - NOTE: sent as `memory_type`, which the
-   *   `/memory/list` route does not declare and therefore ignores. Pre-existing; kept as-is
-   *   so nothing silently changes behaviour for callers already passing it.
+   * @param {string|null} [options.type=null] - Exact memory type filter, applied
+   *   server-side before pagination and counting (sent as `memory_type`).
    * @param {string|null} [options.metadataKey=null] - GRAPH-API-1l. Metadata key to filter
    *   on. Nested keys use dot syntax (`profile.tier`). Must be paired with `metadataValue`;
    *   sending only one half is a 422.
@@ -135,7 +134,7 @@ export class MemoryAPI {
     // contain `&`, `=`, `#`, spaces, or non-ASCII, all of which would corrupt a
     // hand-built query string. Mirrors searchByMetadata below.
     const params = new URLSearchParams({ limit, offset });
-    if (type) params.append('memory_type', type);
+    if (type !== null && type !== undefined) params.append('memory_type', type);
     if (metadataKey !== null && metadataKey !== undefined) {
       params.append('metadata_key', metadataKey);
     }
