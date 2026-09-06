@@ -463,6 +463,12 @@ export class MemoryAPI {
     });
   }
 
+  /**
+   * Request personalization.
+   *
+   * The endpoint currently returns HTTP 501 because
+   * CORE-PERSONALIZATION-CONTRACT-1 is not implemented.
+   */
   async personalize(traits = {}, preferences = {}) {
     return this.api.post('/memory/personalize', { traits, preferences });
   }
@@ -485,6 +491,12 @@ export class MemoryAPI {
     return this.api.post('/memory/feedback', body);
   }
 
+  /**
+   * Request grounding for a memory item.
+   *
+   * The endpoint currently returns HTTP 501 because
+   * CORE-GROUND-ROUTE-CONTRACT-1 is not implemented.
+   */
   async ground(itemId, sourceUrl, validation = null) {
     return this.api.post(`/memory/${encodeURIComponent(itemId)}/ground`, {
       item_id: itemId,

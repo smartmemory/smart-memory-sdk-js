@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed (2026-09-06) — `personalize()` and `ground()` document their 501 (CORE-PERSONALIZATION-CONTRACT-1, CORE-GROUND-ROUTE-CONTRACT-1)
+
+- Both methods remain on `MemoryAPI` but state that the endpoint returns HTTP 501 because the
+  feature is not implemented server-side.
+
 ### Added (2026-09-06) — `since`/`until`, `hopStrategy`, origin context
 
 - `search()` and metadata search forward `since`/`until` as ISO strings or `Date` objects
