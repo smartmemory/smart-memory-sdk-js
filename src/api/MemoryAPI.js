@@ -202,12 +202,20 @@ export class MemoryAPI {
    *   result marked `'unresolved'` is PRESENT-DAY content and must not be rendered
    *   as a historical belief.
    */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false } = {}) {
+  /**
+   * hopStrategy: consensus follows entities several top results agree on; relevance follows
+   * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
+   * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    for (const [key, value] of Object.entries({ since, until })) {
+      if (value != null) body[key] = value instanceof Date ? value.toISOString() : value;
+    }
     if (memoryType) body.memory_type = memoryType;
     if (expertise) body.expertise = true;
     if (cite) body.cite = true;
     if (decompose) body.decompose = true;
+    if (hopStrategy != null) body.hop_strategy = hopStrategy;
     if (multiHop) body.multi_hop = true;
     if (multiHop && maxHops !== 3) body.max_hops = maxHops;
     if (multiHop && budgetMs !== 1500) body.budget_ms = budgetMs;
@@ -319,12 +327,15 @@ export class MemoryAPI {
    *   endpoints return slightly different item shapes, so migrate deliberately rather
    *   than by find-and-replace.
    */
-  async searchByMetadata(metadataKey, metadataValue, { memoryType = null, limit = 25 } = {}) {
+  async searchByMetadata(metadataKey, metadataValue, { memoryType = null, limit = 25, since = null, until = null } = {}) {
     const params = new URLSearchParams({
       metadata_key: metadataKey,
       metadata_value: metadataValue,
       limit,
     });
+    for (const [key, value] of Object.entries({ since, until })) {
+      if (value != null) params.append(key, value instanceof Date ? value.toISOString() : value);
+    }
     if (memoryType) params.append('memory_type', memoryType);
     return this.api.get(`/memory/by-metadata?${params}`);
   }
@@ -339,20 +350,22 @@ export class MemoryAPI {
 
   async ingestConversation(turns, {
     sessionBoundaries = null, conversationId = null, sessionDates = null,
-    turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4
+    turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4, context = null
   } = {}) {
     const body = { turns, turns_per_chunk: turnsPerChunk, max_chunk_chars: maxChunkChars, max_concurrent: maxConcurrent };
     if (sessionBoundaries) body.session_boundaries = sessionBoundaries;
     if (conversationId) body.conversation_id = conversationId;
     if (sessionDates) body.session_dates = sessionDates;
+    if (context !== null) body.context = context;
     return this.api.post('/memory/ingest/conversation', body);
   }
 
-  async ingestDocument(content, { title = null, source = null, chunkStrategy = null } = {}) {
+  async ingestDocument(content, { title = null, source = null, chunkStrategy = null, context = null } = {}) {
     const body = { content };
     if (title) body.title = title;
     if (source) body.source = source;
     if (chunkStrategy) body.chunk_strategy = chunkStrategy;
+    if (context !== null) body.context = context;
     return this.api.post('/memory/ingest/document', body);
   }
 

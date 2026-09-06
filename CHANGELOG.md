@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added (2026-09-06) — `since`/`until`, `hopStrategy`, origin context
+
+- `search()` and metadata search forward `since`/`until` as ISO strings or `Date` objects
+  (SEARCH-TIME-RANGE-1).
+- `hopStrategy` maps to the REST `hop_strategy` parameter (SEARCH-HOP-STRATEGY-SURFACE-1).
+- Conversation and document ingestion forward optional origin context
+  (CORE-ORIGIN-PROPAGATION-1).
+
+
 - fix(memory): document the now-enforced list type filter and test combined type/metadata filters with filtered pagination totals.
 
 ### Added — `excludeSpeculative` on `search()`
