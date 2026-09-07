@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added (2026-09-07) — list grounding policy (PLAT-RETRIEVAL-POLICY-1 slice 1)
+
+- `memories.list({ includeGrounding })` maps explicit `true`/`false` to `include_grounding`.
+  Omitted/null inherits workspace then env (default OFF). The response retains the resolved
+  `policy.include_grounding` and `policy.source` fields. No SDK version bump.
+
+
 ### Changed (2026-09-06) — `personalize()` and `ground()` document their 501 (CORE-PERSONALIZATION-CONTRACT-1, CORE-GROUND-ROUTE-CONTRACT-1)
 
 - Both methods remain on `MemoryAPI` but state that the endpoint returns HTTP 501 because the

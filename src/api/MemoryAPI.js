@@ -120,7 +120,9 @@ export class MemoryAPI {
    *   on. Nested keys use dot syntax (`profile.tier`). Must be paired with `metadataValue`;
    *   sending only one half is a 422.
    * @param {string|null} [options.metadataValue=null] - Value the key must equal.
-   * @returns {Promise<{items: object[], total: number, limit: number, offset: number}>}
+   * @param {boolean|null} [options.includeGrounding=null] - Include grounding nodes.
+   *   Omit to inherit workspace then env (default OFF); false is sent explicitly.
+   * @returns {Promise<{items: object[], total: number, limit: number, offset: number, policy: {include_grounding: boolean, source: string}}>}
    *   `total` counts the filtered set, so it drives pagination directly.
    */
   async list({
@@ -129,6 +131,7 @@ export class MemoryAPI {
     type = null,
     metadataKey = null,
     metadataValue = null,
+    includeGrounding = null,
   } = {}) {
     // URLSearchParams, not string concatenation: a metadata value may legitimately
     // contain `&`, `=`, `#`, spaces, or non-ASCII, all of which would corrupt a
@@ -140,6 +143,9 @@ export class MemoryAPI {
     }
     if (metadataValue !== null && metadataValue !== undefined) {
       params.append('metadata_value', metadataValue);
+    }
+    if (includeGrounding !== null && includeGrounding !== undefined) {
+      params.append('include_grounding', includeGrounding);
     }
     return this.api.get(`/memory/list?${params}`);
   }

@@ -785,3 +785,24 @@ describe('MemoryAPI — item ids are URL-encoded (SDK-PATH-ENCODE-1)', () => {
     expect(baseAPI[method].mock.calls.at(-1)[0]).toBe(expected);
   });
 });
+
+
+describe('list grounding policy', () => {
+  it.each([true, false])('forwards explicit %s and retains resolved policy', async (value) => {
+    const envelope = { items: [], total: 0, limit: 50, offset: 0,
+      policy: { include_grounding: value, source: 'request' } };
+    const api = { get: vi.fn().mockResolvedValue(envelope) };
+    const result = await new MemoryAPI(api).list({ includeGrounding: value });
+    const params = new URL(api.get.mock.calls[0][0], 'https://example.test').searchParams;
+    expect(params.get('include_grounding')).toBe(String(value));
+    expect(result).toEqual(envelope);
+  });
+
+  it.each([null, undefined])('omits %s to inherit workspace policy', async (value) => {
+    const envelope = { items: [], total: 0, limit: 50, offset: 0,
+      policy: { include_grounding: true, source: 'workspace' } };
+    const api = { get: vi.fn().mockResolvedValue(envelope) };
+    expect(await new MemoryAPI(api).list({ includeGrounding: value })).toEqual(envelope);
+    expect(api.get.mock.calls[0][0]).not.toContain('include_grounding');
+  });
+});
