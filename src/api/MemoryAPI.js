@@ -1,3 +1,20 @@
+/**
+ * CORE-RERANK-EXPOSE-1 search evidence, passed through without transformation.
+ * A null rerank_score means unverified, never zero or implicitly relevant.
+ * Scores are raw logits only for a model whose actual activation is Identity.
+ * Unknown model revision/activation never establishes cross-model comparability.
+ * @typedef {'scored'|'unscored_tail'|'bypass_disabled'|'bypass_pending'|'bypass_memory_type'|'bypass_recency'|'bypass_empty_query'|'bypass_small_pool'|'model_unavailable'|'prediction_failed'|'invalid_score'|'post_rerank_insertion'|'not_reranked'} RerankStatus
+ * @typedef {Object} RerankEvidence
+ * @property {number|null} rerank_score
+ * @property {RerankStatus} rerank_status
+ * @property {{name: string, revision: string|null, activation: string|null}|null} rerank_model
+ * @property {number|null} rerank_pool_size Pool before final truncation.
+ * @property {number|null} rerank_candidate_count Pairs submitted to prediction.
+ * @property {number|null} rerank_scored_count Finite scores obtained in the pool.
+ * @property {boolean|null} rerank_pool_capped A scored head left an unscored tail.
+ * @property {number|null} rerank_max_doc_chars Effective prefix limit, not dead config.
+ */
+
 export class MemoryAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -209,6 +226,7 @@ export class MemoryAPI {
    *   as a historical belief.
    */
   /**
+   * Each result carries RerankEvidence (including expertise buckets and citation modes).
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
