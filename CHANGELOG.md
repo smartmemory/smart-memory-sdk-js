@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added (2026-09-08) — rerank evidence (CORE-RERANK-EXPOSE-1)
+
+- Document and lock unmodified rerank evidence passthrough for search responses, including expertise/citation variants. No runtime transform or cutoff.
+
+
 ### Added (2026-09-07) — list grounding policy (PLAT-RETRIEVAL-POLICY-1 slice 1)
 
 - `memories.list({ includeGrounding })` maps explicit `true`/`false` to `include_grounding`.
