@@ -212,7 +212,9 @@ export class MemoryAPI {
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
-   * @returns {Promise<{results: Array|Object, group_roots: Object, citations?: Array}>}
+   * @returns {Promise<{results: Array|Object, group_roots: Object, citations?: Array, coverage?: {complete?: boolean, refill_rounds?: number, vector_scope_incomplete?: boolean, created_at_excluded_count?: number, created_at_backfilled_boundary?: string|null, note?: string}}>}
+   *   `coverage.complete === false` means the server exhausted its candidate budget before
+   *   filling `topK`; eligible items may exist beyond the returned page (CORE-RECALL-SEMANTICS-1).
    *   CORE-RECALL-LINEAGE-1: the response is ALWAYS a `SearchResponse` envelope —
    *   `results` is a flat array by default and a `{bucket: [...]}` map under
    *   `expertise: true`; `group_roots` is always present (possibly `{}`) and

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed (2026-09-09)
+
+- `memory.search()` documents the additive `coverage` envelope field: `complete`, `refill_rounds`, `vector_scope_incomplete` (server candidate-budget completeness, CORE-RECALL-SEMANTICS-1 W1) alongside the existing created-at window note.
+
 ### Added (2026-09-08) — rerank evidence (CORE-RERANK-EXPOSE-1)
 
 - Document and lock unmodified rerank evidence passthrough for search responses, including expertise/citation variants. No runtime transform or cutoff.
