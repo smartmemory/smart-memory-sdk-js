@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Documentation (2026-09-10) — decision belief reads (CORE-DECISION-BELIEF-SURFACE-1)
+
+- `DecisionAPI.get` / `list` / `search` document the three Dempster-Shafer belief reads the service now
+  returns: `belief_hold`, `plausibility_hold` and `ignorance`. All three pass through unchanged, so there
+  is no code change and no version bump; core's `VERSION` is the release dial.
+- The JSDoc states that the reads are evidence-only and independent of the prior scalar `confidence`, and
+  that they separate a disputed decision (high `contest`) from one nothing has evidenced yet (high
+  `ignorance`), which `stability` cannot do because it reads 0.5 for both.
+
 ### Changed (2026-09-09)
 
 - `memory.search()` documents the additive `coverage` envelope field: `complete`, `refill_rounds`, `vector_scope_incomplete` (server candidate-budget completeness, CORE-RECALL-SEMANTICS-1 W1) alongside the existing created-at window note.
