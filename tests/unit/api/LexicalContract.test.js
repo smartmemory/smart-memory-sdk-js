@@ -16,7 +16,10 @@ it.each(['omitted', 'empty', 'zero', 'accepted', 'contains', 'keyword-bm25', 'un
     await expect(api.search('quartz', options)).rejects.toThrow(message);
     expect(transport.post).not.toHaveBeenCalled();
   } else if (['validation', 'unavailable'].includes(scenario)) {
-    const failure = Object.assign(new Error(scenario === 'validation' ? contract.errors.validation.unmatched_quote_message : 'LexicalIndexUnavailableError: sm rebuild --lexical'), { status: scenario === 'validation' ? 400 : 503 });
+    const wire = contract.errors[scenario].http;
+    const message = scenario === 'validation' ? contract.errors.validation.unmatched_quote_message : 'LexicalIndexUnavailableError: sm rebuild --lexical';
+    const body = Object.fromEntries(Object.entries(wire.body).map(([key, value]) => [key, value.replace('{message}', message)]));
+    const failure = Object.assign(new Error(body.detail), { status: wire.status, data: body });
     transport.post.mockRejectedValue(failure);
     await expect(api.search('quartz', options)).rejects.toBe(failure);
   } else {
