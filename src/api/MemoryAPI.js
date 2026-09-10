@@ -232,8 +232,19 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    // lexical-contract v1: omission retains profile/default behavior, zero disables a lane.
+    if (channelWeights != null) {
+      const accepted = new Set(['entity-graph', 'ssg-traversal', 'semantic', 'regex-text', 'lexical', 'spreading-activation', 'facts', 'structural-semantic']);
+      for (const channel of Object.keys(channelWeights)) {
+        if (['contains', 'keyword-bm25'].includes(channel)) {
+          throw new Error(`Channel ${channel} was removed; use lexical.`);
+        }
+        if (!accepted.has(channel)) throw new Error(`Unknown search channel ${channel}. Accepted: ${[...accepted].join(', ')}`);
+      }
+      body.channel_weights = channelWeights;
+    }
     for (const [key, value] of Object.entries({ since, until })) {
       if (value != null) body[key] = value instanceof Date ? value.toISOString() : value;
     }
