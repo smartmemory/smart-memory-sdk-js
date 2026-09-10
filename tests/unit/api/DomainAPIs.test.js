@@ -86,9 +86,23 @@ describe('DecisionAPI', () => {
   it('should supersede a decision', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
-    await decisions.supersede('d-1', { reason: 'outdated' });
+    await decisions.supersede('d-1', {
+      new_content: 'Use CockroachDB',
+      new_confidence: 0.95,
+      reason: 'outdated',
+      rejected_alternatives: ['Keep Citus'],
+      rationale: 'Regional failover is required',
+      constraints: ['No manual operator']
+    });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/supersede', { reason: 'outdated' });
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/supersede', {
+      new_content: 'Use CockroachDB',
+      new_confidence: 0.95,
+      reason: 'outdated',
+      rejected_alternatives: ['Keep Citus'],
+      rationale: 'Regional failover is required',
+      constraints: ['No manual operator']
+    });
   });
 
   it('should retract a decision', async () => {

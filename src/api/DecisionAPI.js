@@ -190,6 +190,9 @@ export class DecisionAPI {
    * @param {string} [data.new_decision_type='inference']
    * @param {number} [data.new_confidence=0.8]
    * @param {string} data.reason
+   * @param {string[]|null} [data.rejected_alternatives=null]
+   * @param {string|null} [data.rationale=null]
+   * @param {string[]|null} [data.constraints=null]
    */
   async supersede(decisionId, data = {}) {
     return this.api.post(`/memory/decisions/${decisionId}/supersede`, data);

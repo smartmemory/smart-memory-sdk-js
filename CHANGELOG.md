@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed (2026-09-10) — decision supersession context
+
+- `DecisionAPI.supersede` documents and forwards optional `rejected_alternatives`, `rationale`,
+  and `constraints`; the SDK continues to pass the request object through without lossy remapping.
+
 ### Documentation (2026-09-10) — decision belief reads (CORE-DECISION-BELIEF-SURFACE-1)
 
 - `DecisionAPI.get` / `list` / `search` document the three Dempster-Shafer belief reads the service now
