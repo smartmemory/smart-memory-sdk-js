@@ -83,6 +83,15 @@ export class DecisionAPI {
    *   provenance subgraph contains this memory id. Filters compose in-query so
    *   the response never silently truncates below `limit` when more matches exist.
    *   Unknown or out-of-scope memory ids return an empty list (never 404).
+   *
+   * Every returned decision carries three Dempster-Shafer belief reads derived from
+   * its reinforce/contradict evidence (CORE-DECISION-BELIEF-SURFACE-1):
+   * `belief_hold` (lower bound that the decision should stand), `plausibility_hold`
+   * (upper bound), and `ignorance` (the width of that interval, so 1.0 means no
+   * evidence has been recorded either way). They are evidence-only and independent of
+   * the prior scalar `confidence`, and they separate "disputed" (high `contest`) from
+   * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
+   * since it reads 0.5 for both.
    */
   async list(params = {}) {
     const qs = new URLSearchParams(params).toString();
@@ -93,6 +102,15 @@ export class DecisionAPI {
    * Search for active decisions related to a topic.
    * @param {string} topic
    * @param {number} [limit=20]
+   *
+   * Every returned decision carries three Dempster-Shafer belief reads derived from
+   * its reinforce/contradict evidence (CORE-DECISION-BELIEF-SURFACE-1):
+   * `belief_hold` (lower bound that the decision should stand), `plausibility_hold`
+   * (upper bound), and `ignorance` (the width of that interval, so 1.0 means no
+   * evidence has been recorded either way). They are evidence-only and independent of
+   * the prior scalar `confidence`, and they separate "disputed" (high `contest`) from
+   * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
+   * since it reads 0.5 for both.
    */
   async search(topic, limit = 20) {
     return this.api.get(`/memory/decisions/search?topic=${encodeURIComponent(topic)}&limit=${limit}`);
@@ -150,6 +168,15 @@ export class DecisionAPI {
   /**
    * Retrieve a decision by ID.
    * @param {string} decisionId
+   *
+   * Every returned decision carries three Dempster-Shafer belief reads derived from
+   * its reinforce/contradict evidence (CORE-DECISION-BELIEF-SURFACE-1):
+   * `belief_hold` (lower bound that the decision should stand), `plausibility_hold`
+   * (upper bound), and `ignorance` (the width of that interval, so 1.0 means no
+   * evidence has been recorded either way). They are evidence-only and independent of
+   * the prior scalar `confidence`, and they separate "disputed" (high `contest`) from
+   * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
+   * since it reads 0.5 for both.
    */
   async get(decisionId) {
     return this.api.get(`/memory/decisions/${decisionId}`);
