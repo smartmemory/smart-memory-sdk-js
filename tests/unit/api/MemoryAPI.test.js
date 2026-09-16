@@ -224,6 +224,14 @@ describe('MemoryAPI', () => {
     });
   });
 
+  it('search should send reranker only when set', async () => {
+    await memoryAPI.search('q', { reranker: 'none' });
+    expect(baseAPI.post.mock.calls.at(-1)[1].reranker).toBe('none');
+
+    await memoryAPI.search('q');
+    expect(baseAPI.post.mock.calls.at(-1)[1]).not.toHaveProperty('reranker');
+  });
+
   // PLAT-AUDITABLE-MEMORY-1 — as-of recall params + explain.
   it('search should map asOfDate/includeSuperseded to snake_case body fields', async () => {
     await memoryAPI.search('q', { asOfDate: '2026-01-01T00:00:00+00:00', includeSuperseded: true });
