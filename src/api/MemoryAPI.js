@@ -175,6 +175,7 @@ export class MemoryAPI {
    * @param {number} [options.topK=5]
    * @param {boolean} [options.enableHybrid=true]
    * @param {string|null} [options.memoryType=null]
+   * @param {string|null} [options.reranker=null] - Optional reranker policy override.
    * @param {boolean} [options.expertise=false] - When true (CORE-EXPERTISE-1 Phase 4a),
    *   the response shape changes from a flat list to `{results: {<expertise_type>: [items]}}`
    *   keyed by expertise type (decision, constraint, learned, opinion, reasoning, observation).
@@ -232,7 +233,7 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     // lexical-contract v1: omission retains profile/default behavior, zero disables a lane.
     if (channelWeights != null) {
@@ -245,6 +246,7 @@ export class MemoryAPI {
       }
       body.channel_weights = channelWeights;
     }
+    if (reranker != null) body.reranker = reranker;
     for (const [key, value] of Object.entries({ since, until })) {
       if (value != null) body[key] = value instanceof Date ? value.toISOString() : value;
     }

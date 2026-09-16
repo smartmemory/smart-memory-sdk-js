@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added: switchable reranker policy (CORE-RERANK-PLUGIN-1)
+
+- `memories.search(query, { reranker })` maps an explicit override to `reranker`
+  and omits it when the caller wants server-side policy resolution.
+
 ### Changed: CORE-LEXICAL-INDEX-1 consumer cutover
 - R-E4: Pin lexical HTTP contract v2 to exact 400/503 detail envelopes and verify consumer error fidelity.
 
