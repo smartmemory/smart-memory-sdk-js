@@ -75,13 +75,21 @@ export class SmartMemoryClient {
     this.policy = new PolicyAPI(baseAPI);
   }
 
-  setTeamId(teamId) {
-    this.auth.tokenManager.setTeamId(teamId);
+  setWorkspaceId(workspaceId) {
+    this.auth.tokenManager.setWorkspaceId(workspaceId);
     this.auth.notifyListeners();
   }
 
+  getWorkspaceId() {
+    return this.auth.tokenManager.getWorkspaceId();
+  }
+
+  setTeamId(teamId) {
+    return this.setWorkspaceId(teamId);
+  }
+
   getTeamId() {
-    return this.auth.tokenManager.getTeamId();
+    return this.getWorkspaceId();
   }
 
   /**

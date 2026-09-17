@@ -22,6 +22,7 @@ describe('TokenManager', () => {
       tm.setRefreshToken('ref');
       tm.setUser({ id: '1', name: 'Test' });
       tm.setTenantId('tenant-1');
+      tm.setWorkspaceId('workspace-1');
 
       tm.clearAll();
 
@@ -29,6 +30,7 @@ describe('TokenManager', () => {
       expect(tm.getRefreshToken()).toBeNull();
       expect(tm.getUser()).toBeNull();
       expect(tm.getTenantId()).toBeNull();
+      expect(tm.getWorkspaceId()).toBeNull();
     });
   });
 
@@ -75,13 +77,57 @@ describe('TokenManager', () => {
       expect(localStorage.getItem('access_token')).toBeNull();
     });
 
-    it('should migrate legacy team key on read', () => {
-      localStorage.setItem('team_id', 'team-legacy');
+    it('should migrate the previous canonical team key on workspace read', () => {
+      localStorage.setItem('smart_memory_team_id', 'workspace-legacy');
       const tm = new TokenManager({ storage: 'localStorage' });
 
-      expect(tm.getTeamId()).toBe('team-legacy');
-      expect(localStorage.getItem('smart_memory_team_id')).toBe('team-legacy');
+      expect(tm.getWorkspaceId()).toBe('workspace-legacy');
+      expect(localStorage.getItem('smart_memory_workspace_id')).toBe('workspace-legacy');
+      expect(localStorage.getItem('smart_memory_team_id')).toBeNull();
+    });
+
+    it('should keep reading older team aliases through getTeamId', () => {
+      localStorage.setItem('team_id', 'workspace-older-alias');
+      const tm = new TokenManager({ storage: 'localStorage' });
+
+      expect(tm.getTeamId()).toBe('workspace-older-alias');
+      expect(tm.getWorkspaceId()).toBe('workspace-older-alias');
       expect(localStorage.getItem('team_id')).toBeNull();
+    });
+  });
+
+  describe('workspace compatibility aliases', () => {
+    it('should expose matching workspace and team values', () => {
+      const tm = new TokenManager({ storage: 'memory' });
+
+      tm.setWorkspaceId('workspace-primary');
+      expect(tm.getWorkspaceId()).toBe('workspace-primary');
+      expect(tm.getTeamId()).toBe('workspace-primary');
+    });
+
+    it('should delegate legacy team methods to workspace methods', () => {
+      const tm = new TokenManager({ storage: 'memory' });
+      const setWorkspaceId = vi.spyOn(tm, 'setWorkspaceId');
+      const getWorkspaceId = vi.spyOn(tm, 'getWorkspaceId');
+
+      tm.setTeamId('workspace-via-team');
+      const value = tm.getTeamId();
+
+      expect(setWorkspaceId).toHaveBeenCalledWith('workspace-via-team');
+      expect(getWorkspaceId).toHaveBeenCalled();
+      expect(value).toBe('workspace-via-team');
+    });
+
+    it('should preserve the legacy custom team storage key', () => {
+      localStorage.setItem('custom_team_key', 'workspace-custom');
+      const tm = new TokenManager({
+        storage: 'localStorage',
+        keys: { team: 'custom_team_key' }
+      });
+
+      expect(tm.getWorkspaceId()).toBe('workspace-custom');
+      tm.setWorkspaceId('workspace-updated');
+      expect(localStorage.getItem('custom_team_key')).toBe('workspace-updated');
     });
   });
 

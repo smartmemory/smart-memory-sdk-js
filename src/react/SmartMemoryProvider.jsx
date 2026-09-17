@@ -16,7 +16,7 @@ export function SmartMemoryProvider({ children, ...config }) {
     user: client.auth.getCurrentUser(),
     token: client.auth.getCurrentToken(),
     tenantId: client.auth.getTenantId(),
-    workspaceId: client.auth.tokenManager.getTeamId(),
+    workspaceId: client.auth.tokenManager.getWorkspaceId(),
     loading: false,
     error: null
   });

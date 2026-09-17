@@ -107,12 +107,12 @@ describe('AuthCore', () => {
       expect(headers.Authorization).toBe('Bearer already-bearer');
     });
 
-    it('should include X-Workspace-Id header when team is set', () => {
+    it('should include X-Workspace-Id header when workspace is set', () => {
       const auth = createCustomAuth();
-      auth.tokenManager.setTeamId('team-123');
+      auth.tokenManager.setWorkspaceId('workspace-123');
 
       const headers = auth.getAuthHeaders();
-      expect(headers['X-Workspace-Id']).toBe('team-123');
+      expect(headers['X-Workspace-Id']).toBe('workspace-123');
     });
 
     it('should not include X-Workspace-Id header when only tenant is set (no team)', () => {
@@ -164,7 +164,26 @@ describe('AuthCore', () => {
 
       expect(ok).toBe(true);
       expect(auth.isAuthenticated()).toBe(true);
-      expect(auth.tokenManager.getTeamId()).toBe('team-1');
+      expect(auth.tokenManager.getWorkspaceId()).toBe('team-1');
+    });
+
+    it('should prefer default_workspace_id over default_team_id', async () => {
+      const auth = createSSOAuth();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          id: 'u1',
+          default_workspace_id: 'workspace-new',
+          default_team_id: 'workspace-old-alias',
+          tenant_id: 'tenant-1'
+        })
+      });
+
+      const ok = await auth.bootstrapSession();
+
+      expect(ok).toBe(true);
+      expect(auth.tokenManager.getWorkspaceId()).toBe('workspace-new');
+      expect(auth.tokenManager.getTeamId()).toBe('workspace-new');
     });
   });
 

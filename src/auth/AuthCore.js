@@ -89,9 +89,9 @@ export class AuthCore {
         : `Bearer ${this.currentToken}`;
     }
 
-    const teamId = this.tokenManager.getTeamId();
-    if (teamId) {
-      headers['X-Workspace-Id'] = teamId;
+    const workspaceId = this.tokenManager.getWorkspaceId();
+    if (workspaceId) {
+      headers['X-Workspace-Id'] = workspaceId;
     }
 
     return headers;
@@ -113,7 +113,7 @@ export class AuthCore {
       user: this.currentUser,
       token: this.currentToken,
       tenantId: this.tokenManager.getTenantId(),
-      workspaceId: this.tokenManager.getTeamId()
+      workspaceId: this.tokenManager.getWorkspaceId()
     };
 
     this.listeners.forEach(listener => {
@@ -193,9 +193,9 @@ export class AuthCore {
       );
 
       // If a stale bearer token is present, middleware may reject before cookie fallback.
-      // Retry once with cookie-only auth (no Authorization/X-Team-Id headers).
+      // Retry once with cookie-only auth (no Authorization/X-Workspace-Id headers).
       let usedCookieOnlyFallback = false;
-      if (!response.ok && (this.currentToken || this.tokenManager.getTeamId())) {
+      if (!response.ok && (this.currentToken || this.tokenManager.getWorkspaceId())) {
         response = await fetch(
           meUrl,
           this.getRequestOptions({ method: 'GET', headers: {} })
@@ -225,18 +225,19 @@ export class AuthCore {
       const user = await response.json();
       this.currentUser = user;
       this.tokenManager.setUser(user);
-      const teamId = user?.default_team_id || this.tokenManager.getTeamId() || null;
-      if (teamId) {
-        this.tokenManager.setTeamId(teamId);
-        this.tokenManager.setTenantId(user?.tenant_id || teamId);
+      const defaultWorkspaceId = user?.default_workspace_id || user?.default_team_id || null;
+      const workspaceId = defaultWorkspaceId || this.tokenManager.getWorkspaceId() || null;
+      if (workspaceId) {
+        this.tokenManager.setWorkspaceId(workspaceId);
+        this.tokenManager.setTenantId(user?.tenant_id || workspaceId);
       }
 
       if (usedCookieOnlyFallback) {
-        // Prevent future requests from sending known-bad bearer/team headers.
+        // Prevent future requests from sending known-bad bearer/workspace headers.
         this.tokenManager.setAccessToken(null);
         this.currentToken = null;
-        if (user?.default_team_id) {
-          this.tokenManager.setTeamId(user.default_team_id);
+        if (defaultWorkspaceId) {
+          this.tokenManager.setWorkspaceId(defaultWorkspaceId);
         }
       }
 

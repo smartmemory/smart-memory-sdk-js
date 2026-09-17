@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added (2026-09-18) — workspace naming (AUTH-IDENTITY-MODEL-1 Phase 3)
+
+- `getWorkspaceId`/`setWorkspaceId` are now primary on `TokenManager` and the client;
+  `getTeamId`/`setTeamId` delegate to them and keep working for one release.
+- The storage key moves from `smart_memory_team_id` to `smart_memory_workspace_id`, with the old
+  key kept as a legacy alias so **existing browser sessions are read through the legacy path and
+  nobody is logged out**. Custom `tokenKeys.team` configurations remain supported.
+- `/auth/me` parsing prefers `default_workspace_id` and falls back to `default_team_id`; the server
+  sends both during the deprecation window.
+- The Clerk exchange helper returns `workspaceId` alongside the existing `teamId`.
+- `TeamAPI` addresses real teams, not workspaces, and is unchanged.
+
 ### Added: switchable reranker policy (CORE-RERANK-PLUGIN-1)
 
 - `memories.search(query, { reranker })` maps an explicit override to `reranker`
