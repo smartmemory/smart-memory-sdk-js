@@ -41,6 +41,7 @@ vi.mock('../../src/api/SmartMemoryClient.js', () => ({
         isAuthenticated: vi.fn(() => false),
         logout: vi.fn(),
         tokenManager: {
+          getWorkspaceId: vi.fn(() => authHarness.workspaceId),
           getTeamId: vi.fn(() => authHarness.workspaceId),
         },
       };

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { SmartMemoryClient } from '../../../src/api/SmartMemoryClient.js';
 
 describe('SmartMemoryClient', () => {
@@ -55,5 +55,23 @@ describe('SmartMemoryClient', () => {
     expect(client.auth.mode).toBe('sso');
     const url = client.auth.getLoginUrl('http://localhost:9002/auth/callback');
     expect(url).toContain('localhost:5173/login');
+  });
+
+  it('should expose workspace methods with delegating team aliases', () => {
+    const client = new SmartMemoryClient({
+      mode: 'custom',
+      apiBaseUrl: 'http://localhost:9001',
+      storage: 'memory'
+    });
+    const setWorkspaceId = vi.spyOn(client, 'setWorkspaceId');
+    const getWorkspaceId = vi.spyOn(client, 'getWorkspaceId');
+
+    client.setTeamId('workspace-via-team');
+    const value = client.getTeamId();
+
+    expect(setWorkspaceId).toHaveBeenCalledWith('workspace-via-team');
+    expect(getWorkspaceId).toHaveBeenCalled();
+    expect(value).toBe('workspace-via-team');
+    expect(client.getWorkspaceId()).toBe('workspace-via-team');
   });
 });

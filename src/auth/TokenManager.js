@@ -3,7 +3,7 @@ const DEFAULT_KEYS = {
   refresh: 'smart_memory_refresh_token',
   user: 'smart_memory_user',
   tenant: 'smart_memory_tenant_id',
-  team: 'smart_memory_team_id'
+  workspace: 'smart_memory_workspace_id'
 };
 
 const LEGACY_KEYS = {
@@ -11,7 +11,7 @@ const LEGACY_KEYS = {
   refresh: ['refresh_token', 'sm_refresh_token'],
   user: ['sm_user'],
   tenant: ['tenant_id', 'workspace_id', 'sm_workspace_id'],
-  team: ['team_id', 'sm_team_id']
+  workspace: ['smart_memory_team_id', 'team_id', 'sm_team_id']
 };
 
 export class TokenManager {
@@ -22,8 +22,15 @@ export class TokenManager {
    */
   constructor({ storage = 'localStorage', keys = {} } = {}) {
     this.storageType = storage;
-    this.keys = { ...DEFAULT_KEYS, ...keys };
-    this._memory = { access: null, refresh: null, user: null, tenant: null, team: null };
+    const workspaceKey = keys.workspace || keys.team || DEFAULT_KEYS.workspace;
+    this.keys = { ...DEFAULT_KEYS, ...keys, workspace: workspaceKey };
+    // Keep the custom-key alias observable for callers that inspect ``keys``.
+    this.keys.team ??= workspaceKey;
+    this.workspaceAliases = [
+      ...LEGACY_KEYS.workspace,
+      ...(keys.team && keys.team !== workspaceKey ? [keys.team] : [])
+    ];
+    this._memory = { access: null, refresh: null, user: null, tenant: null, workspace: null };
   }
 
   getAccessToken() {
@@ -85,23 +92,31 @@ export class TokenManager {
     this._setInStorage(this.keys.tenant, normalized);
   }
 
+  getWorkspaceId() {
+    if (this.storageType === 'memory') return this._memory.workspace;
+    return this._normalizeId(this._getFromStorage(this.keys.workspace, this.workspaceAliases));
+  }
+
+  setWorkspaceId(workspaceId) {
+    const normalized = this._normalizeId(workspaceId);
+    if (this.storageType === 'memory') {
+      this._memory.workspace = normalized;
+      return;
+    }
+    this._setInStorage(this.keys.workspace, normalized);
+  }
+
   getTeamId() {
-    if (this.storageType === 'memory') return this._memory.team;
-    return this._normalizeId(this._getFromStorage(this.keys.team, LEGACY_KEYS.team));
+    return this.getWorkspaceId();
   }
 
   setTeamId(teamId) {
-    const normalized = this._normalizeId(teamId);
-    if (this.storageType === 'memory') {
-      this._memory.team = normalized;
-      return;
-    }
-    this._setInStorage(this.keys.team, normalized);
+    this.setWorkspaceId(teamId);
   }
 
   clearAll() {
     if (this.storageType === 'memory') {
-      this._memory = { access: null, refresh: null, user: null, tenant: null, team: null };
+      this._memory = { access: null, refresh: null, user: null, tenant: null, workspace: null };
       return;
     }
     for (const key of Object.values(this.keys)) {

@@ -72,10 +72,11 @@ export async function exchangeClerkSession({
     const detail = await resp.text().catch(() => '');
     throw new Error(detail || `Session bootstrap failed (${resp.status})`);
   }
+  const workspaceId = resp.headers.get('x-sm-workspace-id');
   return {
     response: resp,
     accessToken: resp.headers.get('x-sm-access-token'),
-    teamId: resp.headers.get('x-sm-workspace-id'),
+    workspaceId,
+    teamId: workspaceId,
   };
 }
-
