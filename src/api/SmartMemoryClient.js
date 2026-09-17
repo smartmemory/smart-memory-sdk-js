@@ -5,6 +5,7 @@ import { DecisionAPI } from './DecisionAPI.js';
 import { OpinionAPI } from './OpinionAPI.js';
 import { GraphAPI } from './GraphAPI.js';
 import { TeamAPI } from './TeamAPI.js';
+import { WorkspaceAPI } from './WorkspaceAPI.js';
 import { ProfileAPI } from './ProfileAPI.js';
 import { SubscriptionAPI } from './SubscriptionAPI.js';
 import { AuthAPI } from './AuthAPI.js';
@@ -47,6 +48,7 @@ export class SmartMemoryClient {
     this.opinions = new OpinionAPI(baseAPI);
     this.graph = new GraphAPI(baseAPI);
     this.teams = new TeamAPI(baseAPI);
+    this.workspaces = new WorkspaceAPI(baseAPI);
     this.profiles = new ProfileAPI(baseAPI);
     this.subscriptions = new SubscriptionAPI(baseAPI);
     this.authAPI = new AuthAPI(baseAPI);

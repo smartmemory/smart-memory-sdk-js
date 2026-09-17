@@ -14,6 +14,7 @@ export { DecisionAPI } from './api/DecisionAPI.js';
 export { OpinionAPI } from './api/OpinionAPI.js';
 export { GraphAPI } from './api/GraphAPI.js';
 export { TeamAPI } from './api/TeamAPI.js';
+export { WorkspaceAPI } from './api/WorkspaceAPI.js';
 export { ProfileAPI } from './api/ProfileAPI.js';
 export { SubscriptionAPI } from './api/SubscriptionAPI.js';
 export { AuthAPI } from './api/AuthAPI.js';
