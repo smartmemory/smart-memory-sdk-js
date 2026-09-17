@@ -17,6 +17,7 @@ describe('SmartMemoryClient', () => {
     expect(client.decisions).toBeDefined();
     expect(client.graph).toBeDefined();
     expect(client.teams).toBeDefined();
+    expect(client.workspaces).toBeDefined();
     expect(client.profiles).toBeDefined();
     expect(client.subscriptions).toBeDefined();
     expect(client.authAPI).toBeDefined();
