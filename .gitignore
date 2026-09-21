@@ -9,3 +9,6 @@ package-lock.json
 .secrets
 .act.secrets
 .idea/
+
+# session flush scratch (per-session, not shared state)
+session-context*
