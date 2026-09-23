@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed — CORE-BG-2b progress contract v1.6.0
+
+- Accept `skipped` in the `ProgressEvent.status` type; SSE subscriptions pass skipped evolver events through unchanged.
+
 ### Added (2026-09-18) — workspace naming (AUTH-IDENTITY-MODEL-1 Phase 3)
 
 - `getWorkspaceId`/`setWorkspaceId` are now primary on `TokenManager` and the client;

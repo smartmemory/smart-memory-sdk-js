@@ -9,7 +9,7 @@
  * That module is stubbed below via vi.mock so these unit tests remain
  * self-contained (no network, no node_modules quirks in jsdom).
  *
- * Contract reference: progress-event-contract.json v1.3.0 — ClientSDKMethod.js
+ * Contract reference: progress-event-contract.json v1.6.0 — ClientSDKMethod.js
  */
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
@@ -38,7 +38,7 @@ vi.mock('@microsoft/fetch-event-source', () => {
 });
 
 // Import AFTER mock declaration
-import { subscribeProgress } from '../src/progress.js';
+import { subscribeProgress, type ProgressEvent } from '../src/progress.js';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 
 let capturedOptions: FetchEventSourceOptions | null = null;
@@ -120,6 +120,17 @@ describe('subscribeProgress (T011 — @internal)', () => {
     });
   });
 
+  it('passes a typed skipped evolver event through unchanged', () => {
+    const event: ProgressEvent = {
+      ...makeEvent(), status: 'skipped', kind: 'evolver.result', payload: {},
+    };
+    const onEvent = vi.fn<(event: ProgressEvent) => void>();
+    const subscription = subscribeProgress({ onEvent, onError: vi.fn() });
+    fireMessage('1-0', event);
+    expect(onEvent).toHaveBeenCalledWith(event);
+    subscription.close();
+  });
+
   // -------------------------------------------------------------------------
   // 1. Signature conformance
   // -------------------------------------------------------------------------
@@ -152,7 +163,7 @@ describe('subscribeProgress (T011 — @internal)', () => {
       // TypeScript compilation would fail; at JS runtime we verify no scope-
       // derived query param leaks into the URL.
       subscribeProgress({ onEvent: vi.fn(), onError: vi.fn() });
-      const calledUrl: string = mockFetchEventSource.mock.calls[0]?.[0] ?? '';
+      const calledUrl = mockFetchEventSource.mock.calls[0]?.[0] ?? '';
       expect(calledUrl).not.toContain('scope=');
     });
   });
@@ -213,7 +224,7 @@ describe('subscribeProgress (T011 — @internal)', () => {
   describe('URL query params', () => {
     it('builds plain /memory/progress/stream for live mode (no params)', () => {
       subscribeProgress({ onEvent: vi.fn(), onError: vi.fn() });
-      const url: string = mockFetchEventSource.mock.calls[0][0];
+      const url = mockFetchEventSource.mock.calls[0][0];
       expect(url).toContain('/memory/progress/stream');
       expect(url).not.toContain('run_id=');
       expect(url).not.toContain('from_seq=');
@@ -227,7 +238,7 @@ describe('subscribeProgress (T011 — @internal)', () => {
         onEvent: vi.fn(),
         onError: vi.fn(),
       });
-      const url: string = mockFetchEventSource.mock.calls[0][0];
+      const url = mockFetchEventSource.mock.calls[0][0];
       expect(url).toContain('run_id=abc-run');
       expect(url).toContain('from_seq=0');
     });
@@ -238,7 +249,7 @@ describe('subscribeProgress (T011 — @internal)', () => {
         onEvent: vi.fn(),
         onError: vi.fn(),
       });
-      const url: string = mockFetchEventSource.mock.calls[0][0];
+      const url = mockFetchEventSource.mock.calls[0][0];
       expect(url).toContain('since=1700000000-5');
       expect(url).not.toContain('from_seq=');
     });
