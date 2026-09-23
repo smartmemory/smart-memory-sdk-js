@@ -14,7 +14,7 @@
  *   then sends credentials: 'include' so the browser's session cookie is forwarded.
  *   fetch-event-source wraps fetch() and exposes the full options object.
  *
- * Contract reference: progress-event-contract.json v1.3.0 — ClientSDKMethod.js
+ * Contract reference: progress-event-contract.json v1.6.0 — ClientSDKMethod.js
  *   Signature: subscribeProgress({ runId, fromSeq, since, onEvent, onError, onReconnect }) → { close() }
  *   Scope is NEVER a client-supplied parameter — the server derives it from the JWT workspace.
  */
@@ -25,14 +25,14 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 // Types
 // ---------------------------------------------------------------------------
 
-/** Wire shape per ProgressEvent in progress-event-contract.json v1.3.0 */
+/** Wire shape per ProgressEvent in progress-event-contract.json v1.6.0 */
 export interface ProgressEvent {
   run_id: string;
   scope: string;
   seq: number;
   ts: number;
   kind: string;
-  status: 'started' | 'progress' | 'ok' | 'warn' | 'error';
+  status: 'started' | 'progress' | 'ok' | 'warn' | 'error' | 'skipped';
   payload: Record<string, unknown>;
   /** Optional — pipeline stage name when applicable */
   stage?: string | null;
