@@ -12,7 +12,8 @@ export class RefreshManager {
 
   /**
    * @param {Object} options
-   * @param {string} options.apiBaseUrl
+   * @param {string | function(): string} options.apiBaseUrl - base URL, or a
+   *   zero-arg resolver invoked per refresh (runtime-resolved bases)
    * @param {string} options.refreshEndpoint
    * @param {import('./TokenManager.js').TokenManager} options.tokenManager
    * @param {boolean} [options.useCookieAuth=false]
@@ -59,7 +60,8 @@ export class RefreshManager {
 
     const body = refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : JSON.stringify({});
     try {
-      const response = await (this.fetchFn || globalThis.fetch.bind(globalThis))(`${this.apiBaseUrl}${this.refreshEndpoint}`, this.getRequestOptions({
+      const apiBase = typeof this.apiBaseUrl === 'function' ? this.apiBaseUrl() : this.apiBaseUrl;
+      const response = await (this.fetchFn || globalThis.fetch.bind(globalThis))(`${apiBase}${this.refreshEndpoint}`, this.getRequestOptions({
         ...(this.useCookieAuth ? { credentials: 'include' } : {}),
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

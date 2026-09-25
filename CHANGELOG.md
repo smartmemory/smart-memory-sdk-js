@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — DRY-FRONTEND-1 runtime-resolved API base
+
+- `apiBaseUrl` now also accepts a zero-arg function returning the current base.
+  `AuthCore.apiBaseUrl`, `RefreshManager` (per refresh) and `BaseAPI` (per request)
+  resolve it on every access, so apps whose base is set at runtime after module
+  load (e.g. admin's app-config `apiBase`) keep refresh, logout and trust checks
+  on the live value. Passing a string is unchanged.
+
 ### Fixed — UI-IDLE-DISCONNECT-1 session and progress recovery
 
 - Refresh cookie sessions through request options with CSRF double-submit headers;
