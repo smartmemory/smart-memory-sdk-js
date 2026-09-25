@@ -1,3 +1,12 @@
+export class SessionRefreshError extends Error {
+  constructor(message, status = 0, recoverable = true) {
+    super(message);
+    this.name = 'SessionRefreshError';
+    this.status = status;
+    this.recoverable = recoverable;
+  }
+}
+
 export class RefreshManager {
   #refreshPromise = null;
 
@@ -10,7 +19,11 @@ export class RefreshManager {
    * @param {function(string): void} options.onTokenRefreshed
    * @param {function(): void} options.onRefreshFailed
    */
-  constructor({ apiBaseUrl, refreshEndpoint, tokenManager, useCookieAuth = false, onTokenRefreshed, onRefreshFailed }) {
+  constructor({ apiBaseUrl, refreshEndpoint, tokenManager, useCookieAuth = false, onTokenRefreshed, onRefreshFailed, getRequestOptions, fetchFn, connection, getSessionKey }) {
+    this.getRequestOptions = getRequestOptions || (options => options);
+    this.fetchFn = fetchFn;
+    this.getSessionKey = getSessionKey;
+    this.connection = connection;
     this.apiBaseUrl = apiBaseUrl;
     this.refreshEndpoint = refreshEndpoint;
     this.tokenManager = tokenManager;
@@ -33,32 +46,50 @@ export class RefreshManager {
   }
 
   async #doRefresh() {
+    const sessionKey = this.getSessionKey?.();
+    const checkSession = () => {
+      if (this.getSessionKey?.() !== sessionKey) throw new DOMException('Session changed during refresh', 'AbortError');
+    };
     const refreshToken = this.tokenManager.getRefreshToken();
     if (!refreshToken && !this.useCookieAuth) {
+      console.warn('[auth] No refresh token available; authentication required');
       this.onRefreshFailed();
-      throw new Error('No refresh token');
+      throw new SessionRefreshError('No refresh token', 401, false);
     }
 
     const body = refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : JSON.stringify({});
-    const response = await fetch(`${this.apiBaseUrl}${this.refreshEndpoint}`, {
-      ...(this.useCookieAuth ? { credentials: 'include' } : {}),
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body
-    });
+    try {
+      const response = await (this.fetchFn || globalThis.fetch.bind(globalThis))(`${this.apiBaseUrl}${this.refreshEndpoint}`, this.getRequestOptions({
+        ...(this.useCookieAuth ? { credentials: 'include' } : {}),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      }));
 
-    if (!response.ok) {
-      this.onRefreshFailed();
-      throw new Error(`Refresh failed: ${response.status}`);
+      checkSession();
+      if (!response.ok) {
+        const definitive = response.status === 401 || response.status === 403;
+        if (definitive) this.onRefreshFailed();
+        throw new SessionRefreshError(`Refresh failed: ${response.status}`, response.status, !definitive);
+      }
+
+      const data = await response.json();
+      checkSession();
+      if (typeof data.access_token !== 'string' || !data.access_token) throw new SessionRefreshError('Refresh response has no access token');
+      this.tokenManager.setAccessToken(data.access_token);
+      if (data.refresh_token) {
+        this.tokenManager.setRefreshToken(data.refresh_token);
+      }
+
+      this.onTokenRefreshed(data.access_token);
+      this.connection?.report('refresh', null);
+      return data.access_token;
+    } catch (cause) {
+      if (cause.name === 'AbortError') throw cause;
+      const error = cause instanceof SessionRefreshError ? cause : new SessionRefreshError(cause.message);
+      console.warn('[auth] Session refresh failed', error);
+      if (error.recoverable) this.connection?.report('refresh', error.message);
+      throw error;
     }
-
-    const data = await response.json();
-    this.tokenManager.setAccessToken(data.access_token);
-    if (data.refresh_token) {
-      this.tokenManager.setRefreshToken(data.refresh_token);
-    }
-
-    this.onTokenRefreshed(data.access_token);
-    return data.access_token;
   }
 }

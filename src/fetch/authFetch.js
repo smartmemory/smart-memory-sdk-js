@@ -1,37 +1,21 @@
-/**
- * Create an authenticated fetch wrapper.
- * Pattern from studio AuthService.js line 318.
- *
- * @param {import('../auth/AuthCore.js').AuthCore} authCore
- * @returns {function} fetch-like function with auth headers
- */
-export function createAuthFetch(authCore) {
-  return async function authFetch(url, options = {}) {
-    const headers = {
-      'Content-Type': 'application/json',
-      ...authCore.getAuthHeaders(options.headers)
-    };
+import { fetchWithRecovery, isTrusted, resolveURL } from './recovery.js';
 
-    const response = await fetch(url, authCore.getRequestOptions({ ...options, headers }));
-
-    if (response.status === 401 && !options.__isRetry) {
-      try {
-        await authCore.refreshToken();
-        const retryHeaders = {
-          'Content-Type': 'application/json',
-          ...authCore.getAuthHeaders(options.headers)
-        };
-        return fetch(
-          url,
-          authCore.getRequestOptions({ ...options, headers: retryHeaders, __isRetry: true })
-        );
-      } catch {
-        // Do not globally revoke cookie sessions from passive request failures.
-        authCore.clearLocalAuth?.();
-        throw new Error('Authentication required');
-      }
+/** Create an injectable fetch function; never changes globalThis.fetch. */
+export function createAuthFetch(authCore, { fetchFn, apiBases = [] } = {}) {
+  return async function authFetch(input, options = {}) {
+    const transport = fetchFn || globalThis.fetch.bind(globalThis);
+    const url = resolveURL(input);
+    if (!isTrusted(authCore, url, apiBases) || /\/auth(?:\/|$)/.test(url.pathname)) {
+      return transport(input, options);
     }
-
-    return response;
+    const request = input instanceof Request ? new Request(input, options) : null;
+    const originalHeaders = request?.headers || options.headers;
+    const signal = request?.signal || options.signal;
+    const send = retry => {
+      const headers = authCore.getAuthHeaders(originalHeaders);
+      const init = authCore.getRequestOptions({ ...options, method: request?.method || options.method, headers, ...(retry ? { __isRetry: true } : {}) });
+      return transport(request ? request.clone() : input, init);
+    };
+    return fetchWithRecovery(authCore, send, { source: url.href, signal });
   };
 }

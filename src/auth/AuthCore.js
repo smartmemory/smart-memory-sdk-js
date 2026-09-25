@@ -1,9 +1,12 @@
+import { ConnectionStatus } from '../connection/ConnectionStatus.js';
 import { TokenManager } from './TokenManager.js';
 import { RefreshManager } from './RefreshManager.js';
 import { SSOManager } from './SSOManager.js';
 
 export class AuthCore {
   constructor(config) {
+    this.sessionRevision = 0;
+    this.connection = new ConnectionStatus();
     this.mode = config.mode;
     this.apiBaseUrl = config.apiBaseUrl;
     this.endpoints = config.endpoints || {};
@@ -28,6 +31,10 @@ export class AuthCore {
         refreshEndpoint: this.endpoints.refresh || '/auth/refresh',
         tokenManager: this.tokenManager,
         useCookieAuth: this.useCookieAuth,
+        getRequestOptions: options => this.getRequestOptions(options),
+        fetchFn: config.fetchFn,
+        connection: this.connection,
+        getSessionKey: () => JSON.stringify([this.sessionRevision, this.currentToken, this.tokenManager.getWorkspaceId()]),
         onTokenRefreshed: (token) => {
           this.currentToken = token;
           this.notifyListeners();
@@ -81,7 +88,13 @@ export class AuthCore {
   }
 
   getAuthHeaders(extraHeaders = {}) {
-    const headers = { ...extraHeaders };
+    const headers = typeof extraHeaders?.entries === 'function' || Array.isArray(extraHeaders)
+      ? Object.fromEntries(new Headers(extraHeaders)) : { ...extraHeaders };
+    const workspaceId = this.tokenManager.getWorkspaceId();
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === 'authorization' ||
+          (workspaceId && key.toLowerCase() === 'x-workspace-id')) delete headers[key];
+    }
 
     if (this.currentToken) {
       headers['Authorization'] = this.currentToken.startsWith('Bearer ')
@@ -89,7 +102,6 @@ export class AuthCore {
         : `Bearer ${this.currentToken}`;
     }
 
-    const workspaceId = this.tokenManager.getWorkspaceId();
     if (workspaceId) {
       headers['X-Workspace-Id'] = workspaceId;
     }
@@ -99,7 +111,18 @@ export class AuthCore {
 
   getRequestOptions(extra = {}) {
     if (!this.useCookieAuth) return { ...extra };
-    return { credentials: 'include', ...extra };
+    const headers = typeof extra.headers?.entries === 'function' || Array.isArray(extra.headers)
+      ? Object.fromEntries(new Headers(extra.headers)) : { ...extra.headers };
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes((extra.method || 'GET').toUpperCase()) && typeof document !== 'undefined') {
+      const cookie = document.cookie.split(/;\s*/).find(value => value.startsWith('sm_csrf='));
+      if (cookie) {
+        for (const key of Object.keys(headers)) {
+          if (key.toLowerCase() === 'x-csrf-token') delete headers[key];
+        }
+        headers['x-csrf-token'] = decodeURIComponent(cookie.slice(8));
+      }
+    }
+    return { credentials: 'include', ...extra, headers };
   }
 
   addListener(listener) {
@@ -108,6 +131,7 @@ export class AuthCore {
   }
 
   notifyListeners() {
+    if (this.isAuthenticated()) this.connection.authenticated();
     const state = {
       isAuthenticated: this.isAuthenticated(),
       user: this.currentUser,
@@ -133,6 +157,8 @@ export class AuthCore {
   }
 
   clearLocalAuth() {
+    this.sessionRevision++;
+    this.connection.signedOut();
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
       this.apiKey = null;
@@ -177,7 +203,6 @@ export class AuthCore {
       throw new Error('Token refresh not available in this mode');
     }
     const token = await this.refreshManager.refresh();
-    this.currentToken = token;
     return token;
   }
 

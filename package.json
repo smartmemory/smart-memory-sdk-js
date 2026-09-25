@@ -1,7 +1,7 @@
 {
   "name": "@smartmemory/sdk-js",
   "version": "1.4.119",
-  "description": "Unified JavaScript SDK for SmartMemory API — auth + API client for all frontends",
+  "description": "Unified JavaScript SDK for SmartMemory API \u2014 auth + API client for all frontends",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -23,16 +23,24 @@
       "default": "./dist/react/analytics.js"
     },
     "./fetch": {
+      "types": "./types/fetch.d.ts",
       "development": "./src/fetch/index.js",
       "default": "./dist/fetch.js"
     },
     "./progress": {
+      "types": "./types/progress.d.ts",
       "development": "./src/progress.ts",
       "default": "./dist/progress.js"
+    },
+    "./connection": {
+      "types": "./types/connection.d.ts",
+      "development": "./src/connection/index.js",
+      "default": "./dist/connection.js"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "types"
   ],
   "scripts": {
     "build": "vite build",
