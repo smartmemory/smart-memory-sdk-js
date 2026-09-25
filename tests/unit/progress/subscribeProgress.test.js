@@ -2,7 +2,7 @@
  * Unit tests for subscribeProgress — focusing on the useCookieAuth option
  * that sets credentials: 'include' on the fetchEventSource call.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Must mock BEFORE importing the module under test (Vitest hoists vi.mock).
 vi.mock('@microsoft/fetch-event-source', () => ({
@@ -10,9 +10,16 @@ vi.mock('@microsoft/fetch-event-source', () => ({
 }));
 
 import { fetchEventSource } from '@microsoft/fetch-event-source';
-import { subscribeProgress } from '../../../src/progress.ts';
+import { subscribeProgress as subscribe } from '../../../src/progress.ts';
 
 const noop = () => {};
+let handles = [];
+const subscribeProgress = options => {
+  const handle = subscribe(options);
+  handles.push(handle);
+  return handle;
+};
+afterEach(() => { handles.forEach(handle => handle.close()); handles = []; });
 
 describe('subscribeProgress — useCookieAuth option', () => {
   beforeEach(() => {
@@ -48,8 +55,8 @@ describe('subscribeProgress — useCookieAuth option', () => {
     expect(opts.credentials).toBeUndefined();
   });
 
-  it('does NOT pass credentials: include when token is provided even if useCookieAuth is true', () => {
-    // Token takes precedence; cookie-auth is a fallback for no-token environments.
+  it('includes cookies alongside bearer when explicitly enabled', () => {
+    // Explicit cookie mode supports cookie refresh alongside bearer auth.
     subscribeProgress({
       baseUrl: 'http://localhost:9001',
       token: 'my-jwt-token',
@@ -60,12 +67,12 @@ describe('subscribeProgress — useCookieAuth option', () => {
 
     expect(fetchEventSource).toHaveBeenCalledOnce();
     const [, opts] = fetchEventSource.mock.calls[0];
-    expect(opts.credentials).toBeUndefined();
+    expect(opts.credentials).toBe('include');
     // Bearer header is still set
     expect(opts.headers['Authorization']).toBe('Bearer my-jwt-token');
   });
 
-  it('does NOT pass credentials: include when apiKey is provided even if useCookieAuth is true', () => {
+  it('includes cookies alongside API key when explicitly enabled', () => {
     subscribeProgress({
       baseUrl: 'http://localhost:9001',
       apiKey: 'my-api-key',
@@ -76,7 +83,7 @@ describe('subscribeProgress — useCookieAuth option', () => {
 
     expect(fetchEventSource).toHaveBeenCalledOnce();
     const [, opts] = fetchEventSource.mock.calls[0];
-    expect(opts.credentials).toBeUndefined();
+    expect(opts.credentials).toBe('include');
     expect(opts.headers['X-API-Key']).toBe('my-api-key');
   });
 

@@ -40,6 +40,7 @@ import { PolicyAPI } from './PolicyAPI.js';
 export class SmartMemoryClient {
   constructor(config) {
     this.auth = new AuthCore(config);
+    this.connection = this.auth.connection;
     const baseAPI = new BaseAPI(this.auth, { fetchFn: config.fetchFn });
     this._api = baseAPI;
 

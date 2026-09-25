@@ -1,3 +1,4 @@
+import { fetchWithRecovery } from '../fetch/recovery.js';
 import { APIError } from '../errors/APIError.js';
 
 function isFormData(body) {
@@ -60,28 +61,15 @@ export class BaseAPI {
     const config = this.auth.getRequestOptions({ ...options, headers });
 
     try {
-      let response = await this.fetchFn(url, config);
-
-      if (response.status === 401 && !options.__isRetry) {
-        try {
-          await this.auth.refreshToken();
-
-          const retryHeaders = {
-            ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
-            ...this.auth.getAuthHeaders(options.headers)
-          };
-          response = await this.fetchFn(
-            url,
-            this.auth.getRequestOptions({ ...config, headers: retryHeaders, __isRetry: true })
-          );
-        } catch {
-          // Refresh failed — fall through to 401 handling below
-        }
-      }
+      const response = await fetchWithRecovery(this.auth, retry => this.fetchFn(
+        url, this.auth.getRequestOptions({
+          ...config, headers: this.auth.getAuthHeaders(headers),
+          ...(retry ? { __isRetry: true } : {})
+        })
+      ), { source: url, signal: options.signal, retry: !options.__isRetry });
 
       if (response.status === 401) {
         // Do not globally revoke cookie sessions from passive request failures.
-        this.auth.clearLocalAuth?.();
         throw new APIError('Authentication required', 401, 'auth_expired');
       }
 
@@ -95,7 +83,8 @@ export class BaseAPI {
 
       return await response.json();
     } catch (error) {
-      if (error instanceof APIError) throw error;
+      if (error.recoverable === false) throw new APIError('Authentication required', 401, 'auth_expired');
+      if (error instanceof APIError || error.name === 'SessionRefreshError') throw error;
       if (isAbortError(error)) throw error;
       throw new APIError(error.message, 0, 'network_error');
     }
@@ -122,26 +111,14 @@ export class BaseAPI {
     const config = this.auth.getRequestOptions({ ...options, headers });
 
     try {
-      let response = await this.fetchFn(url, config);
-
-      if (response.status === 401 && !options.__isRetry) {
-        try {
-          await this.auth.refreshToken();
-          const retryHeaders = {
-            ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
-            ...this.auth.getAuthHeaders(options.headers)
-          };
-          response = await this.fetchFn(
-            url,
-            this.auth.getRequestOptions({ ...config, headers: retryHeaders, __isRetry: true })
-          );
-        } catch {
-          // Refresh failed — fall through to 401 handling below
-        }
-      }
+      const response = await fetchWithRecovery(this.auth, retry => this.fetchFn(
+        url, this.auth.getRequestOptions({
+          ...config, headers: this.auth.getAuthHeaders(headers),
+          ...(retry ? { __isRetry: true } : {})
+        })
+      ), { source: url, signal: options.signal, retry: !options.__isRetry });
 
       if (response.status === 401) {
-        this.auth.clearLocalAuth?.();
         throw new APIError('Authentication required', 401, 'auth_expired');
       }
 
@@ -151,7 +128,8 @@ export class BaseAPI {
 
       return await response.arrayBuffer();
     } catch (error) {
-      if (error instanceof APIError) throw error;
+      if (error.recoverable === false) throw new APIError('Authentication required', 401, 'auth_expired');
+      if (error instanceof APIError || error.name === 'SessionRefreshError') throw error;
       if (isAbortError(error)) throw error;
       throw new APIError(error.message, 0, 'network_error');
     }

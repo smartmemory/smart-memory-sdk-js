@@ -269,22 +269,82 @@ client.authAPI.listAPIKeys();
 client.authAPI.revokeAPIKey(keyId);
 ```
 
-## Fetch Utilities
+## Session and connection recovery
 
 ```javascript
 import { createAuthFetch, installInterceptor } from '@smartmemory/sdk-js/fetch';
+import { subscribeProgress } from '@smartmemory/sdk-js/progress';
 
-// Wrap individual fetch calls
-const authFetch = createAuthFetch(client.auth);
-const response = await authFetch('http://api.example.com/data');
-
-// Or intercept all fetch calls globally
-const uninstall = installInterceptor(client.auth, {
-  urlPatterns: ['localhost:9001']
+// Inject into app services/adapters. Neither helper changes globalThis.fetch.
+const apiFetch = createAuthFetch(client.auth);
+const scopedFetch = installInterceptor(client.auth, {
+  apiBases: ['https://studio-api.example.com'], // explicitly trusted extra API base
+  urlPatterns: ['/api/', '/memory/'],          // optional additional restriction
 });
-// ... all matching fetch calls now include auth headers
-uninstall(); // restore original fetch
+const response = await apiFetch(`${client.auth.apiBaseUrl}/memory/list`);
+
+const unsubscribe = client.connection.subscribe(({ status, reason }) => {
+  // Render connected | reconnecting | signed_out and the reason (string or null).
+  renderConnectionStatus(status, reason);
+});
+const stream = subscribeProgress({
+  baseUrl: client.auth.apiBaseUrl,
+  auth: client.auth, // current headers on EVERY connection, including cookie sessions
+  onEvent: event => renderProgress(event),
+  onReconnect: () => console.warn('Progress reconnecting'),
+  onError: error => showTerminalError(error),
+});
+// On unmount, logout, or workspace change:
+stream.close();
+unsubscribe();
 ```
+
+`BaseAPI` JSON/binary requests and the fetch helpers share one policy: a 401
+refreshes the session and retries once with current headers. Refresh is
+single-flight per AuthCore, includes cookies when configured, and echoes the
+`sm_csrf` cookie as `x-csrf-token` through `getRequestOptions`. A refresh 401/403
+or a second request 401 clears local auth. Ordinary request 403 does not refresh
+or sign out. A network/429/5xx refresh failure throws `SessionRefreshError` with
+`recoverable: true`, retains auth, and reports `reconnecting`. No mutation is
+replayed after an ambiguous network failure. Request bodies, cancellation, and
+workspace scope are preserved; a workspace change cancels recovery.
+
+`client.connection` and `client.auth.connection` are the same observable.
+`subscribe(listener)` immediately emits `{ status, reason }` and returns an
+unsubscribe function; `snapshot` reads current state. Failures are tracked per
+request URL and per stream, so unrelated successes cannot hide them. `connected`
+means no currently recorded connection failure, not a proactive health probe.
+Requests are retried only on 401; apps retain ownership of ordinary polling and
+retrying failed reads. Streams reconnect automatically with exponential delay
+from 1 second to a 30-second cap, indefinitely for transient failures and EOF.
+Online/visible events resume immediately. Auth recovery retries once on 401;
+other 4xx except 408/429 terminate through `onError`.
+
+Scope streams resume using the exact SSE `id` in `since` and `Last-Event-ID`.
+Run streams use `runId` and the next inclusive `fromSeq` boundary. Server scope
+replay may repeat the boundary event: consumers should deduplicate event IDs or
+`(run_id, seq)`. `close()` cancels timers, aborts transport, removes listeners,
+and suppresses stale callbacks. Recreate a subscription on workspace change;
+the SDK refuses to carry a cursor across workspaces. For deliberate finite
+replay, set `reconnect: false` and optionally `onComplete`; EOF then completes.
+Static `token`/`apiKey` remain supported, but automatic session refresh requires
+`auth`. `getHeaders()` can provide live synchronous headers. `fetchFn` injects
+a transport for either fetch helpers or progress; passing a raw transport avoids
+stacking recovery wrappers.
+
+**Interceptor migration:** `installInterceptor(auth, options)` now returns an
+injectable fetch function, **not an uninstaller**. Replace old global-install
+call sites and route their API calls through that function (or
+`createAuthFetch`). No global fetch mutation is performed. Credentials/recovery
+are restricted to `auth.apiBaseUrl` plus explicitly configured `apiBases`, with
+origin and path-boundary matching. `/auth/*` requests bypass the wrapper to avoid
+recursive refresh; auth bootstrap remains owned by AuthCore/app code. Pass the
+actual method/headers to `getRequestOptions` for custom cookie-auth mutations.
+
+TypeScript declarations ship for `/fetch`, `/progress`, and `/connection`.
+The latter exports `ConnectionStatus`, `SessionRefreshError`, and the structural
+`RecoveryClient`, `RecoveryAuth`, `ConnectionSnapshot`, and `ConnectionState`
+types. Existing JavaScript client/domain APIs retain their prior typing surface.
 
 ## Migration from AuthService.js
 

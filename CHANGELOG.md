@@ -2,6 +2,23 @@
 
 ## [Unreleased]
 
+### Fixed — UI-IDLE-DISCONNECT-1 session and progress recovery
+
+- Refresh cookie sessions through request options with CSRF double-submit headers;
+  retain auth on transient refresh failure and share concurrent refresh calls.
+- Unify JSON, binary, authenticated-fetch, and interceptor 401 recovery: one refresh
+  and retry, definitive sign-out on refresh 401/403 or exhausted request 401.
+- Reconnect progress after EOF/transient errors with fresh auth, exact SSE cursors
+  or next run sequence, bounded backoff without a retry limit, online/visibility
+  resume, and complete close cleanup. Add opt-in finite replay completion.
+- Expose `client.connection` / `auth.connection` status subscription with reasons;
+  ship recovery declarations for fetch, progress, and connection subpaths.
+- Guard in-flight refresh against logout/session changes and request/stream replay
+  against workspace changes.
+- **Migration required:** `installInterceptor` returns an injectable fetch function
+  instead of mutating global fetch/returning an uninstaller. Apps must route their
+  transports through it. See README; no app adoption is included here.
+
 ### Fixed — CORE-BG-2b progress contract v1.6.0
 
 - Accept `skipped` in the `ProgressEvent.status` type; SSE subscriptions pass skipped evolver events through unchanged.
