@@ -162,7 +162,7 @@ Currently, each SmartMemory frontend (web, studio, insights, maya) implements it
    - **Resolution**: Not for v1 (Non-Goal). Add in v2 if needed based on demand.
 
 5. **Monorepo structure**: Should SDK live in SmartMemory monorepo or separate repo?
-   - **Resolution**: Separate repo at `smart-memory/smart-memory-sdk-js`. SmartMemory is a container folder, not a monorepo. Created at https://github.com/smart-memory/smart-memory-sdk-js
+   - **Resolution**: Separate repo at `smartmemory/smart-memory-sdk-js`. SmartMemory is a container folder, not a monorepo. Created at https://github.com/smartmemory/smart-memory-sdk-js
 
 6. **API method coverage**: Should SDK include all 80+ methods or just the commonly used subset?
    - **Resolution**: All methods (Requirement #8). One of the main goals is complete coverage so other apps can call any endpoint.

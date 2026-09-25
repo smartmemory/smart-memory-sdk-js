@@ -91,10 +91,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/smart-memory/smart-memory-sdk-js.git"
+    "url": "git+https://github.com/smartmemory/smart-memory-sdk-js.git"
   },
   "bugs": {
-    "url": "https://github.com/smart-memory/smart-memory-sdk-js/issues"
+    "url": "https://github.com/smartmemory/smart-memory-sdk-js/issues"
   },
-  "homepage": "https://github.com/smart-memory/smart-memory-sdk-js#readme"
+  "homepage": "https://github.com/smartmemory/smart-memory-sdk-js#readme"
 }
