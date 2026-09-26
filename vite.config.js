@@ -6,6 +6,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.js'),
+        apiBaseUrl: resolve(__dirname, 'src/apiBaseUrl.js'),
         core: resolve(__dirname, 'src/core.js'),
         react: resolve(__dirname, 'src/react/index.js'),
         'react/analytics': resolve(__dirname, 'src/react/analytics/index.js'),

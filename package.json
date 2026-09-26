@@ -36,6 +36,10 @@
       "types": "./types/connection.d.ts",
       "development": "./src/connection/index.js",
       "default": "./dist/connection.js"
+    },
+    "./apiBaseUrl": {
+      "development": "./src/apiBaseUrl.js",
+      "default": "./dist/apiBaseUrl.js"
     }
   },
   "files": [

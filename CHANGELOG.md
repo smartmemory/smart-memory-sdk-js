@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+### Added — DRY-FRONTEND-1 runtime-resolved API base
+
+- `apiBaseUrl` now also accepts a zero-arg function returning the current base.
+  `AuthCore.apiBaseUrl`, `RefreshManager` (per refresh) and `BaseAPI` (per request)
+  resolve it on every access, so apps whose base is set at runtime after module
+  load (e.g. admin's app-config `apiBase`) keep refresh, logout and trust checks
+  on the live value. Passing a string is unchanged.
+### Added — DRY-FRONTEND-1 shared API base URL resolver
+
+- New `createApiBaseUrl` factory, exported from the root and the dedicated
+  `@smartmemory/sdk-js/apiBaseUrl` subpath. Apps pass their own `import.meta.env`
+  (and may inject an origin accessor), so env is evaluated at app runtime — never
+  frozen at SDK build time. Supports explicit-URL and same-origin env vars, a dev
+  default, production origin fallback, runtime override/reset, and derived
+  resolvers that share one runtime override (used by Insights' second base URL).
+
 ### Fixed — UI-IDLE-DISCONNECT-1 session and progress recovery
 
 - Refresh cookie sessions through request options with CSRF double-submit headers;

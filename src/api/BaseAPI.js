@@ -29,8 +29,12 @@ export class BaseAPI {
    */
   constructor(authCore, { fetchFn } = {}) {
     this.auth = authCore;
-    this.baseURL = authCore.apiBaseUrl;
     this._customFetchFn = fetchFn || null;
+  }
+
+  /** Resolved per request so function-form auth base URLs stay live. */
+  get baseURL() {
+    return this.auth.apiBaseUrl;
   }
 
   get fetchFn() {
