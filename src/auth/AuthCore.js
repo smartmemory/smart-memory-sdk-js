@@ -8,7 +8,11 @@ export class AuthCore {
     this.sessionRevision = 0;
     this.connection = new ConnectionStatus();
     this.mode = config.mode;
-    this.apiBaseUrl = config.apiBaseUrl;
+    // apiBaseUrl may be a string or a zero-arg function returning the current
+    // base. The function form lets apps whose base is resolved at runtime
+    // (e.g. admin's app-config apiBase, set after module load) keep every
+    // consumer — refresh, logout, trust checks — on the live value.
+    this._apiBaseUrl = config.apiBaseUrl;
     this.endpoints = config.endpoints || {};
     this.listeners = new Set();
     this.useCookieAuth = config.useCookieAuth ?? (this.mode === 'sso');
@@ -27,7 +31,8 @@ export class AuthCore {
     // Only set up refresh manager for non-apiKey modes
     if (this.mode !== 'apiKey') {
       this.refreshManager = new RefreshManager({
-        apiBaseUrl: this.apiBaseUrl,
+        // Forward the raw config so a function form keeps resolving per refresh.
+        apiBaseUrl: config.apiBaseUrl,
         refreshEndpoint: this.endpoints.refresh || '/auth/refresh',
         tokenManager: this.tokenManager,
         useCookieAuth: this.useCookieAuth,
@@ -65,6 +70,15 @@ export class AuthCore {
       this.currentUser = this.tokenManager.getUser();
       this.currentToken = this.tokenManager.getAccessToken();
     }
+  }
+
+  /**
+   * Current API base URL. When constructed with a function it is invoked on
+   * every access so runtime-resolved bases stay live for the session.
+   * @returns {string}
+   */
+  get apiBaseUrl() {
+    return typeof this._apiBaseUrl === 'function' ? this._apiBaseUrl() : this._apiBaseUrl;
   }
 
   isAuthenticated() {

@@ -40,3 +40,6 @@ export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+
+// API base URL resolution (DRY-FRONTEND-1)
+export { createApiBaseUrl } from './apiBaseUrl.js';
