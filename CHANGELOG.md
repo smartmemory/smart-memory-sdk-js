@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed — document ingestion request contract
+
+- `memories.ingestDocument(source, { sourceType, chunkSize, chunkStrategy,
+  reference, context })` now sends only the fields accepted by the service's
+  URL ingestion route. Invalid HTTP(S) URL inputs fail before a request.
+- The previous `(content, { source, title })` form uses a valid `source` URL with
+  a one-time deprecation warning; its content and title are ignored by the service.
+
 ### Added — DRY-FRONTEND-1 runtime-resolved API base
 
 - `apiBaseUrl` now also accepts a zero-arg function returning the current base.

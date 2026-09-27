@@ -8,7 +8,7 @@ describe('origin context', () => {
     const context = { origin: 'import:obsidian' };
     await api.ingest('note', { context });
     await api.ingestConversation([{ role: 'user', content: 'hello' }], { context });
-    await api.ingestDocument('note', { source: 'https://example.com', context });
+    await api.ingestDocument('https://example.com', { context });
     expect(transport.post.mock.calls).toHaveLength(3);
     for (const [, body] of transport.post.mock.calls) expect(body.context).toEqual(context);
   });

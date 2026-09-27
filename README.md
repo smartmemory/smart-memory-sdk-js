@@ -189,6 +189,10 @@ client.memories.searchAdvanced('query', { algorithm: 'query_traversal' });
 client.memories.search('query', { asOfDate: '2026-06-01T00:00:00Z', includeSuperseded: true });
 client.memories.explain(memoryId); // origin, version audit, supersession lineage, chain verification
 client.memories.ingest('content', { extractorName: 'llm' });
+client.memories.ingestDocument('https://example.com/guide.pdf', {
+  sourceType: 'pdf', chunkSize: 2000, chunkStrategy: 'paragraph',
+  reference: true, context: { origin: 'import:docs' }
+});
 client.memories.getSummary();
 client.memories.link(sourceId, targetId, 'RELATED');
 client.memories.enrich(itemId, ['routine1']);
@@ -197,6 +201,11 @@ client.memories.timeTravel(timestamp);
 client.memories.rollback(itemId, { toVersion: 3 });
 client.memories.runClustering(0.1, false);
 ```
+
+`ingestDocument` fetches a public HTTP(S) URL. It rejects text, file paths, and
+other URL schemes before sending a request. The former
+`ingestDocument(content, { source, title })` call still uses `source` when it is
+an HTTP(S) URL, but warns once; the service ignores `content` and `title`.
 
 ### Decisions
 

@@ -612,14 +612,63 @@ describe('MemoryAPI', () => {
       expect(baseAPI.get).toHaveBeenCalledWith('/memory/import/chat-export/formats');
     });
 
-    it('ingestDocument should POST exact document ingest path and body', async () => {
-      await memoryAPI.ingestDocument('doc body', { title: 'Doc', source: 'upload' });
-
-      expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/document', {
-        content: 'doc body',
-        title: 'Doc',
-        source: 'upload'
+    it('ingestDocument posts only the service fields in snake_case', async () => {
+      const context = { origin: 'import:obsidian' };
+      await memoryAPI.ingestDocument('https://example.com/document.pdf', {
+        sourceType: 'pdf', chunkSize: 1200, chunkStrategy: 'sentence',
+        reference: false, context, title: 'Ignored'
       });
+
+      expect(baseAPI.post).toHaveBeenCalledTimes(1);
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/document', {
+        source: 'https://example.com/document.pdf',
+        source_type: 'pdf',
+        chunk_size: 1200,
+        chunk_strategy: 'sentence',
+        reference: false,
+        context
+      });
+    });
+
+    it('ingestDocument posts only source when options are omitted', async () => {
+      await memoryAPI.ingestDocument('http://example.com/document');
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/document', {
+        source: 'http://example.com/document'
+      });
+    });
+
+    it('ingestDocument accepts the legacy content form and warns only once', async () => {
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        await memoryAPI.ingestDocument('document text', {
+          source: 'https://example.com/one', title: 'Ignored', chunkStrategy: 'paragraph'
+        });
+        await memoryAPI.ingestDocument('more text', { source: 'https://example.com/two' });
+
+        expect(baseAPI.post).toHaveBeenNthCalledWith(1, '/memory/ingest/document', {
+          source: 'https://example.com/one', chunk_strategy: 'paragraph'
+        });
+        expect(baseAPI.post).toHaveBeenNthCalledWith(2, '/memory/ingest/document', {
+          source: 'https://example.com/two'
+        });
+        expect(warning).toHaveBeenCalledTimes(1);
+        expect(warning).toHaveBeenCalledWith(expect.stringContaining('content and title are ignored'));
+      } finally {
+        warning.mockRestore();
+      }
+    });
+
+    it.each([
+      ['document text', undefined],
+      ['document text', { source: 'upload' }],
+      ['ftp://example.com/document', undefined],
+      [42, undefined],
+      ['https://', undefined]
+    ])('ingestDocument rejects a non-HTTP(S) source without posting', async (source, options) => {
+      await expect(memoryAPI.ingestDocument(source, options)).rejects.toThrow(
+        'ingestDocument source must be an http:// or https:// URL string'
+      );
+      expect(baseAPI.post).not.toHaveBeenCalled();
     });
 
     it('codeIndex should POST exact code index path and body', async () => {

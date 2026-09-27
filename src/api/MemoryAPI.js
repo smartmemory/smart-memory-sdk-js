@@ -15,6 +15,18 @@
  * @property {number|null} rerank_max_doc_chars Effective prefix limit, not dead config.
  */
 
+let warnedLegacyDocumentIngest = false;
+
+function isHttpUrl(source) {
+  if (typeof source !== 'string' || !/^https?:\/\//i.test(source)) return false;
+  try {
+    const url = new URL(source);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export class MemoryAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -399,12 +411,37 @@ export class MemoryAPI {
     return this.api.post('/memory/ingest/conversation', body);
   }
 
-  async ingestDocument(content, { title = null, source = null, chunkStrategy = null, context = null } = {}) {
-    const body = { content };
-    if (title) body.title = title;
-    if (source) body.source = source;
-    if (chunkStrategy) body.chunk_strategy = chunkStrategy;
-    if (context !== null) body.context = context;
+  /**
+   * Ingest a document from a public HTTP(S) URL. The service fetches the URL;
+   * it does not accept document text or a title on this route.
+   *
+   * @param {string} source - Public http:// or https:// document URL.
+   * @param {Object} [options]
+   * @param {string} [options.sourceType] - html | pdf | docx | txt | markdown | auto.
+   * @param {number} [options.chunkSize] - Maximum characters per chunk (100-50000).
+   * @param {string} [options.chunkStrategy] - paragraph | sentence | markdown | recursive.
+   * @param {boolean} [options.reference] - Mark nodes as reference material.
+   * @param {Object} [options.context] - Ingestion context.
+   * The deprecated `(content, { source, title })` form is accepted when
+   * `options.source` is an HTTP(S) URL. Its content and title are ignored.
+   */
+  async ingestDocument(source, { source: legacySource, sourceType, chunkSize, chunkStrategy, reference, context } = {}) {
+    if (!isHttpUrl(source)) {
+      if (!isHttpUrl(legacySource)) {
+        throw new TypeError('ingestDocument source must be an http:// or https:// URL string');
+      }
+      source = legacySource;
+      if (!warnedLegacyDocumentIngest) {
+        console.warn('ingestDocument(content, { source }) is deprecated; content and title are ignored by the service. Pass the URL as the first argument.');
+        warnedLegacyDocumentIngest = true;
+      }
+    }
+    const body = { source };
+    if (sourceType != null) body.source_type = sourceType;
+    if (chunkSize != null) body.chunk_size = chunkSize;
+    if (chunkStrategy != null) body.chunk_strategy = chunkStrategy;
+    if (reference != null) body.reference = reference;
+    if (context != null) body.context = context;
     return this.api.post('/memory/ingest/document', body);
   }
 
