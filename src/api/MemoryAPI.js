@@ -478,11 +478,22 @@ export class MemoryAPI {
     return this.api.get('/memory/import/chat-export/formats');
   }
 
-  async codeIndex(path, { repo = null, commit = null } = {}) {
-    const body = { path };
-    if (repo) body.repo = repo;
-    if (commit) body.commit = commit;
-    return this.api.post('/memory/code/index', body);
+  /**
+   * Upload already-parsed code entities and relations for a repository.
+   * The caller parses files locally (as the MCP and CLI do) before upload.
+   * @param {{repo: string, entities: object[], relations?: object[], commitHash?: string|null}} request
+   * @returns {Promise<{entities_created: number, edges_created: number, commit_hash: string, replaced: boolean}>}
+   */
+  async codeIndex({ repo, entities, relations = [], commitHash = null }) {
+    if (typeof repo !== 'string' || !repo.trim()) {
+      throw new TypeError('repo must be a non-empty string');
+    }
+    if (!Array.isArray(entities)) {
+      throw new TypeError('entities must be an array');
+    }
+    return this.api.post('/memory/code/index', {
+      repo, entities, relations, commit_hash: commitHash
+    });
   }
 
   async codeSearch(query, { entityType = null, repo = null, limit = 20, semantic = false } = {}) {

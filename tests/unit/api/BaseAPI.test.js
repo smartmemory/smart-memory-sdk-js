@@ -86,10 +86,42 @@ describe('BaseAPI', () => {
         'http://localhost:9001/memory/add',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ content: 'test' })
+          body: JSON.stringify({ content: 'test' }),
+          headers: expect.objectContaining({ 'Content-Type': 'application/json' })
         })
       );
       expect(result).toEqual({ id: '1' });
+    });
+
+    it('passes FormData through POST without a JSON content type', async () => {
+      authCore.currentToken = 'test-token';
+      const body = new FormData();
+      body.append('source_format', 'claude');
+      const fetchFn = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: () => Promise.resolve({ imported: 1 })
+      });
+      const api = new BaseAPI(authCore, { fetchFn });
+
+      await api.post('/memory/import/chat-export', body);
+
+      const [url, request] = fetchFn.mock.calls[0];
+      expect(url).toBe('http://localhost:9001/memory/import/chat-export');
+      expect(request.body).toBe(body);
+      expect(request.headers).toEqual(expect.objectContaining({ Authorization: 'Bearer test-token' }));
+      expect(Object.keys(request.headers).some(key => key.toLowerCase() === 'content-type')).toBe(false);
+    });
+
+    it('passes Blob through POST without a JSON content type', async () => {
+      const body = new Blob(['archive'], { type: 'application/octet-stream' });
+      const fetchFn = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: () => Promise.resolve({ imported: 1 })
+      });
+
+      await new BaseAPI(authCore, { fetchFn }).post('/memory/archive', body);
+
+      const request = fetchFn.mock.calls[0][1];
+      expect(request.body).toBe(body);
+      expect(Object.keys(request.headers).some(key => key.toLowerCase() === 'content-type')).toBe(false);
     });
 
     it('should return null for 204 No Content', async () => {
@@ -150,6 +182,28 @@ describe('BaseAPI', () => {
   });
 
   describe('401 refresh+retry', () => {
+    it('replays the same FormData body after refreshing credentials', async () => {
+      authCore.currentToken = 'expired-token';
+      const body = new FormData();
+      body.append('source_format', 'auto');
+      const refresh = vi.spyOn(authCore, 'refreshToken').mockImplementation(async () => {
+        authCore.currentToken = 'fresh-token';
+      });
+      const fetchFn = vi.fn()
+        .mockResolvedValueOnce({ ok: false, status: 401 })
+        .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ imported: 1 }) });
+
+      await new BaseAPI(authCore, { fetchFn }).post('/memory/import/chat-export', body);
+
+      expect(refresh).toHaveBeenCalledOnce();
+      expect(fetchFn).toHaveBeenCalledTimes(2);
+      expect(fetchFn.mock.calls.map(([, request]) => request.body)).toEqual([body, body]);
+      expect(fetchFn.mock.calls[1][1].headers.Authorization).toBe('Bearer fresh-token');
+      for (const [, request] of fetchFn.mock.calls) {
+        expect(Object.keys(request.headers).some(key => key.toLowerCase() === 'content-type')).toBe(false);
+      }
+    });
+
     it('should refresh token and retry on 401', async () => {
       authCore.currentToken = 'expired-token';
       authCore.tokenManager.setRefreshToken('valid-refresh');

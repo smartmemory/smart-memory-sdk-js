@@ -1,8 +1,9 @@
 import { fetchWithRecovery } from '../fetch/recovery.js';
 import { APIError } from '../errors/APIError.js';
 
-function isFormData(body) {
-  return typeof FormData !== 'undefined' && body instanceof FormData;
+function isRawBody(body) {
+  return (typeof FormData !== 'undefined' && body instanceof FormData) ||
+    (typeof Blob !== 'undefined' && body instanceof Blob);
 }
 
 /**
@@ -58,7 +59,7 @@ export class BaseAPI {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
-      ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
+      ...(isRawBody(options.body) ? {} : { 'Content-Type': 'application/json' }),
       ...this.auth.getAuthHeaders(options.headers)
     };
 
@@ -102,14 +103,14 @@ export class BaseAPI {
     return this.request(endpoint, {
       ...options,
       method: 'POST',
-      body: JSON.stringify(data)
+      body: isRawBody(data) ? data : JSON.stringify(data)
     });
   }
 
   async requestBinary(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
-      ...(isFormData(options.body) ? {} : { 'Content-Type': 'application/json' }),
+      ...(isRawBody(options.body) ? {} : { 'Content-Type': 'application/json' }),
       ...this.auth.getAuthHeaders(options.headers)
     };
     const config = this.auth.getRequestOptions({ ...options, headers });

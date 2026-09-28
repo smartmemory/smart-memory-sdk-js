@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Fixed — SDK request contracts
+
+- **Breaking (fix):** `codeIndex({ repo, entities, relations, commitHash })` now
+  uploads already-parsed code entities with the service's request fields. The
+  previous path-based signature always failed service validation.
+- Chat-export uploads now pass multipart FormData through the transport with no
+  JSON content type. Blob uploads are passed through as well.
+
 ### Fixed — document ingestion request contract
 
 - `memories.ingestDocument(source, { sourceType, chunkSize, chunkStrategy,

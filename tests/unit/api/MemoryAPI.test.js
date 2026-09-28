@@ -594,7 +594,10 @@ describe('MemoryAPI', () => {
       expect(body).toBeInstanceOf(FormData);
       expect(body.get('source_format')).toBe('claude');
       expect(body.get('max_conversations')).toBe('5');
-      expect(body.get('file')).toBeTruthy();
+      expect(body.get('file')).toBeInstanceOf(File);
+      expect(body.get('file').name).toBe('export.zip');
+      expect(body.get('file').size).toBe(file.size);
+      expect([...body.keys()]).toEqual(['file', 'source_format', 'max_conversations']);
     });
 
     it('importChatExport should default to auto-detection and a 25-conversation cap', async () => {
@@ -672,13 +675,32 @@ describe('MemoryAPI', () => {
     });
 
     it('codeIndex should POST exact code index path and body', async () => {
-      await memoryAPI.codeIndex('/repo', { repo: 'sdk', commit: 'abc123' });
+      const entities = [{ name: 'parse', entity_type: 'function', file_path: 'src/parser.js', line_number: 1 }];
+      const relations = [{ source_id: 'module', target_id: 'parse', relation_type: 'DEFINES' }];
+      await memoryAPI.codeIndex({ repo: 'sdk', entities, relations, commitHash: 'abc123' });
 
       expect(baseAPI.post).toHaveBeenCalledWith('/memory/code/index', {
-        path: '/repo',
         repo: 'sdk',
-        commit: 'abc123'
+        entities,
+        relations,
+        commit_hash: 'abc123'
       });
+      const body = baseAPI.post.mock.calls[0][1];
+      expect(Object.keys(body)).toEqual(['repo', 'entities', 'relations', 'commit_hash']);
+      expect(body).not.toHaveProperty('path');
+      expect(body).not.toHaveProperty('commit');
+    });
+
+    it('codeIndex defaults optional fields and validates required inputs', async () => {
+      await memoryAPI.codeIndex({ repo: 'sdk', entities: [] });
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/code/index', {
+        repo: 'sdk', entities: [], relations: [], commit_hash: null
+      });
+      baseAPI.post.mockClear();
+
+      await expect(memoryAPI.codeIndex({ repo: ' ', entities: [] })).rejects.toThrow('repo must be a non-empty string');
+      await expect(memoryAPI.codeIndex({ repo: 'sdk', entities: {} })).rejects.toThrow('entities must be an array');
+      expect(baseAPI.post).not.toHaveBeenCalled();
     });
 
     it('codeSearch should GET exact code search path', async () => {
