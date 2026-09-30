@@ -1,6 +1,6 @@
 {
   "name": "@smartmemory/sdk-js",
-  "version": "1.5.12",
+  "version": "1.5.13",
   "description": "Unified JavaScript SDK for SmartMemory API — auth + API client for all frontends",
   "type": "module",
   "main": "dist/index.js",
