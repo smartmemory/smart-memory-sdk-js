@@ -481,19 +481,23 @@ export class MemoryAPI {
   /**
    * Upload already-parsed code entities and relations for a repository.
    * The caller parses files locally (as the MCP and CLI do) before upload.
-   * @param {{repo: string, entities: object[], relations?: object[], commitHash?: string|null}} request
-   * @returns {Promise<{entities_created: number, edges_created: number, commit_hash: string, replaced: boolean}>}
+   * `repoIdentity` ('remote:<normalized remote>' or 'path:<sha256>', CODE-INDEXER-HARDEN-1)
+   * makes the service refuse (HTTP 422) a repo name owned by a different checkout.
+   * @param {{repo: string, entities: object[], relations?: object[], commitHash?: string|null, repoIdentity?: string|null}} request
+   * @returns {Promise<{entities_created: number, edges_created: number, embeddings_generated: number, commit_hash: string, replaced: boolean}>}
    */
-  async codeIndex({ repo, entities, relations = [], commitHash = null }) {
+  async codeIndex({ repo, entities, relations = [], commitHash = null, repoIdentity = null }) {
     if (typeof repo !== 'string' || !repo.trim()) {
       throw new TypeError('repo must be a non-empty string');
     }
     if (!Array.isArray(entities)) {
       throw new TypeError('entities must be an array');
     }
-    return this.api.post('/memory/code/index', {
-      repo, entities, relations, commit_hash: commitHash
-    });
+    const body = { repo, entities, relations, commit_hash: commitHash };
+    if (repoIdentity !== null && repoIdentity !== undefined) {
+      body.repo_identity = repoIdentity;
+    }
+    return this.api.post('/memory/code/index', body);
   }
 
   async codeSearch(query, { entityType = null, repo = null, limit = 20, semantic = false } = {}) {
@@ -503,9 +507,16 @@ export class MemoryAPI {
     return this.api.get(`/memory/code/search?${params}`);
   }
 
-  async codeContext(entityName, { repo = null } = {}) {
+  /**
+   * Code entity plus 1-hop graph context. `entityName` matches a stored name or qualified
+   * name exactly or as a dotted suffix ('run' finds 'Svc.run'). Several matches reject with
+   * HTTP 409 whose `detail.candidates` lists them; pass `filePath` or `itemId` to choose one.
+   */
+  async codeContext(entityName, { repo = null, filePath = null, itemId = null } = {}) {
     const params = new URLSearchParams({ entity_name: entityName });
     if (repo) params.append('repo', repo);
+    if (filePath) params.append('file_path', filePath);
+    if (itemId) params.append('item_id', itemId);
     return this.api.get(`/memory/code/context?${params}`);
   }
 
@@ -526,9 +537,12 @@ export class MemoryAPI {
     return this.api.get(path);
   }
 
-  async codeDependencies(entityName, { direction = 'both', repo = null } = {}) {
+  /** Trace code dependencies. Name matching and the 409 ambiguity response match `codeContext`. */
+  async codeDependencies(entityName, { direction = 'both', repo = null, filePath = null, itemId = null } = {}) {
     const params = new URLSearchParams({ entity_name: entityName, direction });
     if (repo) params.append('repo', repo);
+    if (filePath) params.append('file_path', filePath);
+    if (itemId) params.append('item_id', itemId);
     return this.api.get(`/memory/code/dependencies?${params}`);
   }
 

@@ -7,6 +7,14 @@
 - `codeDeadCode(repo, { includeExported, productionOnly })`: opt-in options, sent as
   `include_exported` / `production_only` only when set (a default call is unchanged).
 
+### Changed — code root disambiguation (CODE-INDEXER-HARDEN-1 U5)
+
+- `codeContext` and `codeDependencies` accept `filePath` and `itemId`. A name that
+- U5 post-review fix round: verify file_path and item_id independently through both code context and dependency methods, including an exact name shadowed by a longer dotted suffix. Existing SDK parameters already match the service contract.
+  matches several entities rejects with HTTP 409 whose `detail.candidates` lists them.
+  `codeIndex` accepts `repoIdentity`; the service refuses (HTTP 422) a repo name owned
+  by a different checkout. Index responses carry `embeddings_generated`.
+
 ### Fixed — SDK request contracts
 
 - **Breaking (fix):** `codeIndex({ repo, entities, relations, commitHash })` now

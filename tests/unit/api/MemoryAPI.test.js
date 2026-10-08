@@ -743,6 +743,32 @@ describe('MemoryAPI', () => {
       expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/dependencies?entity_name=MemoryAPI&direction=out&repo=sdk');
     });
 
+    it('codeIndex sends repo_identity only when given (CODE-INDEXER-HARDEN-1)', async () => {
+      await memoryAPI.codeIndex({ repo: 'sdk', entities: [], repoIdentity: 'remote:github.com/acme/sdk' });
+      expect(baseAPI.post).toHaveBeenCalledWith('/memory/code/index', {
+        repo: 'sdk', entities: [], relations: [], commit_hash: null, repo_identity: 'remote:github.com/acme/sdk'
+      });
+    });
+
+    it('codeContext and codeDependencies pass file_path and item_id disambiguators', async () => {
+      await memoryAPI.codeContext('helper', { repo: 'sdk', filePath: 'b.py', itemId: 'code::sdk::b.py::helper' });
+      expect(baseAPI.get).toHaveBeenCalledWith(
+        '/memory/code/context?entity_name=helper&repo=sdk&file_path=b.py&item_id=code%3A%3Asdk%3A%3Ab.py%3A%3Ahelper'
+      );
+      await memoryAPI.codeDependencies('helper', { direction: 'both', filePath: 'b.py' });
+      expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/dependencies?entity_name=helper&direction=both&file_path=b.py');
+    });
+
+    it.each([
+      ['codeContext', { filePath: 'a.py' }, '/memory/code/context?entity_name=a.helper&repo=sdk&file_path=a.py'],
+      ['codeContext', { itemId: 'code::sdk::a.py::a.helper' }, '/memory/code/context?entity_name=a.helper&repo=sdk&item_id=code%3A%3Asdk%3A%3Aa.py%3A%3Aa.helper'],
+      ['codeDependencies', { filePath: 'a.py' }, '/memory/code/dependencies?entity_name=a.helper&direction=both&repo=sdk&file_path=a.py'],
+      ['codeDependencies', { itemId: 'code::sdk::a.py::a.helper' }, '/memory/code/dependencies?entity_name=a.helper&direction=both&repo=sdk&item_id=code%3A%3Asdk%3A%3Aa.py%3A%3Aa.helper']
+    ])('%s forwards each independent root selector', async (method, selector, expectedURL) => {
+      await memoryAPI[method]('a.helper', { repo: 'sdk', ...selector });
+      expect(baseAPI.get).toHaveBeenCalledWith(expectedURL);
+    });
+
     it('getPlan should GET exact plan path', async () => {
       await memoryAPI.getPlan('plan-1');
 
