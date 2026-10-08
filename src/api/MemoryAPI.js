@@ -509,8 +509,21 @@ export class MemoryAPI {
     return this.api.get(`/memory/code/context?${params}`);
   }
 
-  async codeDeadCode(repo) {
-    return this.api.get(`/memory/code/dead-code?repo=${encodeURIComponent(repo)}`);
+  /**
+   * Find unreferenced code entities in a repository.
+   * CODE-INDEXER-HARDEN-1 U6 options are opt-in and sent only when set, so a default call is unchanged.
+   * @param {string} repo Repository to scan.
+   * @param {{includeExported?: boolean, productionOnly?: boolean}} [options]
+   *   includeExported: also report exported functions with no counted caller.
+   *   productionOnly: count only callers in non-test files as liveness.
+   * The flags are independent: includeExported reports exported functions with no counted caller, and test callers
+   * count unless productionOnly is on, so an exported function used only by tests is reported only when BOTH flags are on.
+   */
+  async codeDeadCode(repo, { includeExported = false, productionOnly = false } = {}) {
+    let path = `/memory/code/dead-code?repo=${encodeURIComponent(repo)}`;
+    if (includeExported) path += '&include_exported=true';
+    if (productionOnly) path += '&production_only=true';
+    return this.api.get(path);
   }
 
   async codeDependencies(entityName, { direction = 'both', repo = null } = {}) {

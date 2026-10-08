@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — dead-code options (CODE-INDEXER-HARDEN-1 U6)
+
+- `codeDeadCode(repo, { includeExported, productionOnly })`: opt-in options, sent as
+  `include_exported` / `production_only` only when set (a default call is unchanged).
+
 ### Fixed — SDK request contracts
 
 - **Breaking (fix):** `codeIndex({ repo, entities, relations, commitHash })` now

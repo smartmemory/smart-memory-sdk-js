@@ -721,6 +721,22 @@ describe('MemoryAPI', () => {
       expect(baseAPI.get).toHaveBeenCalledWith('/memory/code/dead-code?repo=smart%20memory%2Fsdk');
     });
 
+    it('codeDeadCode should send U6 options only when set', async () => {
+      await memoryAPI.codeDeadCode('sdk', {});
+      expect(baseAPI.get).toHaveBeenLastCalledWith('/memory/code/dead-code?repo=sdk');
+
+      await memoryAPI.codeDeadCode('sdk', { includeExported: true });
+      expect(baseAPI.get).toHaveBeenLastCalledWith('/memory/code/dead-code?repo=sdk&include_exported=true');
+
+      await memoryAPI.codeDeadCode('sdk', { productionOnly: true });
+      expect(baseAPI.get).toHaveBeenLastCalledWith('/memory/code/dead-code?repo=sdk&production_only=true');
+
+      await memoryAPI.codeDeadCode('sdk', { includeExported: true, productionOnly: true });
+      expect(baseAPI.get).toHaveBeenLastCalledWith(
+        '/memory/code/dead-code?repo=sdk&include_exported=true&production_only=true'
+      );
+    });
+
     it('codeDependencies should GET exact dependencies path', async () => {
       await memoryAPI.codeDependencies('MemoryAPI', { direction: 'out', repo: 'sdk' });
 
