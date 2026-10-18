@@ -446,6 +446,41 @@ describe('SubscriptionAPI', () => {
     await expect(subs.revokeBillingManager('user_1')).rejects.toBe(refusal);
   });
 
+  const MEMBER = { user_id: 'user_1', email: 'ada@example.com', name: 'Ada', is_admin: false, listed: true };
+  const LIST_ROWS = [
+    ['admin with members', { user_ids: ['user_1'], members: [MEMBER] }],
+    ['admin with no other members', { user_ids: [], members: [] }],
+    ['non-admin has no members key', { user_ids: ['user_1'] }]
+  ];
+
+  it.each(LIST_ROWS)('should return the billing manager list unchanged: %s', async (_name, body) => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce(body);
+    const result = await new SubscriptionAPI(api).listBillingManagers();
+
+    expect(api.get).toHaveBeenCalledWith('/subscription/billing-managers');
+    expect(result).toEqual(body);
+    expect('members' in result).toBe('members' in body);
+  });
+
+  const CURRENT_ROWS = [
+    ['can manage', { can_manage_billing: true, billing_refusal: '' }],
+    ['api key', { can_manage_billing: false, billing_refusal: 'api_key' }],
+    ['not admin', { can_manage_billing: false, billing_refusal: 'not_admin' }],
+    ['comp', { can_manage_billing: false, billing_refusal: 'comp' }],
+    ['older service without the field', { can_manage_billing: false }]
+  ];
+
+  it.each(CURRENT_ROWS)('should return billing_refusal unchanged: %s', async (_name, body) => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce(body);
+    const current = await new SubscriptionAPI(api).getCurrent();
+
+    expect(api.get).toHaveBeenCalledWith('/subscription/current');
+    expect(current).toEqual(body);
+    expect(current.billing_refusal).toBe(body.billing_refusal);
+  });
+
   it('should read can_manage_billing from the current subscription', async () => {
     const api = mockBaseAPI();
     api.get.mockResolvedValueOnce({ subscription_tier: 'pro', can_manage_billing: true });

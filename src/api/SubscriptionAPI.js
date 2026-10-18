@@ -7,6 +7,8 @@ export class SubscriptionAPI {
    * Current plan, limits and billing ids. Includes `can_manage_billing` (boolean):
    * whether the caller may change the plan. Use it, not the member role, to enable billing buttons.
    * False for every caller of an internal comp tenant, whose billing a superadmin manages.
+   * `billing_refusal` says why it is false: `''` (the caller can manage billing), `'api_key'`, `'not_admin'`
+   * or `'comp'`. The body is returned as the service sent it.
    */
   async getCurrent() {
     return this.api.get('/subscription/current');
@@ -32,6 +34,9 @@ export class SubscriptionAPI {
   /**
    * Members an organization admin let manage billing. Resolves to `{ user_ids: [...] }`, current members of
    * your organization only. Any signed-in member may read it. Rejects with 403 for an API key.
+   * An organization admin also gets `members`: one `{ user_id, email, name, is_admin, listed }` entry per current
+   * member, `listed` being the explicit list entry. Everyone else gets no `members` key at all, so check for the key
+   * rather than assuming an empty array.
    */
   async listBillingManagers() {
     return this.api.get('/subscription/billing-managers');

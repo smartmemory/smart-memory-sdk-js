@@ -250,12 +250,12 @@ client.profiles.getLLMKeys();
 client.profiles.updateLLMKeys({ openai_key: 'sk-...', gemini_key: 'AIza...' });
 
 // Subscriptions
-client.subscriptions.getCurrent();
+client.subscriptions.getCurrent(); // { can_manage_billing, billing_refusal: '' | 'api_key' | 'not_admin' | 'comp', ... }
 client.subscriptions.upgrade('pro');
 client.subscriptions.createCheckoutSession('pro', 'monthly');
 client.subscriptions.grantBillingManager('user_id'); // org admins only
 client.subscriptions.revokeBillingManager('user_id');
-client.subscriptions.listBillingManagers(); // { user_ids: [...] }, any signed-in member
+client.subscriptions.listBillingManagers(); // { user_ids: [...] }, any signed-in member, plus members: [...] for org admins
 
 // Usage
 client.usage.getDashboard();

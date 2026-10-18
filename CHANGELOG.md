@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — billing members and refusal reason (SVC-BILLING-MEMBERS-1)
+
+- `subscriptions.listBillingManagers()` resolves to `{ user_ids, members }` for an organization admin only:
+  `members` has one `{ user_id, email, name, is_admin, listed }` entry per current member. Everyone else gets
+  `{ user_ids }` with no `members` key. `user_ids` is unchanged.
+- `subscriptions.getCurrent()` resolves with `billing_refusal` (`''`, `'api_key'`, `'not_admin'` or `'comp'`) next to
+  `can_manage_billing`. Both are the service body passed through, so older SDK users keep working.
+
 ### Added — billing roles (SVC-BILLING-ROLE-1)
 
 - `subscriptions.grantBillingManager(userId)` and `subscriptions.revokeBillingManager(userId)`: `PUT` and `DELETE /subscription/billing-managers/{user_id}`.
