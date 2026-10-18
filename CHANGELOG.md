@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — billing roles (SVC-BILLING-ROLE-1)
+
+- `subscriptions.grantBillingManager(userId)` and `subscriptions.revokeBillingManager(userId)`: `PUT` and `DELETE /subscription/billing-managers/{user_id}`.
+  An organization admin lets a member of the same organization manage billing, or takes that back. Both resolve to
+  `{ user_id, can_manage_billing }` and are idempotent. `subscriptions.getCurrent()` now documents `can_manage_billing`
+  on `GET /subscription/current`.
+
 ### Added — dead-code options (CODE-INDEXER-HARDEN-1 U6)
 
 - `codeDeadCode(repo, { includeExported, productionOnly })`: opt-in options, sent as

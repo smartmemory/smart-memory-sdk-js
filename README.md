@@ -253,6 +253,8 @@ client.profiles.updateLLMKeys({ openai_key: 'sk-...', gemini_key: 'AIza...' });
 client.subscriptions.getCurrent();
 client.subscriptions.upgrade('pro');
 client.subscriptions.createCheckoutSession('pro', 'monthly');
+client.subscriptions.grantBillingManager('user_id'); // org admins only
+client.subscriptions.revokeBillingManager('user_id');
 
 // Usage
 client.usage.getDashboard();

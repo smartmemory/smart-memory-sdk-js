@@ -412,6 +412,26 @@ describe('SubscriptionAPI', () => {
       billing_period: 'yearly'
     });
   });
+
+  it('should grant and revoke a billing manager', async () => {
+    const api = mockBaseAPI();
+    const subs = new SubscriptionAPI(api);
+    await subs.grantBillingManager('user_1');
+    expect(api.put).toHaveBeenCalledWith('/subscription/billing-managers/user_1');
+
+    await subs.revokeBillingManager('user/with space');
+    expect(api.delete).toHaveBeenCalledWith('/subscription/billing-managers/user%2Fwith%20space');
+  });
+
+  it('should read can_manage_billing from the current subscription', async () => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce({ subscription_tier: 'pro', can_manage_billing: true });
+    const subs = new SubscriptionAPI(api);
+    const current = await subs.getCurrent();
+
+    expect(api.get).toHaveBeenCalledWith('/subscription/current');
+    expect(current.can_manage_billing).toBe(true);
+  });
 });
 
 describe('AuthAPI', () => {
