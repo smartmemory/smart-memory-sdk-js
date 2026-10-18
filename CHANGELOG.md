@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added: workspace access list (SVC-WORKSPACE-ACCESS-1)
+
+- `workspaces.getAccess(workspaceId)` reads `GET /memory/workspaces/{workspaceId}/access` and resolves to
+  `{ workspace_id, teams: [{ team_id, name, permission, team_exists }], users: [{ user_id, permission }] }`.
+  A grant whose team was deleted stays listed with `team_exists: false` and `name: null`. Readable by an organization
+  admin or a workspace admin, 403 for anyone else in the organization, 404 for an unknown or another organization's id.
+  Tests: `tests/unit/api/WorkspaceAPI.test.js` (path encoding, body, refusal passed through).
+
 ### Added: billing members and refusal reason (SVC-BILLING-MEMBERS-1)
 
 - `subscriptions.listBillingManagers()` resolves to `{ user_ids, members }` for an organization admin only:

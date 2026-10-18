@@ -75,6 +75,34 @@ describe('WorkspaceAPI', () => {
     );
   });
 
+  it('reads a workspace access list and returns the service body', async () => {
+    const body = {
+      workspace_id: 'workspace/1',
+      teams: [
+        { team_id: 'team-ops', name: 'Ops', permission: 'admin', team_exists: true },
+        { team_id: 'team-gone', name: null, permission: 'view', team_exists: false }
+      ],
+      users: [{ user_id: 'user-1', permission: 'admin' }]
+    };
+    const api = mockBaseAPI();
+    api.get.mockResolvedValue(body);
+    const workspaces = new WorkspaceAPI(api);
+
+    const result = await workspaces.getAccess('workspace/1');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/workspaces/workspace%2F1/access');
+    expect(result).toEqual(body);
+  });
+
+  it('passes a workspace access refusal through unchanged', async () => {
+    const refusal = Object.assign(new Error('forbidden'), { status: 403 });
+    const api = mockBaseAPI();
+    api.get.mockRejectedValue(refusal);
+    const workspaces = new WorkspaceAPI(api);
+
+    await expect(workspaces.getAccess('ws-1')).rejects.toBe(refusal);
+  });
+
   it('lists workspaces shared with a team', async () => {
     const api = mockBaseAPI();
     const workspaces = new WorkspaceAPI(api);
