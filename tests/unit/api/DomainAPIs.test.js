@@ -500,6 +500,21 @@ describe('AuthAPI', () => {
 
     expect(api.get).toHaveBeenCalledWith('/auth/me');
   });
+
+  // SVC-AUTH-ME-TENANT-NAME-1: one row per wire shape of `tenant_name`, passed through untouched.
+  it.each([
+    ['named', { id: 'u1', tenant_id: 't1', tenant_name: 'Acme Corp' }],
+    ['null', { id: 'u1', tenant_id: 't1', tenant_name: null }],
+    ['absent (older server)', { id: 'u1', tenant_id: 't1' }]
+  ])('should pass tenant_name through unchanged: %s', async (_row, payload) => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValue(payload);
+    const auth = new AuthAPI(api);
+    const me = await auth.getCurrentUser();
+
+    expect(me).toStrictEqual(payload);
+    expect('tenant_name' in me).toBe('tenant_name' in payload);
+  });
 });
 
 describe('AgentAPI', () => {

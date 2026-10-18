@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added: tenant name on the session identity (SVC-AUTH-ME-TENANT-NAME-1)
+
+- `auth.getCurrentUser()` (`GET /auth/me`) now carries `tenant_name`, the display name of the active tenant (`tenant_id`): a string, `null` when the tenant is unnamed, and absent from a server that predates the field. The response is passed through unchanged; the JSDoc on `getCurrentUser` documents it.
+
 ### Added: workspace access list (SVC-WORKSPACE-ACCESS-1)
 
 - `workspaces.getAccess(workspaceId)` reads `GET /memory/workspaces/{workspaceId}/access` and resolves to
