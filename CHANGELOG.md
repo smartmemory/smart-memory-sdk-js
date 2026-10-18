@@ -7,6 +7,9 @@
 - `MemoryAPI.ingest` JSDoc documents the receipt `status` values (`created`, `unchanged`, `replaced`, `held`) and the
   low-confidence outcomes: low extraction is pruned or returned as `created` with `extraction_held`; `held` now comes only
   from a low caller confidence with no measured extraction, or the server's `veto` rollback mode. No behavior change.
+### Added: tenant name on the session identity (SVC-AUTH-ME-TENANT-NAME-1)
+
+- `auth.getCurrentUser()` (`GET /auth/me`) now carries `tenant_name`, the display name of the active tenant (`tenant_id`): a string, `null` when the tenant is unnamed, and absent from a server that predates the field. The response is passed through unchanged; the JSDoc on `getCurrentUser` documents it.
 
 ### Added: workspace access list (SVC-WORKSPACE-ACCESS-1)
 
