@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-### Added — billing members and refusal reason (SVC-BILLING-MEMBERS-1)
+### Added: billing members and refusal reason (SVC-BILLING-MEMBERS-1)
 
 - `subscriptions.listBillingManagers()` resolves to `{ user_ids, members }` for an organization admin only:
   `members` has one `{ user_id, email, name, is_admin, listed }` entry per current member. Everyone else gets
