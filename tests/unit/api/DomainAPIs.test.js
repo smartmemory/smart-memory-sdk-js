@@ -423,6 +423,29 @@ describe('SubscriptionAPI', () => {
     expect(api.delete).toHaveBeenCalledWith('/subscription/billing-managers/user%2Fwith%20space');
   });
 
+  it('should list billing managers', async () => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce({ user_ids: ['user_1'] });
+    const subs = new SubscriptionAPI(api);
+    const result = await subs.listBillingManagers();
+
+    expect(api.get).toHaveBeenCalledWith('/subscription/billing-managers');
+    expect(result).toEqual({ user_ids: ['user_1'] });
+  });
+
+  it('should pass through the service refusals from the billing manager calls', async () => {
+    const api = mockBaseAPI();
+    const refusal = Object.assign(new Error('Forbidden'), { status: 403 });
+    api.get.mockRejectedValueOnce(refusal);
+    api.put.mockRejectedValueOnce(refusal);
+    api.delete.mockRejectedValueOnce(refusal);
+    const subs = new SubscriptionAPI(api);
+
+    await expect(subs.listBillingManagers()).rejects.toBe(refusal);
+    await expect(subs.grantBillingManager('user_1')).rejects.toBe(refusal);
+    await expect(subs.revokeBillingManager('user_1')).rejects.toBe(refusal);
+  });
+
   it('should read can_manage_billing from the current subscription', async () => {
     const api = mockBaseAPI();
     api.get.mockResolvedValueOnce({ subscription_tier: 'pro', can_manage_billing: true });

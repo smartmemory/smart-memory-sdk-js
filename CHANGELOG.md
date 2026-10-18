@@ -6,8 +6,10 @@
 
 - `subscriptions.grantBillingManager(userId)` and `subscriptions.revokeBillingManager(userId)`: `PUT` and `DELETE /subscription/billing-managers/{user_id}`.
   An organization admin lets a member of the same organization manage billing, or takes that back. Both resolve to
-  `{ user_id, can_manage_billing }` and are idempotent. `subscriptions.getCurrent()` now documents `can_manage_billing`
-  on `GET /subscription/current`.
+  `{ user_id, listed }` (`listed` is the explicit list entry, not the effective permission) and are idempotent.
+  `subscriptions.getCurrent()` now documents `can_manage_billing` on `GET /subscription/current` (false on internal comp tenants).
+- `subscriptions.listBillingManagers()` (SVC-BILLING-ROLE-FU-1): `GET /subscription/billing-managers`, resolves to
+  `{ user_ids: [...] }` of the current members an admin let manage billing. Any signed-in member may read it, an API key gets 403.
 
 ### Added — dead-code options (CODE-INDEXER-HARDEN-1 U6)
 

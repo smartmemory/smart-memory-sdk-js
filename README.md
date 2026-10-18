@@ -255,6 +255,7 @@ client.subscriptions.upgrade('pro');
 client.subscriptions.createCheckoutSession('pro', 'monthly');
 client.subscriptions.grantBillingManager('user_id'); // org admins only
 client.subscriptions.revokeBillingManager('user_id');
+client.subscriptions.listBillingManagers(); // { user_ids: [...] }, any signed-in member
 
 // Usage
 client.usage.getDashboard();
