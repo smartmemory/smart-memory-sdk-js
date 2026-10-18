@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Docs: ingest receipt statuses (CORE-CONSOLIDATION-MIN-CONF-1)
+
+- `MemoryAPI.ingest` JSDoc documents the receipt `status` values (`created`, `unchanged`, `replaced`, `held`) and the
+  low-confidence outcomes: low extraction is pruned or returned as `created` with `extraction_held`; `held` now comes only
+  from a low caller confidence with no measured extraction, or the server's `veto` rollback mode. No behavior change.
+
 ### Added: workspace access list (SVC-WORKSPACE-ACCESS-1)
 
 - `workspaces.getAccess(workspaceId)` reads `GET /memory/workspaces/{workspaceId}/access` and resolves to
