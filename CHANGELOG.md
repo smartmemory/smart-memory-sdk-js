@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+
+### Changed: posthog-js latest (DEPS-POSTHOG-LATEST-1)
+
+- `posthog-js` dev dependency and optional peer minimum `^1.313.0` -> `^1.438.12` (`package.json` lines 57 and 80; the `peerDependenciesMeta` optional entry is unchanged). No call-site change: the init options, `posthog-js/react` provider/hook and the explicit capture, identify, register calls were checked against the posthog-js changelog and a real-library probe. Lockfile untracked, not committed.
 ### Docs: ingest receipt statuses (CORE-CONSOLIDATION-MIN-CONF-1)
 
 - `MemoryAPI.ingest` JSDoc documents the receipt `status` values (`created`, `unchanged`, `replaced`, `held`) and the
