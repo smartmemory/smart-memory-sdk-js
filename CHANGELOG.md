@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Security: vite floor `^6.4.3` (DEPS-SEC-SDK-JS-1)
+
+- `vite` dev dependency `^6.0.0` -> `^6.4.3` (`package.json` line 83), the lowest 6.x that clears the four HIGH advisories in DEPS-AUDIT-1 (6.4.1 was affected). Same major, no call-site change: the only consumer is `vite.config.js` (`build.lib`, `rollupOptions.external`, `test` block), and `vite build` output is unchanged (11 files in `dist/`). New `tests/unit/depsSecurityFloor.test.js` pins the declared floor and the installed version. Lockfile untracked (gitignored), not committed. `vitest` (CRITICAL, 3.x -> 4.1.11) is a major bump held for an owner decision, not in this change.
+
 
 ### Changed: posthog-js latest (DEPS-POSTHOG-LATEST-1)
 
