@@ -269,14 +269,36 @@ describe('MemoryAPI', () => {
     expect(baseAPI.post.mock.calls.at(-1)[1].metadata_filter).toEqual(sent);
   });
 
-  it.each([['array', [['customer_id', 'c']]], ['string', 'cus_1']])(
-    'search refuses a non-object metadataFilter (%s) before any request',
+  // DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1: only a plain object is a filter. Date, Map, arrays, class
+  // instances and primitives all throw (a Date has no own keys, so it used to read as `{}` and send nothing).
+  class CustomerFilter { constructor() { this.customer_id = 'cus_1'; } }
+  it.each([
+    ['array', [['customer_id', 'c']]],
+    ['string', 'cus_1'],
+    ['number', 5],
+    ['boolean', true],
+    ['Date', new Date(0)],
+    ['Map', new Map([['customer_id', 'c']])],
+    ['class instance', new CustomerFilter()],
+  ])(
+    'search refuses a non-plain-object metadataFilter (%s) before any request',
     async (_name, metadataFilter) => {
       const before = baseAPI.post.mock.calls.length;
       await expect(memoryAPI.search('q', { metadataFilter })).rejects.toThrow('metadataFilter must be an object');
       expect(baseAPI.post.mock.calls.length).toBe(before);
     },
   );
+
+  // One row per near-miss option name (`filters` is the review probe P1 shape).
+  it.each([
+    'filters', 'filter', 'metadata_filter', 'metadata_filters', 'metadataFilters', 'where', 'meta_filter',
+  ].map((name) => [name]))('search throws on the near-miss option %s before any request', async (name) => {
+    const before = baseAPI.post.mock.calls.length;
+    const call = () => memoryAPI.search('q', { [name]: { customer_id: 'cus_1' } });
+    await expect(call()).rejects.toThrow(`Unknown search option '${name}'`);
+    await expect(call()).rejects.toThrow("named 'metadataFilter'");
+    expect(baseAPI.post.mock.calls.length).toBe(before);
+  });
 
   it('search should omit every lifecycle flag when false', async () => {
     // Send-only-when-true: keeps the body minimal, and keeps an older server

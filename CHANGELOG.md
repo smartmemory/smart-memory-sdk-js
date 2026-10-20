@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - **DEV-ONBOARD-FU-SCOPED-SEARCH-1:** `memories.search(query, { metadataFilter })` narrows ranked results to items whose stored properties match (e.g. one end customer). Empty or null sends nothing; a non-object throws before any request.
+- **DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1:** `memories.search` now throws before any request on a misspelt filter option (`filters`, `filter`, `metadata_filter`, `metadata_filters`, `metadataFilters`, `where`, `meta_filter`). Unknown options used to be dropped, so the search ran over the whole workspace with no signal. `metadataFilter` must be a plain object (`Object.getPrototypeOf(x) === Object.prototype`): a `Date`, `Map`, array, class instance or primitive throws (a `Date` used to read as `{}` and send nothing). Service pair: `POST /memory/search` answers 422 for the same names.
 
 ### Added: `upgrade_prompt_*` product events (UPGRADE-NUDGES-2)
 

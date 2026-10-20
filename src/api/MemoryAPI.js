@@ -27,6 +27,12 @@ function isHttpUrl(source) {
   }
 }
 
+// Misspellings of the `metadataFilter` option (camelCase and the wire name). Same set the service
+// refuses with a 422 on POST /memory/search, plus `metadata_filter` itself, which this SDK does not accept.
+const SEARCH_FILTER_NEAR_MISS_OPTIONS = new Set([
+  'filters', 'filter', 'metadata_filter', 'metadata_filters', 'metadataFilters', 'where', 'meta_filter',
+]);
+
 export class MemoryAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -251,12 +257,19 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, ...unknownOptions } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    // DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1: an unknown option is dropped, so a misspelt filter name
+    // would search the whole workspace without a signal. Refuse the near-miss names instead.
+    for (const name of Object.keys(unknownOptions)) {
+      if (SEARCH_FILTER_NEAR_MISS_OPTIONS.has(name)) {
+        throw new Error(`Unknown search option '${name}': the filter option is named 'metadataFilter'`);
+      }
+    }
     // DEV-ONBOARD-FU-SCOPED-SEARCH-1: the server validates the grammar and refuses scope keys (422).
     if (metadataFilter != null) {
-      if (typeof metadataFilter !== 'object' || Array.isArray(metadataFilter)) {
-        throw new Error('metadataFilter must be an object of key -> value');
+      if (Object.getPrototypeOf(metadataFilter) !== Object.prototype) {
+        throw new Error('metadataFilter must be an object of key -> value (a plain object)');
       }
       if (Object.keys(metadataFilter).length > 0) body.metadata_filter = metadataFilter;
     }
