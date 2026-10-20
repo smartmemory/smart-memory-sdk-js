@@ -226,6 +226,25 @@ client.graph.getInferenceRules();
 client.graph.runInference(['transitivity']);
 ```
 
+### Vector
+
+Read-only views of the vector index (`/memory/vector/*`, WEB-VECTOR-SEARCH-TAB-1). Counts and hits are in the caller's scope. Embeddings are preview-only (first 16 floats), never the full vector. The server clamps `topK` (50 for `query`, 20 for `inspect`) and `limit` (200), so the client sends what you pass. Every method also takes an optional `signal` (`AbortSignal`).
+
+```javascript
+const stats = await client.vector.stats();          // backend, embedder, collections, capabilities, warnings
+const res = await client.vector.query({ text: 'auth decisions', topK: 5, memoryType: 'semantic' });
+await client.vector.query({ embedding: [/* ... */], collection: 'memory', includeEmbedding: true });
+res.hits.forEach(h => console.log(h.item_id, h.score, h.snippet));   // score in [0, 1], best first
+
+const detail = await client.vector.inspect('item-id', { topK: 10 }); // item, neighbours (item excluded), space
+
+let page = await client.vector.missing({ limit: 50 });               // memories with no usable vector
+while (page.next_cursor) page = await client.vector.missing({ limit: 50, cursor: page.next_cursor });
+// page.total is null when the backend cannot count cheaply
+```
+
+Errors are `APIError`s. 404 is `VectorNotFoundError` (unknown collection, item not visible, or no vector row: `error.detail.detail === 'no_vector'`), 501 is `VectorUnsupportedError` (the backend lacks the capability, for example `capabilities.missing_list` is false) and 503 is `VectorSubstrateError` (backend substrate error, never an empty page). All three are exported and keep `error.status` and `error.detail`.
+
 ### Teams
 
 ```javascript

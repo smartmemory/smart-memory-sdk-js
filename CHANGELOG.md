@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **WEB-VECTOR-SEARCH-TAB-1 (VEC-TAB-U4):** `client.vector` (`VectorAPI`) for the read-only `/memory/vector/*` routes: `query({text, embedding, topK, memoryType, originPrefix, collection, includeEmbedding})`, `stats()`, `inspect(itemId, {topK, collection, includeEmbedding})` and `missing({limit, cursor, collection})`. Each takes an optional `signal`. Clamps (`topK` 50 and 20, `limit` 200) and the opaque `cursor` are the server's, passed through unchanged, and only provided options are sent. New exported `APIError` subclasses `VectorNotFoundError` (404), `VectorUnsupportedError` (501) and `VectorSubstrateError` (503), raised by the `vector` methods only. Tests: `tests/unit/api/VectorAPI.test.js` (every route, parameter and contract status through the real `BaseAPI` with a fake `fetch`).
+
 - **DEV-ONBOARD-FU-SCOPED-SEARCH-1:** `memories.search(query, { metadataFilter })` narrows ranked results to items whose stored properties match (e.g. one end customer). Empty or null sends nothing; a non-object throws before any request.
 - **DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1:** `memories.search` now throws before any request on a misspelt filter option (`filters`, `filter`, `metadata_filter`, `metadata_filters`, `metadataFilters`, `where`, `meta_filter`). Unknown options used to be dropped, so the search ran over the whole workspace with no signal. `metadataFilter` must be a plain object (`Object.getPrototypeOf(x) === Object.prototype`): a `Date`, `Map`, array, class instance or primitive throws (a `Date` used to read as `{}` and send nothing). Service pair: `POST /memory/search` answers 422 for the same names.
 

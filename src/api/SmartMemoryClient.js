@@ -32,6 +32,7 @@ import { LockAPI } from './LockAPI.js';
 import { SequenceAPI } from './SequenceAPI.js';
 import { RecallAPI } from './RecallAPI.js';
 import { PolicyAPI } from './PolicyAPI.js';
+import { VectorAPI } from './VectorAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -76,6 +77,7 @@ export class SmartMemoryClient {
     this.sequences = new SequenceAPI(baseAPI);
     this.recall = new RecallAPI(baseAPI);
     this.policy = new PolicyAPI(baseAPI);
+    this.vector = new VectorAPI(baseAPI);
   }
 
   setWorkspaceId(workspaceId) {

@@ -13,6 +13,7 @@ export { MemoryAPI } from './api/MemoryAPI.js';
 export { DecisionAPI } from './api/DecisionAPI.js';
 export { OpinionAPI } from './api/OpinionAPI.js';
 export { GraphAPI } from './api/GraphAPI.js';
+export { VectorAPI } from './api/VectorAPI.js';
 export { TeamAPI } from './api/TeamAPI.js';
 export { WorkspaceAPI } from './api/WorkspaceAPI.js';
 export { ProfileAPI } from './api/ProfileAPI.js';
@@ -40,6 +41,7 @@ export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+export { VectorNotFoundError, VectorUnsupportedError, VectorSubstrateError } from './errors/VectorErrors.js';
 
 // API base URL resolution (DRY-FRONTEND-1)
 export { createApiBaseUrl } from './apiBaseUrl.js';
