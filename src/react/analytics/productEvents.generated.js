@@ -9,6 +9,9 @@ export const PRODUCT_EVENT_PROPERTIES = Object.freeze({
   "memory_edited": Object.freeze(["changed_fields", "has_collection", "memory_type", "tag_count", "write_mode"]),
   "search_performed": Object.freeze(["budget_bucket", "cite", "decompose", "hybrid", "max_hops", "memory_type", "min_score_bucket", "multi_hop", "result_count", "semantic_hops", "surface", "top_k"]),
   "studio_pipeline_saved": Object.freeze(["enricher_count", "evolver_count", "grounder_count", "override_key_count", "save_surface", "stage_count", "storage"]),
+  "upgrade_prompt_clicked": Object.freeze(["audience", "nudge_key", "surface", "target_tier"]),
+  "upgrade_prompt_dismissed": Object.freeze(["audience", "nudge_key", "surface", "target_tier"]),
+  "upgrade_prompt_shown": Object.freeze(["audience", "nudge_key", "surface", "target_tier"]),
 });
 
 export const PRODUCT_EVENT_ENUM_VALUES = Object.freeze({
