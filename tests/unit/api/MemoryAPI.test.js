@@ -970,3 +970,45 @@ describe('list grounding policy', () => {
     expect(api.get.mock.calls[0][0]).not.toContain('include_grounding');
   });
 });
+
+describe('list exclude_node_category and q (SVC-LIST-EXCLUDE-ENTITY-1)', () => {
+  const query = (api) => new URL(api.get.mock.calls[0][0], 'https://example.test').searchParams;
+  const makeApi = () => ({ get: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 50, offset: 0 }) });
+
+  // One row per input shape; `expected` is the exact query string after `?`.
+  it.each([
+    ['omitted', {}, 'limit=50&offset=0'],
+    ['null and undefined', { excludeNodeCategory: null, q: undefined }, 'limit=50&offset=0'],
+    ['empty array sends nothing', { excludeNodeCategory: [] }, 'limit=50&offset=0'],
+    ['one category', { excludeNodeCategory: ['entity'] }, 'limit=50&offset=0&exclude_node_category=entity'],
+    ['bare string is one value', { excludeNodeCategory: 'entity' }, 'limit=50&offset=0&exclude_node_category=entity'],
+    ['several categories repeat the param in order', { excludeNodeCategory: ['entity', 'grounding'] },
+      'limit=50&offset=0&exclude_node_category=entity&exclude_node_category=grounding'],
+    ['q only', { q: 'robot arm' }, 'limit=50&offset=0&q=robot+arm'],
+    ['q with reserved characters is encoded', { q: 'a&b=c#d' }, 'limit=50&offset=0&q=a%26b%3Dc%23d'],
+    ['both, alongside type, metadata and grounding', {
+      type: 'semantic', metadataKey: 'topic', metadataValue: 'x', includeGrounding: false,
+      excludeNodeCategory: ['entity'], q: 'arm',
+    }, 'limit=50&offset=0&memory_type=semantic&metadata_key=topic&metadata_value=x&include_grounding=false'
+      + '&exclude_node_category=entity&q=arm'],
+  ])('%s', async (_name, options, expected) => {
+    const api = makeApi();
+    await new MemoryAPI(api).list(options);
+    expect(api.get).toHaveBeenCalledWith(`/memory/list?${expected}`);
+  });
+
+  it('sends 21 categories and a 201-character q untouched, so the server 422s instead of a silent truncation', async () => {
+    const api = makeApi();
+    const categories = Array.from({ length: 21 }, (_, i) => `c${i}`);
+    await new MemoryAPI(api).list({ excludeNodeCategory: categories, q: 'x'.repeat(201) });
+    expect(query(api).getAll('exclude_node_category')).toEqual(categories);
+    expect(query(api).get('q')).toHaveLength(201);
+  });
+
+  it('returns the filtered envelope unchanged', async () => {
+    const page = { items: [{ item_id: 'm1' }], total: 7, limit: 50, offset: 0,
+      policy: { include_grounding: false, source: 'env' } };
+    const api = { get: vi.fn().mockResolvedValue(page) };
+    expect(await new MemoryAPI(api).list({ excludeNodeCategory: ['entity'] })).toEqual(page);
+  });
+});

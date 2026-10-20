@@ -157,6 +157,12 @@ export class MemoryAPI {
    * @param {string|null} [options.metadataValue=null] - Value the key must equal.
    * @param {boolean|null} [options.includeGrounding=null] - Include grounding nodes.
    *   Omit to inherit workspace then env (default OFF); false is sent explicitly.
+   * @param {string[]|string|null} [options.excludeNodeCategory=null] - SVC-LIST-EXCLUDE-ENTITY-1.
+   *   Stored `node_category` values to leave out (e.g. `['entity']`), sent as a repeated
+   *   `exclude_node_category` param. Applied server-side before pagination, so `total`
+   *   counts the filtered set. More than 20 values is a 422 (never truncated here or there).
+   * @param {string|null} [options.q=null] - Case-insensitive substring match over content,
+   *   applied server-side before pagination. Longer than 200 characters is a 422.
    * @returns {Promise<{items: object[], total: number, limit: number, offset: number, policy: {include_grounding: boolean, source: string}}>}
    *   `total` counts the filtered set, so it drives pagination directly.
    */
@@ -167,6 +173,8 @@ export class MemoryAPI {
     metadataKey = null,
     metadataValue = null,
     includeGrounding = null,
+    excludeNodeCategory = null,
+    q = null,
   } = {}) {
     // URLSearchParams, not string concatenation: a metadata value may legitimately
     // contain `&`, `=`, `#`, spaces, or non-ASCII, all of which would corrupt a
@@ -182,6 +190,12 @@ export class MemoryAPI {
     if (includeGrounding !== null && includeGrounding !== undefined) {
       params.append('include_grounding', includeGrounding);
     }
+    if (excludeNodeCategory !== null && excludeNodeCategory !== undefined) {
+      // Repeated param, one per value, in caller order. A bare string is one value.
+      const categories = Array.isArray(excludeNodeCategory) ? excludeNodeCategory : [excludeNodeCategory];
+      for (const category of categories) params.append('exclude_node_category', category);
+    }
+    if (q !== null && q !== undefined) params.append('q', q);
     return this.api.get(`/memory/list?${params}`);
   }
 
