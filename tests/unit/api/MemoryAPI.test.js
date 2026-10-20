@@ -257,6 +257,27 @@ describe('MemoryAPI', () => {
     expect(baseAPI.post.mock.calls.at(-1)[1].exclude_speculative).toBe(true);
   });
 
+  // DEV-ONBOARD-FU-SCOPED-SEARCH-1: one row per accepted shape; empty or absent sends nothing.
+  it.each([
+    ['absent', undefined, undefined],
+    ['null', null, undefined],
+    ['empty', {}, undefined],
+    ['equality', { customer_id: 'cus_8812' }, { customer_id: 'cus_8812' }],
+    ['operator', { priority: { gte: 2 }, customer_id: 'c' }, { priority: { gte: 2 }, customer_id: 'c' }],
+  ])('search maps metadataFilter (%s)', async (_name, metadataFilter, sent) => {
+    await memoryAPI.search('billing plan', { metadataFilter });
+    expect(baseAPI.post.mock.calls.at(-1)[1].metadata_filter).toEqual(sent);
+  });
+
+  it.each([['array', [['customer_id', 'c']]], ['string', 'cus_1']])(
+    'search refuses a non-object metadataFilter (%s) before any request',
+    async (_name, metadataFilter) => {
+      const before = baseAPI.post.mock.calls.length;
+      await expect(memoryAPI.search('q', { metadataFilter })).rejects.toThrow('metadataFilter must be an object');
+      expect(baseAPI.post.mock.calls.length).toBe(before);
+    },
+  );
+
   it('search should omit every lifecycle flag when false', async () => {
     // Send-only-when-true: keeps the body minimal, and keeps an older server
     // that predates a flag from rejecting an unknown field.

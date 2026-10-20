@@ -222,10 +222,16 @@ export class MemoryAPI {
    *   archived items were returned ranked exactly like live ones.
    * @param {boolean} [options.excludeSpeculative=false] - Exclude speculative
    *   memories from results. Sent as `exclude_speculative` only when true.
+   * @param {Object|null} [options.metadataFilter=null] - Narrow the ranked results to
+   *   items whose stored properties match, e.g. `{ customer_id: 'cus_8812' }` or
+   *   `{ priority: { gte: 2 } }` (operators: gte, gt, lte, lt). It can only narrow your
+   *   workspace's results: keys naming tenant, workspace or user scope are refused (422).
+   *   The filter runs on a wider candidate pool than `topK`; when that pool still missed
+   *   matches, `coverage.metadata_filter_incomplete` is true. Not supported with `expertise`.
    * @param {boolean} [options.cite=false] - When true (RECALL-CITATIONS-1), the
    *   envelope gains a `citations` array of `{n, item_id, item_type, preview, score, footnote_marker}`.
    *   Empty `citations: []` when no results — distinguishes "no results" from "no citations requested".
-   * @returns {Promise<{results: Array|Object, group_roots: Object, citations?: Array, coverage?: {complete?: boolean, refill_rounds?: number, vector_scope_incomplete?: boolean, created_at_excluded_count?: number, created_at_backfilled_boundary?: string|null, note?: string}}>}
+   * @returns {Promise<{results: Array|Object, group_roots: Object, citations?: Array, coverage?: {complete?: boolean, refill_rounds?: number, vector_scope_incomplete?: boolean, created_at_excluded_count?: number, created_at_backfilled_boundary?: string|null, metadata_filter_incomplete?: boolean, note?: string}}>}
    *   `coverage.complete === false` means the server exhausted its candidate budget before
    *   filling `topK`; eligible items may exist beyond the returned page (CORE-RECALL-SEMANTICS-1).
    *   CORE-RECALL-LINEAGE-1: the response is ALWAYS a `SearchResponse` envelope —
@@ -245,8 +251,15 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    // DEV-ONBOARD-FU-SCOPED-SEARCH-1: the server validates the grammar and refuses scope keys (422).
+    if (metadataFilter != null) {
+      if (typeof metadataFilter !== 'object' || Array.isArray(metadataFilter)) {
+        throw new Error('metadataFilter must be an object of key -> value');
+      }
+      if (Object.keys(metadataFilter).length > 0) body.metadata_filter = metadataFilter;
+    }
     // lexical-contract v1: omission retains profile/default behavior, zero disables a lane.
     if (channelWeights != null) {
       const accepted = new Set(['entity-graph', 'ssg-traversal', 'semantic', 'regex-text', 'lexical', 'spreading-activation', 'facts', 'structural-semantic']);

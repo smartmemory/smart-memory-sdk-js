@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **DEV-ONBOARD-FU-SCOPED-SEARCH-1:** `memories.search(query, { metadataFilter })` narrows ranked results to items whose stored properties match (e.g. one end customer). Empty or null sends nothing; a non-object throws before any request.
+
 ### Added: `upgrade_prompt_*` product events (UPGRADE-NUDGES-2)
 
 - `src/react/analytics/productEvents.generated.js` regenerated with `scripts/generate-product-events.mjs` from `PLAT-ANALYTICS-1/product-events-contract.json`: `upgrade_prompt_shown`, `upgrade_prompt_clicked` and `upgrade_prompt_dismissed`, each allowing `nudge_key`, `surface`, `target_tier` and `audience`. `captureProductEvent` needs no code change: a `nudge_id` (or any `*_id`, `*_name`, `*_tag` key) is still dropped. New `tests/unit/upgradePromptEvents.test.js` (21 cases, real generated file) pins both.
