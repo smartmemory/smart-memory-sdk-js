@@ -97,6 +97,7 @@ export class SmartMemoryClient {
 
   /**
    * Export the current workspace as a gzipped OKF bundle.
+   * Needs workspace admin or tenant admin: any other caller gets a 403.
    * @returns {Promise<ArrayBuffer>}
    */
   async exportOkf() {
