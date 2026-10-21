@@ -145,6 +145,26 @@ describe('client.vector', () => {
     expect(page.next_cursor).toBe('opaque-2');
   });
 
+  // Core returns null for these figures when the store's scope filters do not pin the caller
+  // (VEC-CONTRACT-NULLABLE-COUNTS-1). One row per figure: the null arrives as null, never coerced or rejected.
+  const nullFigureRows = [
+    ['query_truncated', c => c.vector.query({ text: 'x' }), { ...QUERY_BODY, truncated: null }, b => b.truncated],
+    ['stats_count', c => c.vector.stats(),
+      { ...STATS_BODY, collections: [{ ...STATS_BODY.collections[0], count: null }] }, b => b.collections[0].count],
+    ['stats_missing_count', c => c.vector.stats(),
+      { ...STATS_BODY, collections: [{ ...STATS_BODY.collections[0], missing_count: null }] },
+      b => b.collections[0].missing_count],
+    ['missing_total', c => c.vector.missing(), { ...MISSING_BODY, total: null }, b => b.total],
+    ['projection_total', c => c.vector.projection(), { ...PROJECTION_BODY, total: null }, b => b.total]
+  ];
+
+  it.each(nullFigureRows)('%s: a null figure round-trips as null', async (_id, call, response, pick) => {
+    respondWith(200, response);
+    const body = await call(client);
+    expect(pick(body)).toBeNull();
+    expect(body).toEqual(response);
+  });
+
   it('forwards an AbortSignal to fetch on every method', async () => {
     const signal = new AbortController().signal;
     respondWith(200, {});

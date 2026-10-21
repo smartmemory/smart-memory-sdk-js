@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **VEC-CONTRACT-NULLABLE-COUNTS-1:** the `client.vector` JSDoc types now say `query().truncated` is `boolean|null`, `stats().collections[].count` and `missing_count` are `number|null`, and `missing().total` / `projection().total` are null when withheld (core returns null when the store's scope filters do not pin the caller; contract `vector-contract.json`). Bodies are still returned untouched, so no runtime change. Tests: one null round-trip row per figure in `tests/unit/api/VectorAPI.test.js`.
+
 - **WEB-VECTOR-SEARCH-TAB-1 (VEC-TAB-U6):** `client.vector.projection({dims, method, limit, collection, signal})` for `GET /memory/vector/projection` (the Vectors tab map view): the caller's in-scope vectors as 2D/3D coordinates and ids, never an embedding. Unset params are omitted from the query; `limit` is sent as given (server clamps to 2000). Errors use the VectorAPI mapping (404 `VectorNotFoundError`, 501 `VectorUnsupportedError` when umap is not enabled or the backend cannot sample, 503 `VectorSubstrateError`). Tests: request-shape, signal and error rows in `tests/unit/api/VectorAPI.test.js`.
 
 - Test (security, DEPS-SEC-FLOOR-GUARD-CLASS-1): `tests/unit/depsSecurityFloor.test.js` judges a declared range by the lowest version it admits, ordered by full semver precedence (a prerelease sorts below its release), instead of the first numeric triple after stripping the operator. `<6.4.3`, `<=6.4.3`, `^4.1.11-rc.0` and `^4.1.12 || 4.0.18` now fail a stable floor, range syntax the check cannot model fails closed, and installed versions use the same ordering. One row table covers the repros and each grammar form.

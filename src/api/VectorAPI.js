@@ -92,7 +92,7 @@ export class VectorAPI {
    * @param {boolean} [params.includeEmbedding] - Adds `embedding_preview` (16 floats) to each hit.
    * @param {AbortSignal} [params.signal]
    * @returns {Promise<{ query: { mode: 'text'|'embedding', dimension: number, space: VectorSpaceRef },
-   *   hits: VectorHit[], truncated: boolean, timing_ms: { embed: number|null, search: number } }>}
+   *   hits: VectorHit[], truncated: boolean|null, timing_ms: { embed: number|null, search: number } }>}
    */
   async query({
     text,
@@ -119,6 +119,8 @@ export class VectorAPI {
   /**
    * Backend, embedder, per-collection counts, capabilities and warnings.
    * `collections[].index_count` is present only when `single_tenant` is true.
+   * `collections[].count` and `collections[].missing_count` are `number|null`: null when the
+   * backend cannot count or the store's scope filters do not pin the caller.
    * @param {{ signal?: AbortSignal }} [options]
    */
   async stats({ signal } = {}) {
@@ -152,7 +154,7 @@ export class VectorAPI {
    * One page of in-scope memories with no usable vector. Pass the previous page's
    * `next_cursor` as `cursor`. 501 means the backend has no missing list
    * (`stats().capabilities.missing_list` is false). `total` is null when the backend
-   * cannot count cheaply.
+   * cannot count cheaply or the store's scope filters do not pin the caller.
    *
    * @param {Object} [params]
    * @param {number} [params.limit] - Server max 200.
@@ -183,7 +185,7 @@ export class VectorAPI {
    * @param {string} [params.collection]
    * @param {AbortSignal} [params.signal]
    * @returns {Promise<{ method: string, dims: number, space: VectorSpaceRef, points: Object[],
-   *   total: number|null, sampled: boolean, limit: number, explained_variance: number[]|null,
+   *   total: number|null (null when withheld), sampled: boolean, limit: number, explained_variance: number[]|null,
    *   warnings: string[], cached: boolean }>}
    */
   async projection({ dims, method, limit, collection, signal } = {}) {
