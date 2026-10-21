@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **CLIENT-CONN-REUSE-1:** test only, no runtime change. `tests/unit/connReuse.test.js` pins that no request path defeats connection reuse: one row per call-site class (`BaseAPI` GET/POST/binary/form, `AuthCore.logout` and `bootstrapSession`, `RefreshManager.refresh`, `exchangeClerkSession`, `createAuthFetch`, `subscribeProgress`) asserts the request goes to the configured `apiBaseUrl` origin with no `Connection` header, `dispatcher`, `agent` or `keepalive: false`, and a source scan of `src/` fails on any of those. Measured on Node 22 against the public API `/health`: the SDK shares undici's process-wide pool (a fresh `BaseAPI` per call opens no new connection), and undici closes an idle connection after 4 s by default, so Node callers with gaps over 4 s pay a new handshake unless they pass a `fetchFn` built on an undici `Agent` with a longer `keepAliveTimeout`.
+
 - **VEC-CONTRACT-NULLABLE-SAMPLED-1:** the `client.vector.projection()` JSDoc type now says `sampled` is `boolean|null` (null when `total` is withheld). One new null round-trip row in `VectorAPI.test.js`.
 
 - **VEC-CONTRACT-NULLABLE-COUNTS-1:** the `client.vector` JSDoc types now say `query().truncated` is `boolean|null`, `stats().collections[].count` and `missing_count` are `number|null`, and `missing().total` / `projection().total` are null when withheld (core returns null when the store's scope filters do not pin the caller; contract `vector-contract.json`). Bodies are still returned untouched, so no runtime change. Tests: one null round-trip row per figure in `tests/unit/api/VectorAPI.test.js`.
