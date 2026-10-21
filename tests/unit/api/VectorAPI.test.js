@@ -155,7 +155,8 @@ describe('client.vector', () => {
       { ...STATS_BODY, collections: [{ ...STATS_BODY.collections[0], missing_count: null }] },
       b => b.collections[0].missing_count],
     ['missing_total', c => c.vector.missing(), { ...MISSING_BODY, total: null }, b => b.total],
-    ['projection_total', c => c.vector.projection(), { ...PROJECTION_BODY, total: null }, b => b.total]
+    ['projection_total', c => c.vector.projection(), { ...PROJECTION_BODY, total: null }, b => b.total],
+    ['projection_sampled', c => c.vector.projection(), { ...PROJECTION_BODY, total: null, sampled: null }, b => b.sampled]
   ];
 
   it.each(nullFigureRows)('%s: a null figure round-trips as null', async (_id, call, response, pick) => {

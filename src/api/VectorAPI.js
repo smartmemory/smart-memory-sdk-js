@@ -185,7 +185,7 @@ export class VectorAPI {
    * @param {string} [params.collection]
    * @param {AbortSignal} [params.signal]
    * @returns {Promise<{ method: string, dims: number, space: VectorSpaceRef, points: Object[],
-   *   total: number|null (null when withheld), sampled: boolean, limit: number, explained_variance: number[]|null,
+   *   total: number|null (null when withheld), sampled: boolean|null (null when total is withheld), limit: number, explained_variance: number[]|null,
    *   warnings: string[], cached: boolean }>}
    */
   async projection({ dims, method, limit, collection, signal } = {}) {
