@@ -163,6 +163,9 @@ export class MemoryAPI {
    *   counts the filtered set. More than 20 values is a 422 (never truncated here or there).
    * @param {string|null} [options.q=null] - Case-insensitive substring match over content,
    *   applied server-side before pagination. Longer than 200 characters is a 422.
+   * @param {'asc'|'desc'|null} [options.order=null] - WEB-LIST-SERVER-PARAMS-1. Sort direction by
+   *   creation time. Omitted when null, so the service default (ascending) applies. Any other
+   *   value is sent untouched and the service answers 422.
    * @returns {Promise<{items: object[], total: number, limit: number, offset: number, policy: {include_grounding: boolean, source: string}}>}
    *   `total` counts the filtered set, so it drives pagination directly.
    */
@@ -175,6 +178,7 @@ export class MemoryAPI {
     includeGrounding = null,
     excludeNodeCategory = null,
     q = null,
+    order = null,
   } = {}) {
     // URLSearchParams, not string concatenation: a metadata value may legitimately
     // contain `&`, `=`, `#`, spaces, or non-ASCII, all of which would corrupt a
@@ -196,6 +200,7 @@ export class MemoryAPI {
       for (const category of categories) params.append('exclude_node_category', category);
     }
     if (q !== null && q !== undefined) params.append('q', q);
+    if (order !== null && order !== undefined) params.append('order', order);
     return this.api.get(`/memory/list?${params}`);
   }
 

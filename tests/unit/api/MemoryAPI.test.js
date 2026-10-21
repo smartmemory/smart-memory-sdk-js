@@ -986,11 +986,15 @@ describe('list exclude_node_category and q (SVC-LIST-EXCLUDE-ENTITY-1)', () => {
       'limit=50&offset=0&exclude_node_category=entity&exclude_node_category=grounding'],
     ['q only', { q: 'robot arm' }, 'limit=50&offset=0&q=robot+arm'],
     ['q with reserved characters is encoded', { q: 'a&b=c#d' }, 'limit=50&offset=0&q=a%26b%3Dc%23d'],
+    ['order desc', { order: 'desc' }, 'limit=50&offset=0&order=desc'],
+    ['order asc is sent explicitly', { order: 'asc' }, 'limit=50&offset=0&order=asc'],
+    ['order null and undefined omit the param', { order: null }, 'limit=50&offset=0'],
+    ['unknown order is sent untouched for the server to 422', { order: 'newest' }, 'limit=50&offset=0&order=newest'],
     ['both, alongside type, metadata and grounding', {
       type: 'semantic', metadataKey: 'topic', metadataValue: 'x', includeGrounding: false,
-      excludeNodeCategory: ['entity'], q: 'arm',
+      excludeNodeCategory: ['entity'], q: 'arm', order: 'desc',
     }, 'limit=50&offset=0&memory_type=semantic&metadata_key=topic&metadata_value=x&include_grounding=false'
-      + '&exclude_node_category=entity&q=arm'],
+      + '&exclude_node_category=entity&q=arm&order=desc'],
   ])('%s', async (_name, options, expected) => {
     const api = makeApi();
     await new MemoryAPI(api).list(options);
