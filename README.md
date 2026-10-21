@@ -240,6 +240,7 @@ const detail = await client.vector.inspect('item-id', { topK: 10 }); // item, ne
 
 let page = await client.vector.missing({ limit: 50 });               // memories with no usable vector
 while (page.next_cursor) page = await client.vector.missing({ limit: 50, cursor: page.next_cursor });
+const map = await client.vector.projection({ dims: 3 });              // 2D/3D coordinates + ids, never embeddings
 // page.total is null when the backend cannot count cheaply
 ```
 

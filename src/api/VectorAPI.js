@@ -168,4 +168,29 @@ export class VectorAPI {
     const path = `/memory/vector/missing${qs ? '?' + qs : ''}`;
     return this._call(() => this.api.get(path, this._opts(signal)));
   }
+
+  /**
+   * The caller's in-scope vectors projected to 2D/3D coordinates for the map view.
+   * Points carry `item_id`, `coords`, `memory_type`, `title`, `has_graph_node` and are
+   * ordered by `item_id`; no embedding is ever returned. `limit` is sent as given (server
+   * clamps it to 2000 and samples larger scopes deterministically). 501 means `umap` is
+   * not enabled on the server or the backend cannot sample (`stats().capabilities.projection`).
+   *
+   * @param {Object} [params]
+   * @param {number} [params.dims] - 2 or 3 (server default 3).
+   * @param {string} [params.method] - 'pca' (server default) or 'umap'.
+   * @param {number} [params.limit] - Server max 2000.
+   * @param {string} [params.collection]
+   * @param {AbortSignal} [params.signal]
+   * @returns {Promise<{ method: string, dims: number, space: VectorSpaceRef, points: Object[],
+   *   total: number|null, sampled: boolean, limit: number, explained_variance: number[]|null,
+   *   warnings: string[], cached: boolean }>}
+   */
+  async projection({ dims, method, limit, collection, signal } = {}) {
+    const qs = new URLSearchParams(
+      Object.entries(defined({ dims, method, limit, collection })).map(([k, v]) => [k, String(v)])
+    ).toString();
+    const path = `/memory/vector/projection${qs ? '?' + qs : ''}`;
+    return this._call(() => this.api.get(path, this._opts(signal)));
+  }
 }

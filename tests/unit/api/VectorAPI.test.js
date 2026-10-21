@@ -35,6 +35,11 @@ const STATS_BODY = {
   warnings: []
 };
 const INSPECT_BODY = { item: { item_id: 'a', vector: { present: true } }, neighbours: [HIT], space: SPACE };
+const PROJECTION_BODY = {
+  method: 'pca', dims: 3, space: SPACE, total: 1, sampled: false, limit: 2000,
+  points: [{ item_id: 'a', coords: [0.1, -0.2, 0.3], memory_type: 'semantic', title: null, has_graph_node: true }],
+  explained_variance: [0.6, 0.3, 0.1], warnings: [], cached: false
+};
 const MISSING_BODY = { items: [{ item_id: 'z', reason: 'no_row' }], next_cursor: 'opaque-2', total: null };
 
 function jsonResponse(status, body) {
@@ -110,7 +115,12 @@ describe('client.vector', () => {
     ['missing_all_params', c => c.vector.missing({ limit: 10, cursor: 'opaque-2', collection: 'structure' }),
       'GET', '/memory/vector/missing?limit=10&cursor=opaque-2&collection=structure', undefined, MISSING_BODY],
     ['missing_limit_clamp', c => c.vector.missing({ limit: 1000 }),
-      'GET', '/memory/vector/missing?limit=1000', undefined, MISSING_BODY]
+      'GET', '/memory/vector/missing?limit=1000', undefined, MISSING_BODY],
+    ['projection_defaults_no_query', c => c.vector.projection(),
+      'GET', '/memory/vector/projection', undefined, PROJECTION_BODY],
+    ['projection_all_params_limit_clamp_not_reimplemented',
+      c => c.vector.projection({ dims: 2, method: 'umap', limit: 5000, collection: 'structure' }),
+      'GET', '/memory/vector/projection?dims=2&method=umap&limit=5000&collection=structure', undefined, PROJECTION_BODY]
   ];
 
   it.each(requestRows)('%s: sends the contract request and returns the body untouched',
@@ -146,6 +156,8 @@ describe('client.vector', () => {
     expect(fetchFn.mock.calls.at(-1)[1].signal).toBe(signal);
     await client.vector.missing({ signal });
     expect(fetchFn.mock.calls.at(-1)[1].signal).toBe(signal);
+    await client.vector.projection({ signal });
+    expect(fetchFn.mock.calls.at(-1)[1].signal).toBe(signal);
   });
 
   // One row per (method, status) the contract lists, plus 500 for every method. `Typed`
@@ -154,7 +166,8 @@ describe('client.vector', () => {
     query: c => c.vector.query({ text: 'x' }),
     stats: c => c.vector.stats(),
     inspect: c => c.vector.inspect('a'),
-    missing: c => c.vector.missing()
+    missing: c => c.vector.missing(),
+    projection: c => c.vector.projection()
   };
   const errorRows = [
     ['query', 400, null], ['query', 403, null], ['query', 404, VectorNotFoundError],
@@ -164,7 +177,9 @@ describe('client.vector', () => {
     ['inspect', 400, null], ['inspect', 403, null], ['inspect', 404, VectorNotFoundError],
     ['inspect', 501, VectorUnsupportedError], ['inspect', 503, VectorSubstrateError], ['inspect', 500, null],
     ['missing', 400, null], ['missing', 403, null], ['missing', 404, VectorNotFoundError],
-    ['missing', 501, VectorUnsupportedError], ['missing', 503, VectorSubstrateError], ['missing', 500, null]
+    ['missing', 501, VectorUnsupportedError], ['missing', 503, VectorSubstrateError], ['missing', 500, null],
+    ['projection', 400, null], ['projection', 403, null], ['projection', 404, VectorNotFoundError],
+    ['projection', 501, VectorUnsupportedError], ['projection', 503, VectorSubstrateError], ['projection', 500, null]
   ];
 
   it.each(errorRows.map(([m, st, T]) => [m, st, T ? T.name : 'a plain APIError', T]))(
