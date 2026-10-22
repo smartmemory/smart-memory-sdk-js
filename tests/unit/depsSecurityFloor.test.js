@@ -1,12 +1,26 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // One row per security-floored dependency. `min` is the lowest version that clears
 // every advisory in DEPS-AUDIT-1 (smart-memory-ops/units/DEPS-AUDIT-1/report.md).
-// Add a row when a new advisory sets a floor; vitest is a separate decision (major bump).
+// Add a row when a new advisory sets a floor. `section: null` is a transitive package: only the install proves it.
+// vitest (CRITICAL, cleared at 4.1.11) and every @vitest/* package carry one row (DEPS-MEDIUM-BATCH-1).
 const FLOORS = [
   { section: 'devDependencies', pkg: 'vite', min: '6.4.3' },
+  { section: 'devDependencies', pkg: 'vitest', min: '4.1.11' },
+  // @vitest/browser-preview is declared on purpose and never imported: vitest >= 4.1.0 lists it as an optional
+  // peer, and npm 10 (Node 20/22 bundled) crashes in `npm install` ("edgesOut") until one is a direct dependency.
+  { section: 'devDependencies', pkg: '@vitest/browser-preview', min: '4.1.11' },
+  { section: 'devDependencies', pkg: '@vitest/coverage-v8', min: '4.1.11' },
+  { section: null, pkg: '@vitest/browser', min: '4.1.11' },
+  { section: null, pkg: '@vitest/expect', min: '4.1.11' },
+  { section: null, pkg: '@vitest/mocker', min: '4.1.11' },
+  { section: null, pkg: '@vitest/pretty-format', min: '4.1.11' },
+  { section: null, pkg: '@vitest/runner', min: '4.1.11' },
+  { section: null, pkg: '@vitest/snapshot', min: '4.1.11' },
+  { section: null, pkg: '@vitest/spy', min: '4.1.11' },
+  { section: null, pkg: '@vitest/utils', min: '4.1.11' },
 ];
 
 const root = resolve(__dirname, '../..');
@@ -110,10 +124,20 @@ const UNSUPPORTED_RANGES = ['>4.1.10', '4.1.0 - 4.2.0', '>= 4.1.11', 'latest', '
 describe('dependency security floors', () => {
   const manifest = readJson('package.json');
 
-  it.each(FLOORS)('$pkg declared range floor is >= $min', ({ section, pkg, min }) => {
+  const declared = FLOORS.filter((row) => row.section);
+
+  it.each(declared)('$pkg declared range floor is >= $min', ({ section, pkg, min }) => {
     const range = manifest[section][pkg];
     expect(range, `${pkg} missing from ${section}`).toBeTruthy();
     expect(rangeAtLeast(range, min), `${pkg} ${range} allows versions below ${min}`).toBe(true);
+  });
+
+  it('every declared or installed @vitest/* package has a floor row above', () => {
+    const listed = new Set(FLOORS.map((row) => row.pkg));
+    const installed = readdirSync(resolve(root, 'node_modules/@vitest')).map((dir) => `@vitest/${dir}`);
+    const declaredNames = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies })
+      .filter((name) => name.startsWith('@vitest/'));
+    expect([...new Set([...installed, ...declaredNames])].filter((name) => !listed.has(name))).toEqual([]);
   });
 
   it.each(FLOORS)('$pkg installed version is >= $min', ({ pkg, min }) => {
