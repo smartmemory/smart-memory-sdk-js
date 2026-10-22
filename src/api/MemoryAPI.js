@@ -57,6 +57,9 @@ export class MemoryAPI {
    *   behaviour untouched. **Only valid with `usePipeline: false`** — the server
    *   answers 400 for the combination rather than silently ignoring it, because
    *   the ingestion pipeline has no per-item override.
+   * @returns {Promise<object>} The service response (`id` is the item id). WS-ROUTING-2 servers
+   *   also return `workspace_id`, `workspace_name`, `routed_by` and `notices`; `routingEcho(result)`
+   *   reads them as typed fields, `null`/`[]` on an older server.
    */
   async create({
     content,
@@ -408,6 +411,9 @@ export class MemoryAPI {
    * was measured and `context.confidence` was below the threshold, or the server runs the
    * `veto` rollback mode. Check `status` before using `item_id`.
    *
+   * WS-ROUTING-2 servers also return `workspace_id`, `workspace_name`, `routed_by` and `notices`
+   * (`routingEcho(result)` reads them as typed fields; an older server omits them).
+   *
    * @param {string} content
    * @param {{profileName?: string|null, extractorName?: string, context?: object}} [options]
    * @returns {Promise<object>}
@@ -459,6 +465,12 @@ export class MemoryAPI {
     return this.api.get('/memory/summary');
   }
 
+  /**
+   * Ingest a conversation as session chunks. WS-ROUTING-2 servers add the write echo
+   * (`workspace_id`, `workspace_name`, `routed_by`, `notices`) to the result; `routingEcho(result)`
+   * reads it.
+   * @returns {Promise<object>}
+   */
   async ingestConversation(turns, {
     sessionBoundaries = null, conversationId = null, sessionDates = null,
     turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4, context = null
