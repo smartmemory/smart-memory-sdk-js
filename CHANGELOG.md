@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **DEV-ONBOARD-FU-SDKJS-README-ORDER-1 / DEV-ONBOARD-FU-DOCS-DRIFT-1 (README only, no runtime change):** the README now leads Quick Start with API key mode (a server-side example using `apiKey`), adds a three-mode table (API key, SSO, custom) and lists `apiKey` in Configuration, and the stale `**Version:** 0.6.0` header (package.json is 1.5.14) now points at `package.json` instead of repeating a number that drifts. `tests/unit/readmeAuthModes.test.js` pins the order, the modes against `AuthCore.js`, and no hard-coded version (6 rows; the order and version rows fail on the old README).
+
 - **CLIENT-CONN-REUSE-1:** test only, no runtime change. `tests/unit/connReuse.test.js` pins that no request path defeats connection reuse: one row per call-site class (`BaseAPI` GET/POST/binary/form, `AuthCore.logout` and `bootstrapSession`, `RefreshManager.refresh`, `exchangeClerkSession`, `createAuthFetch`, `subscribeProgress`) asserts the request goes to the configured `apiBaseUrl` origin with no `Connection` header, `dispatcher`, `agent` or `keepalive: false`, and a source scan of `src/` fails on any of those. Measured on Node 22 against the public API `/health`: the SDK shares undici's process-wide pool (a fresh `BaseAPI` per call opens no new connection), and undici closes an idle connection after 4 s by default, so Node callers with gaps over 4 s pay a new handshake unless they pass a `fetchFn` built on an undici `Agent` with a longer `keepAliveTimeout`.
 
 - **VEC-CONTRACT-NULLABLE-SAMPLED-1:** the `client.vector.projection()` JSDoc type now says `sampled` is `boolean|null` (null when `total` is withheld). One new null round-trip row in `VectorAPI.test.js`.

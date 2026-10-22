@@ -1,11 +1,12 @@
 # @smartmemory/sdk-js
 
-**Version:** 0.6.0
+**Version:** see `package.json` (or `npm view @smartmemory/sdk-js version`)
 
 Unified JavaScript SDK for [SmartMemory](https://smartmemory.ai) — consolidates authentication and API client logic across all SmartMemory frontend applications.
 
 ## Features
 
+- **API key auth**: Server-side scripts and services authenticate with a static key, no token management
 - **SSO auth (Clerk)**: Cookie-based session bootstrap via `/auth/me`; redirect to Clerk IdP for login
 - **Automatic token refresh**: Single-flight deduplication prevents race conditions
 - **80+ API methods**: Full coverage of SmartMemory's REST API across 10 domain modules
@@ -21,7 +22,32 @@ npm install @smartmemory/sdk-js
 
 ## Quick Start
 
-### SSO Mode (All Apps — Clerk-backed)
+Pick the auth mode that matches where your code runs:
+
+| Mode | Use it for | Config |
+|------|------------|--------|
+| API key | Server-side code: scripts, workers, backends | `apiKey` (the mode is set to `apiKey` for you) |
+| SSO | Browser apps behind SmartMemory sign-in (Clerk) | `mode: 'sso'` |
+| Custom | Your own login endpoint and token refresh | `mode: 'custom'` |
+
+### API Key Mode (server-side)
+
+Create a key in the [SmartMemory dashboard](https://www.smartmemory.ai/dashboard) (Settings, then API Keys) and keep it in an environment variable. Never ship an API key to a browser.
+
+```javascript
+import { SmartMemoryClient } from '@smartmemory/sdk-js';
+
+const client = new SmartMemoryClient({
+  apiKey: process.env.SMARTMEMORY_API_KEY,
+  apiBaseUrl: 'https://api.smartmemory.ai',
+});
+
+// The key is sent as a bearer token on every request. There is no session to bootstrap or refresh.
+await client.memories.create({ content: 'Customer prefers email over phone', memoryType: 'semantic' });
+const results = await client.memories.search('contact preference', { topK: 5 });
+```
+
+### SSO Mode (browser apps, Clerk-backed)
 
 ```javascript
 import { SmartMemoryClient } from '@smartmemory/sdk-js';
@@ -127,8 +153,10 @@ This subpath also exports `captureProductEvent`, `captureException`, and `resetA
 
 ```javascript
 const client = new SmartMemoryClient({
-  // Required
-  mode: 'custom' | 'sso',
+  // Required: an auth mode and the API base
+  apiKey: 'sm_live_...',            // API key mode, server-side (the mode becomes 'apiKey')
+  // or
+  mode: 'sso' | 'custom',        // browser session modes
   apiBaseUrl: 'http://localhost:9001',
 
   // SSO mode only
