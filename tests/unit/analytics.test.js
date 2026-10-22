@@ -52,6 +52,7 @@ import { AuthCore } from '../../src/auth/AuthCore.js';
 import {
   captureException,
   captureProductEvent,
+  resetClientNotLoadedWarnings,
 } from '../../src/react/analytics/client.js';
 import { generateProductEvents } from '../../scripts/generate-product-events.mjs';
 
@@ -69,6 +70,26 @@ describe('analytics client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     posthogMock.__loaded = true;
+  });
+
+  it('warns once per event name when no loaded client drops a known event, never for unknown events', () => {
+    resetClientNotLoadedWarnings();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    posthogMock.__loaded = false;
+
+    // One flat table: call sequence -> total warnings after that call.
+    const rows = [
+      ['memory_created', 1],
+      ['memory_created', 1],
+      ['search_performed', 2],
+      ['dream_phase_run', 2],
+    ];
+    for (const [eventName, warnings] of rows) {
+      expect(captureProductEvent(eventName, {})).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(warnings);
+    }
+    expect(warn.mock.calls.map(([m]) => m).join('\n')).toMatch(/"memory_created".*\n.*"search_performed"/);
+    warn.mockRestore();
   });
 
   it('captures all seven exact canonical event names', () => {

@@ -38,6 +38,24 @@ function activeClient() {
   return posthog;
 }
 
+const warnedEvents = new Set();
+
+// No silent degradation: a dropped product event names itself once per event name.
+function warnClientNotLoaded(eventName) {
+  if (warnedEvents.has(eventName)) {
+    return;
+  }
+  warnedEvents.add(eventName);
+  console.warn(
+    `[analytics] product event "${eventName}" dropped: posthog-js client is not loaded `
+    + '(provider not mounted, no API key, or a second posthog-js copy was initialised)',
+  );
+}
+
+export function resetClientNotLoadedWarnings() {
+  warnedEvents.clear();
+}
+
 function isForbiddenPropertyKey(key) {
   if (FORBIDDEN_KEYS.has(key)) {
     return true;
@@ -89,8 +107,12 @@ function sanitizeExceptionContext(context) {
 
 export function captureProductEvent(eventName, properties = {}) {
   const allowedKeys = PRODUCT_EVENT_PROPERTIES[eventName];
+  if (!allowedKeys) {
+    return false;
+  }
   const client = activeClient();
-  if (!allowedKeys || !client || typeof client.capture !== 'function') {
+  if (!client || typeof client.capture !== 'function') {
+    warnClientNotLoaded(eventName);
     return false;
   }
 
