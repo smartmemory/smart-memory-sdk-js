@@ -17,7 +17,7 @@
 
 import { decodeReceipt } from './receipt.js';
 import { awaitReceipt } from './awaitReceipt.js';
-import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError } from './submit.js';
+import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
 
 let warnedLegacyDocumentIngest = false;
 
@@ -45,11 +45,14 @@ export class MemoryAPI {
   /**
    * One logical save: mint (or reuse) the `idempotency_key`, send the identical body up to four
    * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
+   * The whole request is snapshotted before the first send, so every attempt carries the same bytes
+   * even if the caller changes a nested object while one is in flight.
    * @private
    */
-  async _save(path, body, { idempotencyKey, send = () => this.api.post(path, body), expectedRevision } = {}) {
+  async _save(path, body, { idempotencyKey, method = 'post', expectedRevision } = {}) {
     const key = resolveIdempotencyKey(idempotencyKey);
-    body.idempotency_key = key;
+    const request = snapshotRequest({ ...body, idempotency_key: key });
+    const send = () => this.api[method](path, request);
     let raw;
     try {
       raw = await submitWithRetry(send, { idempotencyKey: key });
@@ -168,7 +171,7 @@ export class MemoryAPI {
       return this.api.patch(path, updates);
     }
     const body = { ...updates, expected_revision: expectedRevision };
-    return this._save(path, body, { idempotencyKey, expectedRevision, send: () => this.api.patch(path, body) });
+    return this._save(path, body, { idempotencyKey, expectedRevision, method: 'patch' });
   }
 
   async supersede(id, { content, memoryType, metadata = {}, reason }) {

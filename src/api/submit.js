@@ -53,6 +53,18 @@ export function isRetryable(error) {
 const defaultSleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
+ * The complete logical request, frozen at its first send (ST14). The copy is what the wire form
+ * would carry (a JSON round trip), so a caller changing a nested object while an attempt is in
+ * flight can never change a replay under the same `idempotency_key`.
+ * @template T
+ * @param {T} body
+ * @returns {T}
+ */
+export function snapshotRequest(body) {
+  return JSON.parse(JSON.stringify(body));
+}
+
+/**
  * Run `send` (one POST/PATCH of an already-built body) with at most four attempts. Retries only
  * transport loss and 408/429/500/502/503/504, after full jitter within 0-200/0-400/0-800 ms, honoring
  * `Retry-After` (`error.retryAfterMs`) as a minimum on 429/503. When that minimum cannot fit the

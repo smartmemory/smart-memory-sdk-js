@@ -21,10 +21,10 @@
  * `chainRequest(receipt)`: it carries `result.pipeline_state_run_id`, never `receipt.run_id`.
  */
 import { APIError } from '../errors/APIError.js';
-import { StageChainError, STAGE_CHAIN_CODES } from '../errors/ReceiptErrors.js';
+import { StageChainError, STAGE_CHAIN_CODES, UnsupportedReceiptError } from '../errors/ReceiptErrors.js';
 import { decodeReceipt } from './receipt.js';
 import { awaitReceipt } from './awaitReceipt.js';
-import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError } from './submit.js';
+import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
 
 const MAX_TRACKED_RUNS = 1000;
 
@@ -50,7 +50,7 @@ export class PipelineAPI {
     }
     const { idempotencyKey, ...rest } = request ?? {};
     const key = resolveIdempotencyKey(idempotencyKey);
-    const body = { ...rest, idempotency_key: key };
+    const body = snapshotRequest({ ...rest, idempotency_key: key });
     const path = `/memory/pipeline/${stage}`;
     let raw;
     try {
@@ -58,7 +58,12 @@ export class PipelineAPI {
     } catch (error) {
       throw mapStageError(mapAdmissionError(error));
     }
-    const receipt = decodeReceipt(raw);
+    let receipt;
+    try {
+      receipt = decodeReceipt(raw);
+    } catch (error) {
+      throw mapStageError(error, { run_id: null });
+    }
     if (this._receiptRunIds.size >= MAX_TRACKED_RUNS) this._receiptRunIds.delete(this._receiptRunIds.values().next().value);
     this._receiptRunIds.add(receipt.run_id);
     return receipt;
@@ -71,7 +76,11 @@ export class PipelineAPI {
    * @param {{timeoutMs?: number, holdMs?: number, signal?: AbortSignal}} [options]
    */
   async awaitReceipt(receipt, options = {}) {
-    return awaitReceipt(this.api, receipt, options);
+    try {
+      return await awaitReceipt(this.api, receipt, options);
+    } catch (error) {
+      throw mapStageError(error, { run_id: receipt?.run_id ?? null });
+    }
   }
 
   /**
@@ -239,8 +248,24 @@ export class PipelineAPI {
  * A dependent-stage rejection carrying the public `stage_client_error` body becomes a `StageChainError`
  * with the same code; any other error is returned untouched (a bare 404 is not proof of `stage_scope_denied`).
  */
-function mapStageError(error) {
+function mapStageError(error, { run_id: fallbackRunId = null } = {}) {
   if (!(error instanceof APIError)) return error;
+  if (error instanceof UnsupportedReceiptError) {
+    // ST33: an unsupported receipt major or mandatory state is a public stage-chain refusal; the
+    // authorized handle and the decoder's own code/field/value stay on the error.
+    const mapped = new StageChainError(error.message, 'unsupported_receipt_version', {
+      detail: { decoder_code: error.code, field: error.field, value: error.value },
+      run_id: error.run_id ?? fallbackRunId,
+    });
+    mapped.status_url = error.status_url;
+    mapped.decoder_code = error.code;
+    mapped.field = error.field;
+    mapped.value = error.value;
+    mapped.raw = error.raw;
+    mapped.cause = error;
+    console.warn(`[pipeline] unsupported receipt (${error.code}) mapped to StageChainError unsupported_receipt_version, run_id=${mapped.run_id}`);
+    return mapped;
+  }
   const body = error.detail?.detail && typeof error.detail.detail === 'object' ? error.detail.detail : error.detail;
   if (!body || typeof body !== 'object' || !STAGE_CHAIN_CODES.includes(body.code)) return error;
   const mapped = new StageChainError(body.message || body.code, body.code, {
