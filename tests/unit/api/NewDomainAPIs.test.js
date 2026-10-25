@@ -8,6 +8,8 @@ import { OntologyAPI } from '../../../src/api/OntologyAPI.js';
 import { AnalyticsAPI } from '../../../src/api/AnalyticsAPI.js';
 import { ValidationAPI } from '../../../src/api/ValidationAPI.js';
 import { PipelineAPI } from '../../../src/api/PipelineAPI.js';
+import { SaveReceipt } from '../../../src/api/receipt.js';
+import { KEY_RE, STAGE_PENDING } from './receiptFixtures.js';
 import { ArchiveAPI } from '../../../src/api/ArchiveAPI.js';
 import { ZettelkastenAPI } from '../../../src/api/ZettelkastenAPI.js';
 import { GraphAPI } from '../../../src/api/GraphAPI.js';
@@ -1262,47 +1264,25 @@ describe('ValidationAPI', () => {
 // ============================================================
 
 describe('PipelineAPI', () => {
-  it('should run extraction', async () => {
+  // One row per public stage: route and the request sent. Each resolves to a stage_job receipt (ST33/G169).
+  const STAGES = [
+    ['extraction', 'runExtraction', { content: 'text', options: {} }],
+    ['storage', 'runStorage', { items: [] }],
+    ['linking', 'runLinking', { items: [] }],
+    ['enrichment', 'runEnrichment', { items: [] }],
+    ['grounding', 'runGrounding', { items: [] }],
+  ];
+
+  it.each(STAGES)('should run %s and resolve to a stage_job receipt', async (stage, method, request) => {
     const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runExtraction({ content: 'text', options: {} });
+    api.post.mockResolvedValue(STAGE_PENDING);
+    const receipt = await new PipelineAPI(api)[method](request);
 
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/extraction', {
-      content: 'text',
-      options: {}
-    });
-  });
-
-  it('should run storage', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runStorage({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/storage', { items: [] });
-  });
-
-  it('should run linking', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runLinking({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/linking', { items: [] });
-  });
-
-  it('should run enrichment', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runEnrichment({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/enrichment', { items: [] });
-  });
-
-  it('should run grounding', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runGrounding({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/grounding', { items: [] });
+    expect(api.post).toHaveBeenCalledWith(`/memory/pipeline/${stage}`, { ...request, idempotency_key: expect.stringMatching(KEY_RE) });
+    expect(receipt).toBeInstanceOf(SaveReceipt);
+    expect(receipt.run_id).toBe('run_stage_1');
+    expect(receipt.subject.kind).toBe('stage_job');
+    expect(receipt.occurrence_id).toBe('occ_1');
   });
 
   it('should get pipeline state', async () => {
@@ -1708,8 +1688,7 @@ describe('ProcedureCandidateAPI', () => {
         name: null,
         description: null,
         procedure_type: 'extraction',
-        preferred_profile: 'quick_extract',
-        remove_working_items: false
+        preferred_profile: 'quick_extract'
       }
     );
   });
@@ -1721,8 +1700,7 @@ describe('ProcedureCandidateAPI', () => {
       name: 'API Error Handler',
       description: 'Handles 4xx errors',
       procedure_type: 'validation',
-      preferred_profile: 'full_extract',
-      remove_working_items: true
+      preferred_profile: 'full_extract'
     });
 
     expect(api.post).toHaveBeenCalledWith(
@@ -1731,8 +1709,7 @@ describe('ProcedureCandidateAPI', () => {
         name: 'API Error Handler',
         description: 'Handles 4xx errors',
         procedure_type: 'validation',
-        preferred_profile: 'full_extract',
-        remove_working_items: true
+        preferred_profile: 'full_extract'
       }
     );
   });

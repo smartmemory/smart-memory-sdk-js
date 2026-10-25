@@ -42,6 +42,12 @@ export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+export { UnsupportedReceiptError, AdmissionConflictError, StageChainError, STAGE_CHAIN_CODES } from './errors/ReceiptErrors.js';
+
+// 2.0 save receipt, await and retry identity (REL-CALLERS-JSSDK-1)
+export { SaveReceipt, decodeReceipt } from './api/receipt.js';
+export { awaitReceipt } from './api/awaitReceipt.js';
+export { newIdempotencyKey } from './api/submit.js';
 export { VectorNotFoundError, VectorUnsupportedError, VectorSubstrateError } from './errors/VectorErrors.js';
 
 // API base URL resolution (DRY-FRONTEND-1)

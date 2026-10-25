@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryAPI } from '../../../src/api/MemoryAPI.js';
+import { RECEIPT } from './receiptFixtures.js';
 
 describe('origin context', () => {
   it('passes through ingest, conversation and document', async () => {
-    const transport = { post: vi.fn().mockResolvedValue({}) };
+    const transport = { post: vi.fn().mockResolvedValue({ ...RECEIPT }) };
     const api = new MemoryAPI(transport);
     const context = { origin: 'import:obsidian' };
     await api.ingest('note', { context });

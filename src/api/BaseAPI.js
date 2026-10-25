@@ -183,11 +183,16 @@ export class BaseAPI {
       errorData = { message: `HTTP ${response.status}` };
     }
 
-    return new APIError(
+    const error = new APIError(
       this._extractMessage(errorData, response.status),
       response.status,
       errorData
     );
+    // Retry-After as seconds (the HTTP-date form is ignored: nothing in the save path honors it).
+    const retryAfterHeader = response.headers?.get?.('retry-after');
+    const retryAfter = retryAfterHeader == null || retryAfterHeader === '' ? NaN : Number(retryAfterHeader);
+    if (Number.isFinite(retryAfter) && retryAfter >= 0) error.retryAfterMs = Math.round(retryAfter * 1000);
+    return error;
   }
 
   /**

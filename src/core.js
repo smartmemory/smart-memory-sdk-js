@@ -28,3 +28,7 @@ export { OntologyAPI } from './api/OntologyAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+export { UnsupportedReceiptError, AdmissionConflictError, StageChainError, STAGE_CHAIN_CODES } from './errors/ReceiptErrors.js';
+export { SaveReceipt, decodeReceipt } from './api/receipt.js';
+export { awaitReceipt } from './api/awaitReceipt.js';
+export { newIdempotencyKey } from './api/submit.js';

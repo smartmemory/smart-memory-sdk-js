@@ -43,7 +43,8 @@ const client = new SmartMemoryClient({
 });
 
 // The key is sent as a bearer token on every request. There is no session to bootstrap or refresh.
-await client.memories.create({ content: 'Customer prefers email over phone', memoryType: 'semantic' });
+const receipt = await client.memories.create({ content: 'Customer prefers email over phone', memoryType: 'semantic' });
+await client.memories.awaitReceipt(receipt); // the save is a receipt, wait for its terminal fate when you need it
 const results = await client.memories.search('contact preference', { topK: 5 });
 ```
 
@@ -206,9 +207,11 @@ Default `client.memories.search(query)` returns the flat list — no breaking ch
 ### Memories
 
 ```javascript
-client.memories.create({ content: 'text', memoryType: 'semantic' });
+// 2.0 saves resolve to a receipt (run_id, status_url, revision), not the stored item.
+const receipt = await client.memories.create({ content: 'text', memoryType: 'semantic' });
+const done = await client.memories.awaitReceipt(receipt, { timeoutMs: 30000 }); // done.client_timed_out === true if still pending
 client.memories.get(id);
-client.memories.update(id, { content: 'updated' });
+client.memories.update(id, { content: 'updated' }, { expectedRevision: receipt.revision }); // 409 -> AdmissionConflictError
 client.memories.delete(id);
 client.memories.list({ limit: 50, offset: 0, type: 'semantic' });
 client.memories.search('query', { topK: 5, enableHybrid: true });
