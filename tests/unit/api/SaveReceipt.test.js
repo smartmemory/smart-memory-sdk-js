@@ -493,7 +493,7 @@ describe('probe 6: G129 and stage chains', () => {
 
   it('a stage request with idempotencyKey reuses it and a refusal keeps the handle', async () => {
     const { api, pipeline } = pipelineWith(async () => ({ ...STAGE_PENDING, schema_version: '2.1' }));
-    await expect(pipeline.runLinking({ items: [], idempotencyKey: 'stage:1' })).rejects.toMatchObject({ code: 'unsupported_version', run_id: 'run_stage_1' });
+    await expect(pipeline.runLinking({ items: [], idempotencyKey: 'stage:1' })).rejects.toMatchObject({ name: 'StageChainError', code: 'unsupported_receipt_version', decoder_code: 'unsupported_version', run_id: 'run_stage_1' });
     expect(api.post.mock.calls[0][1]).toEqual({ items: [], idempotency_key: 'stage:1' });
   });
 });
