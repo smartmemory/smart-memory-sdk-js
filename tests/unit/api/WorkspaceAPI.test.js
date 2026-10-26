@@ -5,6 +5,7 @@ function mockBaseAPI() {
   return {
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
+    put: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue(null)
   };
 }
@@ -110,5 +111,45 @@ describe('WorkspaceAPI', () => {
     await workspaces.listTeamWorkspaces('team/1');
 
     expect(api.get).toHaveBeenCalledWith('/memory/teams/team%2F1/workspaces');
+  });
+  // WS-ROUTING-4: one row per call shape. Columns: name, call, verb, expected arguments.
+  const SESSION_ROWS = [
+    [
+      'sets a session pick without a context',
+      (w) => w.setSessionWorkspace('ws-1', { clientKey: 'app:web' }),
+      'put',
+      ['/memory/routing/session', { workspace_id: 'ws-1', client_key: 'app:web' }]
+    ],
+    [
+      'sets a session pick with a context',
+      (w) => w.setSessionWorkspace('ws-1', { clientKey: 'app:web', contextKey: 'repo:aaaaaaaaaaaa' }),
+      'put',
+      ['/memory/routing/session', { workspace_id: 'ws-1', client_key: 'app:web', context_key: 'repo:aaaaaaaaaaaa' }]
+    ],
+    [
+      'clears a session pick with the key as a query, no trailing slash',
+      (w) => w.clearSessionWorkspace({ clientKey: 'mcp:claude-ai' }),
+      'delete',
+      ['/memory/routing/session?client_key=mcp%3Aclaude-ai']
+    ],
+    [
+      'clears a context pick',
+      (w) => w.clearSessionWorkspace({ clientKey: 'app:web', contextKey: 'repo:aaaaaaaaaaaa' }),
+      'delete',
+      ['/memory/routing/session?client_key=app%3Aweb&context_key=repo%3Aaaaaaaaaaaaa']
+    ]
+  ];
+
+  it.each(SESSION_ROWS)('%s', async (_name, call, verb, args) => {
+    const api = mockBaseAPI();
+    await call(new WorkspaceAPI(api));
+    expect(api[verb]).toHaveBeenCalledWith(...args);
+  });
+
+  it('passes a service refusal through unchanged', async () => {
+    const api = mockBaseAPI();
+    const refusal = Object.assign(new Error('insufficient_team_permissions'), { status: 403 });
+    api.put.mockRejectedValue(refusal);
+    await expect(new WorkspaceAPI(api).setSessionWorkspace('ws-x', { clientKey: 'app:web' })).rejects.toBe(refusal);
   });
 });
