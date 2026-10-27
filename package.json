@@ -18,6 +18,10 @@
       "development": "./src/react/index.js",
       "default": "./dist/react.js"
     },
+    "./react/recovery": {
+      "development": "./src/react/recovery/index.js",
+      "default": "./dist/react/recovery.js"
+    },
     "./react/analytics": {
       "development": "./src/react/analytics/index.js",
       "default": "./dist/react/analytics.js"

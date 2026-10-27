@@ -10,6 +10,7 @@ export default defineConfig({
         core: resolve(__dirname, 'src/core.js'),
         react: resolve(__dirname, 'src/react/index.js'),
         'react/analytics': resolve(__dirname, 'src/react/analytics/index.js'),
+        'react/recovery': resolve(__dirname, 'src/react/recovery/index.js'),
         fetch: resolve(__dirname, 'src/fetch/index.js'),
         connection: resolve(__dirname, 'src/connection/index.js'),
         progress: resolve(__dirname, 'src/progress.ts')
