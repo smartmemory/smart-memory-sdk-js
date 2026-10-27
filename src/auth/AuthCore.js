@@ -6,6 +6,7 @@ import { SSOManager } from './SSOManager.js';
 export class AuthCore {
   constructor(config) {
     this.sessionRevision = 0;
+    this.config = config;
     this.connection = new ConnectionStatus();
     this.mode = config.mode;
     // apiBaseUrl may be a string or a zero-arg function returning the current
@@ -45,10 +46,8 @@ export class AuthCore {
           this.notifyListeners();
           config.onTokenRefresh?.(token);
         },
-        onRefreshFailed: () => {
-          // Passive auth failures should not globally revoke shared cookie sessions.
-          this.clearLocalAuth();
-        }
+        // A rejected refresh alone does not end the session: /auth/me decides.
+        onRefreshFailed: () => this.clearIfSessionLost()
       });
     } else {
       this.refreshManager = null;
@@ -185,6 +184,41 @@ export class AuthCore {
     this.currentUser = null;
     this.currentToken = null;
     this.notifyListeners();
+  }
+
+  /**
+   * Clear local identity only when the server confirms the session is gone:
+   * the refresh was refused AND `/auth/me` answers 401/403. A valid cookie
+   * session keeps its identity (a stale bearer is dropped), and a transient
+   * `/auth/me` failure (network, 429, 5xx) keeps it too.
+   */
+  clearIfSessionLost() {
+    if (this.mode === 'apiKey') { this.clearLocalAuth(); return Promise.resolve(); }
+    this._sessionProbe ??= this._probeSession().finally(() => { this._sessionProbe = null; });
+    return this._sessionProbe;
+  }
+
+  async _probeSession() {
+    const revision = this.sessionRevision;
+    let response;
+    try {
+      response = await (this.config.fetchFn || globalThis.fetch.bind(globalThis))(
+        `${this.apiBaseUrl}/auth/me`,
+        this.getRequestOptions({ method: 'GET', headers: this.useCookieAuth ? {} : this.getAuthHeaders() })
+      );
+    } catch (error) {
+      console.warn('[auth] Session check failed; keeping local identity', error);
+      return;
+    }
+    if (this.sessionRevision !== revision) return;
+    if (response?.status === 401 || response?.status === 403) { this.clearLocalAuth(); return; }
+    if (!response?.ok) return;
+    if (this.useCookieAuth && this.currentToken) {
+      // The cookie session is valid: stop sending the rejected bearer.
+      this.tokenManager.setAccessToken(null);
+      this.currentToken = null;
+      this.notifyListeners();
+    }
   }
 
   async logout() {

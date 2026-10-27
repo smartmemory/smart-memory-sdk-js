@@ -15,6 +15,7 @@ export interface ProgressAuth {
   getRequestOptions(options?: RequestInit): RequestInit;
   refreshToken(): Promise<unknown>;
   clearLocalAuth(options?: { reason?: "user" | "expired" }): void;
+  clearIfSessionLost?(): Promise<void>;
   connection?: ProgressConnection;
 }
 export interface ProgressConnection {

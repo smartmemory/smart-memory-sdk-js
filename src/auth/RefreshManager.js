@@ -54,7 +54,7 @@ export class RefreshManager {
     const refreshToken = this.tokenManager.getRefreshToken();
     if (!refreshToken && !this.useCookieAuth) {
       console.warn('[auth] No refresh token available; authentication required');
-      this.onRefreshFailed();
+      await this.onRefreshFailed();
       throw new SessionRefreshError('No refresh token', 401, false);
     }
 
@@ -71,7 +71,7 @@ export class RefreshManager {
       checkSession();
       if (!response.ok) {
         const definitive = response.status === 401 || response.status === 403;
-        if (definitive) this.onRefreshFailed();
+        if (definitive) await this.onRefreshFailed();
         throw new SessionRefreshError(`Refresh failed: ${response.status}`, response.status, !definitive);
       }
 

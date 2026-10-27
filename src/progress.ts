@@ -43,6 +43,7 @@ export interface ProgressAuth {
   getRequestOptions(options?: RequestInit): RequestInit;
   refreshToken(): Promise<unknown>;
   clearLocalAuth(options?: { reason?: "user" | "expired" }): void;
+  clearIfSessionLost?(): Promise<void>;
   connection?: ProgressConnection;
 }
 export interface ProgressConnection {
@@ -173,7 +174,7 @@ export function subscribeProgress(options: SubscribeProgressOptions): ProgressSu
               }
             }
           } else if (response.status >= 400 && response.status < 500 && response.status !== 429 && response.status !== 408) {
-            if (response.status === 401) auth?.clearLocalAuth();
+            if (response.status === 401) void (auth?.clearIfSessionLost ? auth.clearIfSessionLost() : auth?.clearLocalAuth());
             terminal(error);
           }
           throw error;

@@ -90,13 +90,16 @@ describe('resumable progress', () => {
     const auth = new AuthCore({ mode: 'sso', apiBaseUrl: '', storage: 'memory' });
     auth.currentToken = 'old';
     vi.spyOn(auth, 'refreshToken').mockImplementation(async () => { auth.currentToken = 'new'; return 'new'; });
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 401 })));
     const sub = start({ auth });
     await expect(latest().onopen!(new Response(null, { status: 401 }))).rejects.toThrow('401');
     await vi.advanceTimersByTimeAsync(0);
     expect(latest().headers).toMatchObject({ Authorization: 'Bearer new' });
     await expect(latest().onopen!(new Response(null, { status: 401 }))).rejects.toThrow('401');
+    await vi.advanceTimersByTimeAsync(0);
     expect(auth.refreshToken).toHaveBeenCalledOnce();
     expect(auth.currentToken).toBeNull(); expect(sub.onError).toHaveBeenCalledOnce();
+    vi.unstubAllGlobals();
   });
   it('keeps auth and retries after a transient refresh failure', async () => {
     const auth = new AuthCore({ mode: 'sso', apiBaseUrl: '', storage: 'memory' });
