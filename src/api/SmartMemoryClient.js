@@ -34,6 +34,7 @@ import { RecallAPI } from './RecallAPI.js';
 import { PolicyAPI } from './PolicyAPI.js';
 import { VectorAPI } from './VectorAPI.js';
 import { UpgradeNudgeAPI } from './UpgradeNudgeAPI.js';
+import { RoutingAPI } from './RoutingAPI.js';
 
 /**
  * Main entry point for SmartMemory SDK.
@@ -80,6 +81,7 @@ export class SmartMemoryClient {
     this.policy = new PolicyAPI(baseAPI);
     this.vector = new VectorAPI(baseAPI);
     this.upgradeNudges = new UpgradeNudgeAPI(baseAPI);
+    this.routing = new RoutingAPI(baseAPI);
   }
 
   setWorkspaceId(workspaceId) {
@@ -97,6 +99,34 @@ export class SmartMemoryClient {
 
   getTeamId() {
     return this.getWorkspaceId();
+  }
+
+  /**
+   * Read the caller's account-default routing prefs (WS-ROUTING-2b).
+   * @returns {Promise<import('./RoutingAPI.js').RoutingPrefs>}
+   */
+  async getRoutingPrefs() {
+    return this.routing.getPrefs();
+  }
+
+  /**
+   * Set (or clear, with `null`) the account default workspace, compare-and-set on `version`.
+   * A lost CAS rejects with `RoutingPrefsConflictError`: re-read with `getRoutingPrefs()` and retry.
+   * @param {string|null} accountDefaultWorkspaceId
+   * @param {number} version - the value last read (0 for no row)
+   * @returns {Promise<import('./RoutingAPI.js').RoutingPrefs>}
+   */
+  async setRoutingPrefs(accountDefaultWorkspaceId, version) {
+    return this.routing.setPrefs(accountDefaultWorkspaceId, version);
+  }
+
+  /**
+   * Explain where a write would land, and why. Writes nothing.
+   * @param {{clientKey?: string|null, contextKey?: string|null, fileWorkspaceId?: string|null}} [options]
+   * @returns {Promise<import('./RoutingAPI.js').RoutingExplain>}
+   */
+  async explainRouting(options = {}) {
+    return this.routing.explain(options);
   }
 
   /**
