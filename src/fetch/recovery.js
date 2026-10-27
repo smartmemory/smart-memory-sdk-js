@@ -1,3 +1,18 @@
+/** Wait for shared recovery work, but let an aborted caller stop waiting without cancelling it. */
+function untilAborted(work, signal) {
+  const promise = Promise.resolve(work);
+  if (!signal) return promise;
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(new DOMException('Request aborted', 'AbortError'));
+    if (signal.aborted) onAbort();
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(
+      value => { signal.removeEventListener('abort', onAbort); resolve(value); },
+      error => { signal.removeEventListener('abort', onAbort); reject(error); }
+    );
+  });
+}
+
 /** Shared retry policy. Only a definitive HTTP 401 is replayed, never a network error. */
 export async function fetchWithRecovery(auth, send, { source, signal, retry = true } = {}) {
   const workspace = () => new Headers(auth.getAuthHeaders()).get('X-Workspace-Id');
@@ -14,14 +29,14 @@ export async function fetchWithRecovery(auth, send, { source, signal, retry = tr
       checkScope();
       if (signal?.aborted) throw new DOMException('Request aborted', 'AbortError');
       // Another concurrent request may already have renewed this credential.
-      if (new Headers(auth.getAuthHeaders()).get('Authorization') === initialToken) await auth.refreshToken();
+      if (new Headers(auth.getAuthHeaders()).get('Authorization') === initialToken) await untilAborted(auth.refreshToken(), signal);
       checkScope();
       if (signal?.aborted) throw new DOMException('Request aborted', 'AbortError');
       response = await send(true);
     }
     if (response.status === 401) {
       console.warn('[session] Authentication required after recovery');
-      await (auth.clearIfSessionLost ? auth.clearIfSessionLost() : auth.clearLocalAuth?.());
+      await untilAborted(auth.clearIfSessionLost ? auth.clearIfSessionLost() : auth.clearLocalAuth?.(), signal);
     } else if (response.status === 429 || response.status >= 500) {
       console.warn(`[session] Service unavailable: HTTP ${response.status}`);
       auth.connection?.report(source, `HTTP ${response.status}`);

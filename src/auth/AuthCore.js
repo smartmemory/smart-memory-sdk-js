@@ -3,9 +3,17 @@ import { TokenManager } from './TokenManager.js';
 import { RefreshManager } from './RefreshManager.js';
 import { SSOManager } from './SSOManager.js';
 
+// `/auth/me` 404 details that mean the identity itself is gone (smart-memory-service
+// routes/auth.py get_me: user, tenant or org default team missing). Any other 404
+// (a missing route behind a proxy) is not treated as a sign-out.
+const IDENTITY_GONE_404 = new Set(['User not found', 'Tenant not found', 'Default team not found']);
+const SESSION_CHECK_TIMEOUT_MS = 10000;
+
 export class AuthCore {
   constructor(config) {
     this.sessionRevision = 0;
+    // Bumped on every successful refresh so a session check started before it is discarded.
+    this.tokenEpoch = 0;
     this.config = config;
     this.connection = new ConnectionStatus();
     this.mode = config.mode;
@@ -42,6 +50,7 @@ export class AuthCore {
         connection: this.connection,
         getSessionKey: () => JSON.stringify([this.sessionRevision, this.currentToken, this.tokenManager.getWorkspaceId()]),
         onTokenRefreshed: (token) => {
+          this.tokenEpoch++;
           this.currentToken = token;
           this.notifyListeners();
           config.onTokenRefresh?.(token);
@@ -186,32 +195,86 @@ export class AuthCore {
   }
 
   /**
-   * Clear local identity only when the server confirms the session is gone:
-   * the refresh was refused AND `/auth/me` answers 401/403. A valid cookie
-   * session keeps its identity (a stale bearer is dropped), and a transient
-   * `/auth/me` failure (network, 429, 5xx) keeps it too.
+   * Clear local identity only when the server does not confirm it: the refresh
+   * was refused AND `/auth/me` answers 401/403, a documented identity-gone 404,
+   * or a 2xx for a different user or tenant (org). Only the same user in the
+   * same tenant keeps its identity (a stale bearer is dropped). A transient
+   * `/auth/me` failure (network, timeout, 429, 5xx) keeps it too. One check runs
+   * per session snapshot, bounded by `config.sessionCheckTimeoutMs` (10 s).
    */
   clearIfSessionLost() {
     if (this.mode === 'apiKey') { this.clearLocalAuth(); return Promise.resolve(); }
-    this._sessionProbe ??= this._probeSession().finally(() => { this._sessionProbe = null; });
-    return this._sessionProbe;
+    const key = this._sessionSnapshot();
+    let entry = this._sessionProbe;
+    if (entry?.key !== key) {
+      entry = { key };
+      entry.promise = this._probeSession(key).finally(() => { if (this._sessionProbe === entry) this._sessionProbe = null; });
+      this._sessionProbe = entry;
+    }
+    return entry.promise;
   }
 
-  async _probeSession() {
-    const revision = this.sessionRevision;
-    let response;
-    try {
-      response = await (this.config.fetchFn || globalThis.fetch.bind(globalThis))(
+  /** Everything a session check result depends on; any change supersedes it. */
+  _sessionSnapshot() {
+    return JSON.stringify([this.sessionRevision, this.tokenEpoch, this.currentToken, this.currentUser?.id ?? null,
+      this.tokenManager.getTenantId(), this.tokenManager.getWorkspaceId()]);
+  }
+
+  /**
+   * Same principal and same tenant (org) as the cached identity. The workspace
+   * is the user's own pick and is deliberately not compared with the server's
+   * default workspace. No cached user means nothing to bind: not the same.
+   */
+  _isSameIdentity(me) {
+    const user = this.currentUser;
+    if (user?.id == null || me?.id == null || String(me.id) !== String(user.id)) return false;
+    const tenants = [user.tenant_id, this.tokenManager.getTenantId()].filter(t => t != null && t !== '');
+    return tenants.every(tenant => me.tenant_id != null && String(me.tenant_id) === String(tenant));
+  }
+
+  async _probeSession(key) {
+    const controller = new AbortController();
+    const timeoutMs = this.config.sessionCheckTimeoutMs ?? SESSION_CHECK_TIMEOUT_MS;
+    const check = (async () => {
+      const response = await (this.config.fetchFn || globalThis.fetch.bind(globalThis))(
         `${this.apiBaseUrl}/auth/me`,
-        this.getRequestOptions({ method: 'GET', headers: this.useCookieAuth ? {} : this.getAuthHeaders() })
+        this.getRequestOptions({ method: 'GET', headers: this.useCookieAuth ? {} : this.getAuthHeaders(), signal: controller.signal })
       );
+      const body = response?.ok || response?.status === 404 ? await response.json().catch(() => null) : null;
+      return { response, body };
+    })();
+    check.catch(() => {});
+    let timer;
+    let result;
+    try {
+      result = await Promise.race([check, new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new DOMException('Session check timed out', 'TimeoutError'));
+        }, timeoutMs);
+      })]);
     } catch (error) {
       console.warn('[auth] Session check failed; keeping local identity', error);
       return;
+    } finally {
+      clearTimeout(timer);
     }
-    if (this.sessionRevision !== revision) return;
-    if (response?.status === 401 || response?.status === 403) { this.clearLocalAuth(); return; }
+    // Superseded by a refresh, bootstrap, logout or tenant/workspace change meanwhile.
+    if (this._sessionSnapshot() !== key) return;
+    const { response, body } = result;
+    const status = response?.status;
+    if (status === 401 || status === 403 || (status === 404 && IDENTITY_GONE_404.has(body?.detail))) {
+      this.clearLocalAuth();
+      return;
+    }
     if (!response?.ok) return;
+    if (!this._isSameIdentity(body)) {
+      // Another principal or org now owns the session: never carry the old
+      // user, roles, tenant, workspace or refresh token over to it.
+      console.warn('[auth] Session belongs to a different user or tenant; signing out');
+      this.clearLocalAuth();
+      return;
+    }
     if (this.useCookieAuth && this.currentToken) {
       // The cookie session is valid: stop sending the rejected bearer.
       this.tokenManager.setAccessToken(null);
