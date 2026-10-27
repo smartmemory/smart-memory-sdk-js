@@ -58,16 +58,17 @@ describe.each(Object.entries(paths))('%s recovery', (_name, send) => {
     expect(console.warn).toHaveBeenCalled();
   });
   it.each([401, 403])('clears auth on refresh %s', async status => {
-    transport.mockResolvedValueOnce(response(401)).mockResolvedValueOnce(response(status));
+    transport.mockResolvedValueOnce(response(401)).mockResolvedValueOnce(response(status)).mockResolvedValueOnce(response(401));
     await expect(send()).rejects.toThrow();
     expect(auth.currentToken).toBeNull();
     expect(auth.connection.snapshot.status).toBe('signed_out');
   });
-  it('clears auth on second 401 without a third request', async () => {
+  it('clears auth on second 401 without a third request to the API', async () => {
     transport.mockResolvedValueOnce(response(401)).mockResolvedValueOnce(response(200, { access_token: 'new' }))
-      .mockResolvedValueOnce(response(401));
+      .mockResolvedValueOnce(response(401)).mockResolvedValueOnce(response(401));
     await send().catch(() => {});
-    expect(transport).toHaveBeenCalledTimes(3);
+    expect(transport).toHaveBeenCalledTimes(4);
+    expect(transport.mock.calls[3][0]).toBe('https://service.test/auth/me');
     expect(auth.currentToken).toBeNull();
   });
   it('does not refresh or sign out on ordinary permission denial', async () => {

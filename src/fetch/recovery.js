@@ -21,7 +21,7 @@ export async function fetchWithRecovery(auth, send, { source, signal, retry = tr
     }
     if (response.status === 401) {
       console.warn('[session] Authentication required after recovery');
-      auth.clearLocalAuth?.();
+      await (auth.clearIfSessionLost ? auth.clearIfSessionLost() : auth.clearLocalAuth?.());
     } else if (response.status === 429 || response.status >= 500) {
       console.warn(`[session] Service unavailable: HTTP ${response.status}`);
       auth.connection?.report(source, `HTTP ${response.status}`);
