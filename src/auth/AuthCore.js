@@ -170,9 +170,10 @@ export class AuthCore {
     return this.ssoManager.getLoginUrl(currentUrl);
   }
 
-  clearLocalAuth() {
+  /** `reason: 'user'` marks an intentional sign-out (logout, account switch); default 'expired'. */
+  clearLocalAuth(options = {}) {
     this.sessionRevision++;
-    this.connection.signedOut();
+    this.connection.signedOut({ reason: options.reason });
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
       this.apiKey = null;
@@ -189,7 +190,7 @@ export class AuthCore {
   async logout() {
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
-      this.clearLocalAuth();
+      this.clearLocalAuth({ reason: 'user' });
       return;
     }
 
@@ -205,7 +206,7 @@ export class AuthCore {
       }
     }
 
-    this.clearLocalAuth();
+    this.clearLocalAuth({ reason: 'user' });
   }
 
   async refreshToken() {
