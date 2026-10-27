@@ -14,7 +14,7 @@ export interface ProgressAuth {
   getAuthHeaders(): Record<string, string>;
   getRequestOptions(options?: RequestInit): RequestInit;
   refreshToken(): Promise<unknown>;
-  clearLocalAuth(): void;
+  clearLocalAuth(options?: { reason?: "user" | "expired" }): void;
   connection?: ProgressConnection;
 }
 export interface ProgressConnection {
