@@ -3,10 +3,13 @@ export class ConnectionStatus {
   #listeners = new Set();
   #issues = new Map();
   #signedOut = false;
+  #signOutReason = null;
   get snapshot() {
     return Object.freeze({
       status: this.#signedOut ? 'signed_out' : this.#issues.size ? 'reconnecting' : 'connected',
       reason: this.#signedOut ? 'Authentication required' : [...this.#issues.values()].at(-1) || null,
+      // Present only while signed_out. Why we are signed out: 'user' (logout, account switch) or 'expired' (401, refresh failure).
+      ...(this.#signedOut ? { signOutReason: this.#signOutReason } : {}),
     });
   }
   subscribe(listener) {
@@ -19,10 +22,16 @@ export class ConnectionStatus {
     else this.#issues.delete(source);
     this.#emit();
   }
-  signedOut() { this.#signedOut = true; this.#emit(); }
+  // Unknown callers default to 'expired' so a real expiry is never silenced.
+  signedOut({ reason } = {}) {
+    this.#signedOut = true;
+    this.#signOutReason = reason === 'user' ? 'user' : 'expired';
+    this.#emit();
+  }
   authenticated() {
     if (this.#signedOut) this.#issues.clear();
     this.#signedOut = false;
+    this.#signOutReason = null;
     this.#emit();
   }
   #emit() {

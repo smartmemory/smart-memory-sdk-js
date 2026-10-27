@@ -178,9 +178,10 @@ export class AuthCore {
     return this.ssoManager.getLoginUrl(currentUrl);
   }
 
-  clearLocalAuth() {
+  /** `reason: 'user'` marks an intentional sign-out (logout, account switch); default 'expired'. */
+  clearLocalAuth(options = {}) {
     this.sessionRevision++;
-    this.connection.signedOut();
+    this.connection.signedOut({ reason: options.reason });
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
       this.apiKey = null;
@@ -272,7 +273,7 @@ export class AuthCore {
       // Another principal or org now owns the session: never carry the old
       // user, roles, tenant, workspace or refresh token over to it.
       console.warn('[auth] Session belongs to a different user or tenant; signing out');
-      this.clearLocalAuth();
+      this.clearLocalAuth({ reason: 'user' });
       return;
     }
     if (this.useCookieAuth && this.currentToken) {
@@ -286,7 +287,7 @@ export class AuthCore {
   async logout() {
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
-      this.clearLocalAuth();
+      this.clearLocalAuth({ reason: 'user' });
       return;
     }
 
@@ -302,7 +303,7 @@ export class AuthCore {
       }
     }
 
-    this.clearLocalAuth();
+    this.clearLocalAuth({ reason: 'user' });
   }
 
   async refreshToken() {
