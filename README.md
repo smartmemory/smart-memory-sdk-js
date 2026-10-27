@@ -147,6 +147,7 @@ This subpath also exports `captureProductEvent`, `captureException`, and `resetA
 | `@smartmemory/sdk-js` | SmartMemoryClient, AuthCore, TokenManager, all domain APIs, APIError |
 | `@smartmemory/sdk-js/core` | Everything above + BaseAPI, RefreshManager, SSOManager (internal access) |
 | `@smartmemory/sdk-js/react` | SmartMemoryProvider, useAuth, useAuthState, useAuthActions, useSmartMemory, AuthWrapper |
+| `@smartmemory/sdk-js/react/recovery` | Blank-page recovery for every UI: `<RecoveryBoundary app="...">` (stale-chunk auto-reload once, new-version prompt fallback, crash card), `installRecovery`, `useSessionDraft` |
 | `@smartmemory/sdk-js/react/analytics` | Browser-only strict PostHog config, identity, product-event, exception, and reset helpers (optional `posthog-js` peer) |
 | `@smartmemory/sdk-js/fetch` | createAuthFetch, installInterceptor |
 
