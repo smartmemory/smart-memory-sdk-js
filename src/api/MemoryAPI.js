@@ -15,7 +15,7 @@
  * @property {number|null} rerank_max_doc_chars Effective prefix limit, not dead config.
  */
 
-import { decodeReceipt } from './receipt.js';
+import { decodeReceipt, legacyNoStatus } from './receipt.js';
 import { awaitReceipt } from './awaitReceipt.js';
 import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
 
@@ -69,6 +69,7 @@ export class MemoryAPI {
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async getStatus(target, { waitMs = 0, signal } = {}) {
+    if (target?.legacy) throw legacyNoStatus();
     let path = typeof target === 'string' ? `/memory/status/${encodeURIComponent(target)}` : target?.status_url;
     if (typeof path !== 'string' || !path) throw new TypeError('getStatus needs a run_id or a receipt with a status_url');
     if (waitMs > 0) path += `${path.includes('?') ? '&' : '?'}wait_ms=${Math.min(10000, Math.floor(waitMs))}`;
