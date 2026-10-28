@@ -73,16 +73,26 @@ function refuse(message, code, raw, extra = {}) {
 
 let legacyWarned = false;
 
+// `status` values of the legacy add/ingest 2xx bodies that mean the item is stored (ingest.py `dedupe_status`,
+// crud.py add). `held`, `error`, `failed`, `success`, `queued` and anything else are never a stored save.
+// TODO(SVC-INGEST-WAIT-STATUS-1): delete this bridge when the hosted receipt producer lands.
+const LEGACY_STORED_STATUS = new Set(['created', 'unchanged', 'replaced']);
+
 /**
  * The legacy add/ingest save body, recognised by its exact keys: a non-empty string `id` (add) or
- * `item_id` (ingest, dedupe hit), a string `status`, and none of the receipt's own keys.
+ * `item_id` (ingest), none of the receipt's own `schema_version`/`subject`/`status_url`, and a `run_id` that
+ * is absent, null or a string (a legacy ingest `run_id` is never followed). `status` must be one of
+ * `created|unchanged|replaced`; it may be absent only for the ingest content-hash duplicate
+ * (`ingest.py:268-280`: `item_id` with `run_id: null` and no `status`).
  * TODO(SVC-INGEST-WAIT-STATUS-1): delete this bridge when the hosted receipt producer lands.
  */
 function legacyItemId(raw) {
-  if ('schema_version' in raw || 'subject' in raw || 'run_id' in raw || 'status_url' in raw) return null;
-  if (typeof raw.status !== 'string') return null;
+  if ('schema_version' in raw || 'subject' in raw || 'status_url' in raw) return null;
+  if (raw.run_id !== undefined && raw.run_id !== null && typeof raw.run_id !== 'string') return null;
   const id = typeof raw.id === 'string' && raw.id ? raw.id : raw.item_id;
-  return typeof id === 'string' && id ? id : null;
+  if (typeof id !== 'string' || !id) return null;
+  if (raw.status === undefined) return raw.run_id === null && id === raw.item_id ? id : null;
+  return LEGACY_STORED_STATUS.has(raw.status) ? id : null;
 }
 
 /** A `legacy: true` receipt for a pre-receipt 2xx save: stored, no handle, so nothing to await. */
@@ -96,16 +106,16 @@ function legacyReceipt(raw, itemId) {
     run_id: null,
     status_url: null,
     processing_stage: 'stored',
-    execution_state: 'completed',
+    execution_state: 'running', // stored, enrichment unknown: never 'completed' beside terminal:false
     outcome: null,
     terminal: false,
     result_availability: 'none',
     legacy: true,
-    legacy_status: raw.status,
+    legacy_status: raw.status ?? null,
   });
 }
 
-/** Typed refusal for an await/poll on a `legacy: true` receipt: there is no handle to follow. */
+/** Typed refusal for an await/poll on a `legacy: true` receipt: there is no handle to follow. TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge. */
 export function legacyNoStatus() {
   return new UnsupportedReceiptError('legacy save receipt has no run_id/status_url to await or poll', 'legacy_receipt_no_status', {});
 }
@@ -122,11 +132,13 @@ export function admissionErrorOf(body) {
  * known fields decoded, and anything unknown is a typed refusal that carries the handle.
  *
  * @param {object} raw JSON body of a 2xx save, edit, stage or status response.
+ * @param {{legacyBridge?: boolean}} [options] `legacyBridge` (add and ingest saves only, TODO(SVC-INGEST-WAIT-STATUS-1)) also
+ *   reads the pre-receipt add/ingest body as a stored `legacy: true` receipt. Off for edits, stages and status reads.
  * @returns {SaveReceipt}
  * @throws {AdmissionConflictError} the body is a pre-admission conflict.
  * @throws {UnsupportedReceiptError} unknown major, subject or state, or not a receipt at all.
  */
-export function decodeReceipt(raw) {
+export function decodeReceipt(raw, { legacyBridge = false } = {}) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw refuse('response is not a receipt object', 'unsupported_version', null);
   }
@@ -139,7 +151,8 @@ export function decodeReceipt(raw) {
       currentRevision: conflict.body.current_revision ?? null,
     });
   }
-  const legacyId = legacyItemId(raw);
+  // TODO(SVC-INGEST-WAIT-STATUS-1): remove the bridge branch
+  const legacyId = legacyBridge ? legacyItemId(raw) : null;
   if (legacyId) return legacyReceipt(raw, legacyId);
   const match = typeof raw.schema_version === 'string' ? /^(\d+)\.(\d+)$/.exec(raw.schema_version) : null;
   if (!match || Number(match[1]) !== SUPPORTED_MAJOR) {

@@ -5,7 +5,7 @@
  * receipt flagged `client_timed_out: true`: it is client-only, never a server transition.
  */
 import { APIError } from '../errors/APIError.js';
-import { decodeReceipt, legacyNoStatus, timedOut } from './receipt.js';
+import { decodeReceipt, legacyNoStatus, timedOut } from './receipt.js'; // legacyNoStatus: TODO(SVC-INGEST-WAIT-STATUS-1)
 import { isRetryable } from './submit.js';
 
 export const DEFAULT_TIMEOUT_MS = 30000;
@@ -63,7 +63,7 @@ function statusPath(receipt, waitMs) {
  * @returns {Promise<import('./receipt.js').SaveReceipt>} terminal, or pending with `client_timed_out: true`.
  */
 export async function awaitReceipt(api, receipt, { timeoutMs = DEFAULT_TIMEOUT_MS, holdMs = MAX_HOLD_MS, signal, sleep = defaultSleep, now = () => globalThis.performance.now(), random = Math.random } = {}) {
-  if (receipt?.legacy) throw legacyNoStatus();
+  if (receipt?.legacy) throw legacyNoStatus(); // TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge
   if (!receipt || typeof receipt.status_url !== 'string' || !receipt.status_url) {
     throw new TypeError('awaitReceipt needs a receipt with a status_url');
   }

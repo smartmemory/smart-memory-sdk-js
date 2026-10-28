@@ -15,7 +15,7 @@
  * @property {number|null} rerank_max_doc_chars Effective prefix limit, not dead config.
  */
 
-import { decodeReceipt, legacyNoStatus } from './receipt.js';
+import { decodeReceipt, legacyNoStatus } from './receipt.js'; // legacyNoStatus: TODO(SVC-INGEST-WAIT-STATUS-1)
 import { awaitReceipt } from './awaitReceipt.js';
 import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
 
@@ -47,9 +47,11 @@ export class MemoryAPI {
    * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
    * The whole request is snapshotted before the first send, so every attempt carries the same bytes
    * even if the caller changes a nested object while one is in flight.
+   * `legacyBridge` (add and ingest only, never an edit) also reads the pre-receipt body
+   * (TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge).
    * @private
    */
-  async _save(path, body, { idempotencyKey, method = 'post', expectedRevision } = {}) {
+  async _save(path, body, { idempotencyKey, method = 'post', expectedRevision, legacyBridge = false } = {}) {
     const key = resolveIdempotencyKey(idempotencyKey);
     const request = snapshotRequest({ ...body, idempotency_key: key });
     const send = () => this.api[method](path, request);
@@ -59,7 +61,7 @@ export class MemoryAPI {
     } catch (error) {
       throw mapAdmissionError(error, { expectedRevision });
     }
-    return decodeReceipt(raw);
+    return decodeReceipt(raw, { legacyBridge });
   }
 
   /**
@@ -69,7 +71,7 @@ export class MemoryAPI {
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async getStatus(target, { waitMs = 0, signal } = {}) {
-    if (target?.legacy) throw legacyNoStatus();
+    if (target?.legacy) throw legacyNoStatus(); // TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge
     let path = typeof target === 'string' ? `/memory/status/${encodeURIComponent(target)}` : target?.status_url;
     if (typeof path !== 'string' || !path) throw new TypeError('getStatus needs a run_id or a receipt with a status_url');
     if (waitMs > 0) path += `${path.includes('?') ? '&' : '?'}wait_ms=${Math.min(10000, Math.floor(waitMs))}`;
@@ -138,7 +140,7 @@ export class MemoryAPI {
     if (embed !== null && embed !== undefined) {
       body.embed = embed;
     }
-    return this._save('/memory/add', body, { idempotencyKey });
+    return this._save('/memory/add', body, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
 
   async get(id) {
@@ -483,7 +485,7 @@ export class MemoryAPI {
       profile_name: profileName,
       extractor_name: extractorName,
       context
-    }, { idempotencyKey });
+    }, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
 
   async getLineage(id) {
