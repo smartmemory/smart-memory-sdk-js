@@ -105,7 +105,7 @@ describe('probe 2: reader compatibility and typed refusals', () => {
     expect(error.status_url).toBe('/memory/status/run_1');
   });
 
-  it.each([[null], ['mem_123'], [[RECEIPT]], [{ id: 'legacy', status: 'ok' }]])('refuses a non-receipt body %j with no handle', body => {
+  it.each([[null], ['mem_123'], [[RECEIPT]], [{ id: 'legacy' }]])('refuses a non-receipt body %j with no handle', body => {
     let error;
     try { decodeReceipt(body); } catch (e) { error = e; }
     expect(error).toBeInstanceOf(UnsupportedReceiptError);

@@ -71,6 +71,45 @@ function refuse(message, code, raw, extra = {}) {
   return new UnsupportedReceiptError(message, code, { ...handle, ...extra, raw });
 }
 
+let legacyWarned = false;
+
+/**
+ * The legacy add/ingest save body, recognised by its exact keys: a non-empty string `id` (add) or
+ * `item_id` (ingest, dedupe hit), a string `status`, and none of the receipt's own keys.
+ * TODO(SVC-INGEST-WAIT-STATUS-1): delete this bridge when the hosted receipt producer lands.
+ */
+function legacyItemId(raw) {
+  if ('schema_version' in raw || 'subject' in raw || 'run_id' in raw || 'status_url' in raw) return null;
+  if (typeof raw.status !== 'string') return null;
+  const id = typeof raw.id === 'string' && raw.id ? raw.id : raw.item_id;
+  return typeof id === 'string' && id ? id : null;
+}
+
+/** A `legacy: true` receipt for a pre-receipt 2xx save: stored, no handle, so nothing to await. */
+function legacyReceipt(raw, itemId) {
+  if (!legacyWarned) {
+    legacyWarned = true;
+    console.warn('[receipt] legacy save shape read (no schema_version); treated as stored, with no run_id/status_url to await');
+  }
+  return new SaveReceipt({
+    subject: { kind: 'item_save', item_id: itemId },
+    run_id: null,
+    status_url: null,
+    processing_stage: 'stored',
+    execution_state: 'completed',
+    outcome: null,
+    terminal: false,
+    result_availability: 'none',
+    legacy: true,
+    legacy_status: raw.status,
+  });
+}
+
+/** Typed refusal for an await/poll on a `legacy: true` receipt: there is no handle to follow. */
+export function legacyNoStatus() {
+  return new UnsupportedReceiptError('legacy save receipt has no run_id/status_url to await or poll', 'legacy_receipt_no_status', {});
+}
+
 /** The scoped `admission_error` of a conflict body, whether top-level or FastAPI-wrapped in `detail`. */
 export function admissionErrorOf(body) {
   if (!body || typeof body !== 'object') return null;
@@ -100,6 +139,8 @@ export function decodeReceipt(raw) {
       currentRevision: conflict.body.current_revision ?? null,
     });
   }
+  const legacyId = legacyItemId(raw);
+  if (legacyId) return legacyReceipt(raw, legacyId);
   const match = typeof raw.schema_version === 'string' ? /^(\d+)\.(\d+)$/.exec(raw.schema_version) : null;
   if (!match || Number(match[1]) !== SUPPORTED_MAJOR) {
     throw refuse(`unsupported receipt schema_version ${JSON.stringify(raw.schema_version ?? null)}`, 'unsupported_version', raw, { field: 'schema_version', value: raw.schema_version ?? null });
