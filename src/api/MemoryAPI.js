@@ -169,8 +169,12 @@ export class MemoryAPI {
    * @param {'asc'|'desc'|null} [options.order=null] - WEB-LIST-SERVER-PARAMS-1. Sort direction by
    *   creation time. Omitted when null, so the service default (ascending) applies. Any other
    *   value is sent untouched and the service answers 422.
-   * @returns {Promise<{items: object[], total: number, limit: number, offset: number, policy: {include_grounding: boolean, source: string}}>}
-   *   `total` counts the filtered set, so it drives pagination directly.
+   * @returns {Promise<{items: object[], total: number, limit: number, offset: number, policy: {include_grounding: boolean, source: string}, skipped_rows?: number}>}
+   *   `total` counts the filtered set, so it drives pagination directly. `skipped_rows`
+   *   (SVC-LIST-SKIPPED-ROWS-EXPOSE-1) counts rows in scope the server could not read, left out
+   *   of `items` and `total`; a destructive caller must not treat the listing as complete while
+   *   it is above 0. The envelope is returned as sent: an older server omits the key, so
+   *   `undefined` means "unknown", never 0.
    */
   async list({
     limit = 50,

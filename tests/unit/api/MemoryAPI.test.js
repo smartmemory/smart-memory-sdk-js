@@ -1016,3 +1016,22 @@ describe('list exclude_node_category and q (SVC-LIST-EXCLUDE-ENTITY-1)', () => {
     expect(await new MemoryAPI(api).list({ excludeNodeCategory: ['entity'] })).toEqual(page);
   });
 });
+
+
+// SVC-LIST-SKIPPED-ROWS-EXPOSE-1: the envelope is returned as sent, so `skipped_rows` surfaces and an old server's
+// envelope (key missing) is not given a fabricated 0.
+describe('list skipped_rows', () => {
+  const rows = [
+    ['two unreadable rows', { skipped_rows: 2 }, 2],
+    ['clean page', { skipped_rows: 0 }, 0],
+    ['old server, key missing', {}, undefined],
+  ];
+  it.each(rows)('%s', async (_label, extra, expected) => {
+    const envelope = { items: [], total: 0, limit: 50, offset: 0, ...extra };
+    const api = { get: vi.fn().mockResolvedValue(envelope) };
+    const result = await new MemoryAPI(api).list();
+    expect(result).toEqual(envelope);
+    expect(result.skipped_rows).toBe(expected);
+    expect('skipped_rows' in result).toBe(expected !== undefined);
+  });
+});
