@@ -12,3 +12,4 @@ package-lock.json
 
 # session flush scratch (per-session, not shared state)
 session-context*
+node_modules
