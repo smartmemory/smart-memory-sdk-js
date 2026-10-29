@@ -21,7 +21,31 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
+// Sequences on a bare ConnectionStatus: [name, calls, want]. 'user' is sticky while signed out; authenticated() resets.
+const SEQ = [
+  ['logout then late bare 401 stays user', [['signedOut', { reason: 'user' }], ['signedOut']], 'user'],
+  ['logout then late 401 with junk reason stays user', [['signedOut', { reason: 'user' }], ['signedOut', { reason: 'bogus' }]], 'user'],
+  ['bare 401 while signed in is expired', [['signedOut']], 'expired'],
+  ['expired then org switch upgrades to user', [['signedOut'], ['signedOut', { reason: 'user' }]], 'user'],
+  ['authenticated() then 401 is expired', [['signedOut', { reason: 'user' }], ['authenticated'], ['signedOut']], 'expired'],
+  ['authenticated() then logout is user', [['signedOut'], ['authenticated'], ['signedOut', { reason: 'user' }]], 'user'],
+];
+
 describe('ConnectionStatus signOutReason', () => {
+  it.each(SEQ)('%s', (_name, calls, want) => {
+    const c = new ConnectionStatus();
+    for (const [fn, arg] of calls) c[fn](arg);
+    expect(c.snapshot.signOutReason).toBe(want);
+  });
+
+  it('logout() then an in-flight 401 recovery keeps signOutReason user', async () => {
+    transport.mockResolvedValue(new Response('{}', { status: 401 }));
+    const auth = new AuthCore({ mode: 'sso', storage: 'memory', apiBaseUrl: 'https://service.test' });
+    await auth.logout();
+    auth.clearLocalAuth(); // what recovery.js / progress.ts / onRefreshFailed do on a late 401
+    expect(auth.connection.snapshot.signOutReason).toBe('user');
+  });
+
   it.each(ROWS)('%s', async (_name, act, want, cfg = {}, meStatus = 200) => {
     transport.mockResolvedValue(new Response('{}', { status: meStatus }));
     const auth = new AuthCore({ mode: 'sso', storage: 'memory', apiBaseUrl: 'https://service.test', ...cfg });

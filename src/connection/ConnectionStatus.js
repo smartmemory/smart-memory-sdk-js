@@ -22,10 +22,13 @@ export class ConnectionStatus {
     else this.#issues.delete(source);
     this.#emit();
   }
-  // Unknown callers default to 'expired' so a real expiry is never silenced.
+  // Unknown callers default to 'expired' so a real expiry is never silenced. 'user' is sticky while
+  // signed out: a late 401 after a deliberate logout must not turn it back into 'expired'.
   signedOut({ reason } = {}) {
+    if (!(this.#signedOut && this.#signOutReason === 'user')) {
+      this.#signOutReason = reason === 'user' ? 'user' : 'expired';
+    }
     this.#signedOut = true;
-    this.#signOutReason = reason === 'user' ? 'user' : 'expired';
     this.#emit();
   }
   authenticated() {
