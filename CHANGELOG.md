@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [1.5.14] - 2026-10-29
+
+Published to npm (owner go 2026-10-29 via s1-chat). Live was 1.5.11; this release carries every entry below up to the 1.4.86 heading.
+
 - **WEB-STALE-TAB-VERSION-CHECK-1:** `@smartmemory/sdk-js/react/recovery` gains `installVersionCheck({ app, dev })`: when a tab comes back (`visibilitychange` to visible, or `focus`, at most once per 60 s) it fetches `/index.html` with `cache: 'no-store'`, compares the entry `<script type="module" src>` with the one the page booted from, and on a difference reloads once through the shared chunk-reload guard (a second change inside the 5-minute window shows the "new version" prompt instead of looping). A fetch failure, non-200 or parse miss does nothing but one `console.warn`. `dev` is passed by the app (`import.meta.env.DEV`), because the SDK never reads the bundler env. Also `<LazyFallback />`, a Suspense fallback that is empty for 1 s, then a quiet spinner, then a "Still loading. Reload" button after 10 s, so a hung lazy import is never a silent blank page. Tests: `tests/react/versionCheck.test.jsx` (one row table, plus LazyFallback timing).
 
 - **SVC-LIST-SKIPPED-ROWS-EXPOSE-1:** `MemoryAPI.list()` JSDoc `@returns` gains `skipped_rows?: number` (rows in scope the server could not read, left out of `items` and `total`; a destructive caller must not treat the listing as complete while it is above 0). The response is already returned as sent: `undefined` means an older server, never 0. Test table in `tests/unit/api/MemoryAPI.test.js` (2, 0, missing). No version bump.
