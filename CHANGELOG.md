@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **WEB-SIGNOUT-TOAST-FU-1:** `connection.signedOut()` keeps `signOutReason: 'user'` sticky while signed out, so a 401 that lands after a deliberate `logout()` (an in-flight request, an SSE stream, a refresh failure) no longer flips it back to `'expired'` and brings the "Session ended" toast back. Unknown or bare callers while NOT already signed out by the user still default to `'expired'`, an `'expired'` sign-out can still be upgraded to `'user'` (account switch), and `authenticated()` resets as before. Backward compatible. Tests: `tests/unit/auth/signOutReason.test.js` (new sequence table plus one in-flight row, red at base).
+
 ## [1.5.14] - 2026-10-29
 
 Published to npm (owner go 2026-10-29 via s1-chat). Live was 1.5.11; this release carries every entry below up to the 1.4.86 heading.
