@@ -31,9 +31,11 @@ export class SaveReceipt {
   /** @param {object} raw A receipt body that already passed `decodeReceipt`. */
   constructor(raw) {
     for (const [key, value] of Object.entries(raw)) {
-      // item_id etc. are accessors over `subject`; a body-level copy would shadow them.
-      if (!ID_ACCESSORS.includes(key)) this[key] = value;
+      // item_id etc. and `status` are accessors; a body-level copy would shadow or throw (`status` is getter-only).
+      if (!ID_ACCESSORS.includes(key) && key !== 'status') this[key] = value;
     }
+    // A hosted additive body keeps the old top-level `status`; keep its text as `legacy_status`.
+    if (raw.status !== undefined && raw.legacy_status === undefined) this.legacy_status = raw.status;
   }
 
   get item_id() { return this.subject?.item_id; }

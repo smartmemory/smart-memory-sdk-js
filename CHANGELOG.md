@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **SDKJS-2.0-RECEIPT-STATUS-SKIP-1 (2.0 branch):** `SaveReceipt` no longer throws a TypeError on an additive hosted body that keeps the old top-level `status` (a getter-only field): the constructor skips `status` and keeps its text as `legacy_status` when the body has none. `.status` stays the receipt's own status. Test row in `SaveReceipt.test.js`.
+
 - **WEB-SIGNOUT-TOAST-FU-1:** `connection.signedOut()` keeps `signOutReason: 'user'` sticky while signed out, so a 401 that lands after a deliberate `logout()` (an in-flight request, an SSE stream, a refresh failure) no longer flips it back to `'expired'` and brings the "Session ended" toast back. Unknown or bare callers while NOT already signed out by the user still default to `'expired'`, an `'expired'` sign-out can still be upgraded to `'user'` (account switch), and `authenticated()` resets as before. Backward compatible. Tests: `tests/unit/auth/signOutReason.test.js` (new sequence table plus one in-flight row, red at base).
 
 - **SVC-LIST-SKIPPED-ROWS-EXPOSE-1:** `MemoryAPI.list()` JSDoc `@returns` gains `skipped_rows?: number` (rows in scope the server could not read, left out of `items` and `total`; a destructive caller must not treat the listing as complete while it is above 0). The response is already returned as sent: `undefined` means an older server, never 0. Test table in `tests/unit/api/MemoryAPI.test.js` (2, 0, missing). No version bump.

@@ -63,6 +63,13 @@ describe('probe 1: save methods resolve to a typed receipt', () => {
     }
     expect(decodeReceipt({ ...RECEIPT, item_id: 'shadow' }).item_id).toBe('mem_123');
   });
+
+  it('additive hosted body keeping the old id and status decodes; status stays the receipt status', () => {
+    const receipt = decodeReceipt({ ...TERMINAL, id: 'mem_123', status: 'queued' });
+    expect(receipt.status).toBe('completed');
+    expect(receipt.legacy_status).toBe('queued');
+    expect(receipt.item_id).toBe('mem_123');
+  });
 });
 
 describe('probe 2: reader compatibility and typed refusals', () => {
