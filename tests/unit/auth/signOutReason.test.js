@@ -10,7 +10,8 @@ const ROWS = [
   ['bare clearLocalAuth() defaults to expired', (a) => a.clearLocalAuth(), 'expired'],
   ['clearLocalAuth({reason:junk}) defaults to expired', (a) => a.clearLocalAuth({ reason: 'bogus' }), 'expired'],
   ['bare connection.signedOut() defaults to expired', (a) => a.connection.signedOut(), 'expired'],
-  ['refresh failure (onRefreshFailed) is an expiry', (a) => a.refreshManager.onRefreshFailed(), 'expired'],
+  ['refresh failure (onRefreshFailed) with /auth/me refused is an expiry', (a) => a.refreshManager.onRefreshFailed(), 'expired', {}, 401],
+  ['refresh failure with /auth/me answering a different identity signs out as user', (a) => a.refreshManager.onRefreshFailed(), 'user', {}, 200],
 ];
 
 let transport;

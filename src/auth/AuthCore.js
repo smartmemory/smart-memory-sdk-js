@@ -273,7 +273,7 @@ export class AuthCore {
       // Another principal or org now owns the session: never carry the old
       // user, roles, tenant, workspace or refresh token over to it.
       console.warn('[auth] Session belongs to a different user or tenant; signing out');
-      this.clearLocalAuth();
+      this.clearLocalAuth({ reason: 'user' });
       return;
     }
     if (this.useCookieAuth && this.currentToken) {
