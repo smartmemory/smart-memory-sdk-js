@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- SVC-2.0-METADATA-RESERVED-KEY-REFUSE-1 fix round 1 (2026-11-01): docs only. `memory.get` and `memory.list` JSDoc: the server no longer returns `owner_key` or `is_global` inside `metadata` (nor a reserved key with no value), so read-back metadata saves again unchanged, except a personal memory's `scope`. No code change: no SDK code reads either key.
 - SVC-2.0-METADATA-RESERVED-KEY-REFUSE-1 (2026-11-01): new `ReservedMetadataKeyError` (an `APIError`, exported with `RESERVED_METADATA_KEY` from the package root) with `.key`. `BaseAPI._handleError` returns it for a 400 whose `detail.error_type` is `reserved_metadata_key`: a save set `scope`, `workspace_id`, `tenant_id`, `team_id`, `owner_key`, `is_global` or `security_scope` in its metadata or context to a value the server does not stamp. `err instanceof APIError`, `err.status` and `err.detail` keep working. Contract: docs `PLAT-API-CODES-1`. Test: `tests/unit/errors/ReservedMetadataKeyError.test.js`.
 
 - ci, CI-2.0-MANUAL-ONLY-SWEEP-1 (2.0 port of main GH-ACTIONS-MANUAL-1, owner policy 2026-10-29): the Actions workflow triggers on this line are `workflow_dispatch` only (no push or pull_request triggers). Workflow trigger blocks only, no job body change.

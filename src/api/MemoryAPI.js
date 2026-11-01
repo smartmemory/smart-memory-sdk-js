@@ -143,6 +143,14 @@ export class MemoryAPI {
     return this._save('/memory/add', body, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
 
+  /**
+   * Fetch one memory by id.
+   * @param {string} id
+   * @returns {Promise<object>} The item. Its `metadata` never carries `owner_key` or `is_global`
+   *   and leaves out a reserved key with no value (SVC-2.0-METADATA-RESERVED-KEY-REFUSE-1 fix
+   *   round 1), so it can be saved again unchanged. A personal memory's `scope: 'personal'` is the
+   *   exception: `add` throws `ReservedMetadataKeyError` for it, so drop `scope` before saving a copy.
+   */
   async get(id) {
     const response = await this.api.get(`/memory/${encodeURIComponent(id)}`);
     return { ...response, id: response.item_id || response.id };
@@ -241,7 +249,8 @@ export class MemoryAPI {
    *   (SVC-LIST-SKIPPED-ROWS-EXPOSE-1) counts rows in scope the server could not read, left out
    *   of `items` and `total`; a destructive caller must not treat the listing as complete while
    *   it is above 0. The envelope is returned as sent: an older server omits the key, so
-   *   `undefined` means "unknown", never 0.
+   *   `undefined` means "unknown", never 0. Each item's `metadata` never carries `owner_key` or
+   *   `is_global` and can be saved again unchanged (see `get`).
    */
   async list({
     limit = 50,
