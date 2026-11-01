@@ -42,6 +42,7 @@ export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+export { ReservedMetadataKeyError, RESERVED_METADATA_KEY } from './errors/ReservedMetadataKeyError.js';
 export { UnsupportedReceiptError, AdmissionConflictError, StageChainError, STAGE_CHAIN_CODES } from './errors/ReceiptErrors.js';
 
 // 2.0 save receipt, await and retry identity (REL-CALLERS-JSSDK-1)

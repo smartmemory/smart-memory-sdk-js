@@ -1,5 +1,6 @@
 import { fetchWithRecovery } from '../fetch/recovery.js';
 import { APIError } from '../errors/APIError.js';
+import { ReservedMetadataKeyError, isReservedMetadataKeyBody } from '../errors/ReservedMetadataKeyError.js';
 
 function isRawBody(body) {
   return (typeof FormData !== 'undefined' && body instanceof FormData) ||
@@ -183,7 +184,9 @@ export class BaseAPI {
       errorData = { message: `HTTP ${response.status}` };
     }
 
-    const error = new APIError(
+    // SVC-2.0-METADATA-RESERVED-KEY-REFUSE-1: a reserved ownership key in save metadata gets its own class.
+    const ErrorClass = isReservedMetadataKeyBody(response.status, errorData) ? ReservedMetadataKeyError : APIError;
+    const error = new ErrorClass(
       this._extractMessage(errorData, response.status),
       response.status,
       errorData
