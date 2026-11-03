@@ -19,9 +19,13 @@ export class TokenManager {
    * @param {Object} options
    * @param {'localStorage' | 'sessionStorage' | 'memory'} [options.storage='localStorage']
    * @param {Object} [options.keys] - Custom storage key names
+   * @param {boolean} [options.persistCredentials=true] - false keeps the access and
+   *   refresh tokens in memory only (cookie auth: the HttpOnly cookies are the durable
+   *   credential) and removes any copies a previous version left in Web Storage.
    */
-  constructor({ storage = 'localStorage', keys = {} } = {}) {
+  constructor({ storage = 'localStorage', keys = {}, persistCredentials = true } = {}) {
     this.storageType = storage;
+    this.persistCredentials = persistCredentials;
     const workspaceKey = keys.workspace || keys.team || DEFAULT_KEYS.workspace;
     this.keys = { ...DEFAULT_KEYS, ...keys, workspace: workspaceKey };
     // Keep the custom-key alias observable for callers that inspect ``keys``.
@@ -31,15 +35,21 @@ export class TokenManager {
       ...(keys.team && keys.team !== workspaceKey ? [keys.team] : [])
     ];
     this._memory = { access: null, refresh: null, user: null, tenant: null, workspace: null };
+    if (!persistCredentials && storage !== 'memory') this._removeStoredCredentials();
+  }
+
+  /** True when the access and refresh tokens live in `_memory`, never in Web Storage. */
+  get _credentialsInMemory() {
+    return this.storageType === 'memory' || !this.persistCredentials;
   }
 
   getAccessToken() {
-    if (this.storageType === 'memory') return this._memory.access;
+    if (this._credentialsInMemory) return this._memory.access;
     return this._getFromStorage(this.keys.access, LEGACY_KEYS.access);
   }
 
   setAccessToken(token) {
-    if (this.storageType === 'memory') {
+    if (this._credentialsInMemory) {
       this._memory.access = token;
       return;
     }
@@ -47,12 +57,12 @@ export class TokenManager {
   }
 
   getRefreshToken() {
-    if (this.storageType === 'memory') return this._memory.refresh;
+    if (this._credentialsInMemory) return this._memory.refresh;
     return this._getFromStorage(this.keys.refresh, LEGACY_KEYS.refresh);
   }
 
   setRefreshToken(token) {
-    if (this.storageType === 'memory') {
+    if (this._credentialsInMemory) {
       this._memory.refresh = token;
       return;
     }
@@ -115,10 +125,8 @@ export class TokenManager {
   }
 
   clearAll() {
-    if (this.storageType === 'memory') {
-      this._memory = { access: null, refresh: null, user: null, tenant: null, workspace: null };
-      return;
-    }
+    this._memory = { access: null, refresh: null, user: null, tenant: null, workspace: null };
+    if (this.storageType === 'memory') return;
     for (const key of Object.values(this.keys)) {
       try {
         localStorage.removeItem(key);
@@ -174,6 +182,16 @@ export class TokenManager {
       return null;
     } catch {
       return null;
+    }
+  }
+
+  /** @private Remove stored access/refresh tokens under the current and legacy key names. */
+  _removeStoredCredentials() {
+    for (const key of [this.keys.access, this.keys.refresh, ...LEGACY_KEYS.access, ...LEGACY_KEYS.refresh]) {
+      try {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      } catch { /* storage unavailable */ }
     }
   }
 

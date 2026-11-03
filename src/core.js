@@ -4,7 +4,7 @@
 export { SmartMemoryClient } from './api/SmartMemoryClient.js';
 
 // Auth (all internals)
-export { AuthCore } from './auth/AuthCore.js';
+export { AuthCore, LogoutError } from './auth/AuthCore.js';
 export { TokenManager } from './auth/TokenManager.js';
 export { RefreshManager } from './auth/RefreshManager.js';
 export { SSOManager } from './auth/SSOManager.js';

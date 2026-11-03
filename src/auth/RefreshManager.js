@@ -51,7 +51,9 @@ export class RefreshManager {
     const checkSession = () => {
       if (this.getSessionKey?.() !== sessionKey) throw new DOMException('Session changed during refresh', 'AbortError');
     };
-    const refreshToken = this.tokenManager.getRefreshToken();
+    // Cookie auth: the HttpOnly refresh cookie is the credential. A body token would win
+    // over it server-side, so none is ever sent (or stored, below).
+    const refreshToken = this.useCookieAuth ? null : this.tokenManager.getRefreshToken();
     if (!refreshToken && !this.useCookieAuth) {
       console.warn('[auth] No refresh token available; authentication required');
       await this.onRefreshFailed();
@@ -79,7 +81,9 @@ export class RefreshManager {
       checkSession();
       if (typeof data.access_token !== 'string' || !data.access_token) throw new SessionRefreshError('Refresh response has no access token');
       this.tokenManager.setAccessToken(data.access_token);
-      if (data.refresh_token) {
+      // Cookie auth: the server also set the HttpOnly refresh cookie, so the JSON copy is
+      // never stored (a stored one would be sent in the body and mask the cookie).
+      if (data.refresh_token && !this.useCookieAuth) {
         this.tokenManager.setRefreshToken(data.refresh_token);
       }
 
