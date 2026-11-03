@@ -9,6 +9,14 @@ import { SSOManager } from './SSOManager.js';
 const IDENTITY_GONE_404 = new Set(['User not found', 'Tenant not found', 'Default team not found']);
 const SESSION_CHECK_TIMEOUT_MS = 10000;
 
+const PROVIDER_SIGN_OUT_VALUES = new Set(['revoked', 'failed', 'none']);
+
+/** The `X-SM-Provider-Signout` answer of a confirmed logout; anything else is 'unknown'. */
+function providerSignOutOf(response) {
+  const value = response?.headers?.get?.('x-sm-provider-signout');
+  return PROVIDER_SIGN_OUT_VALUES.has(value) ? value : 'unknown';
+}
+
 /** The server did not confirm a logout: its session may still be active. `status` 0 = no response. */
 export class LogoutError extends Error {
   constructor(message, status = 0, options) {
@@ -302,23 +310,34 @@ export class AuthCore {
     }
   }
 
+  /**
+   * Ends the session. Resolves to `{ providerSignOut }`, the server's `X-SM-Provider-Signout`
+   * answer about the identity-provider (Clerk) session behind it:
+   * - `'revoked'`: the server ended the provider session; no tab can mint a new session from it.
+   * - `'failed'`: the server could not end it; the app must still sign out of the provider.
+   * - `'none'`: the session did not come from a provider session.
+   * - `'unknown'`: no answer (API key mode, no logout endpoint, a session that was already gone,
+   *   or a server without the header). Treat like `'failed'` when a provider session exists.
+   */
   async logout() {
     // API key mode: just clear the key
     if (this.mode === 'apiKey') {
       this.clearLocalAuth({ reason: 'user' });
-      return;
+      return { providerSignOut: 'unknown' };
     }
 
+    let providerSignOut = 'unknown';
     if (this.endpoints.logout) {
       this._logoutsInFlight++;
       try {
-        await this._revokeServerSession();
+        providerSignOut = await this._revokeServerSession();
       } finally {
         this._logoutsInFlight--;
       }
     }
 
     this.clearLocalAuth({ reason: 'user' });
+    return { providerSignOut };
   }
 
   /**
@@ -330,24 +349,25 @@ export class AuthCore {
    * A 401 says the access credential is dead, not that the session is: a live refresh
    * cookie would bring it back on reload. So a 401 refreshes once and retries once, and
    * after a successful refresh only a 2xx retry counts (a second 401 is a failure).
+   * Returns the provider sign-out answer of the confirming 2xx (see logout), else 'unknown'.
    */
   async _revokeServerSession() {
     const response = await this._postLogout();
-    if (response.ok) return;
+    if (response.ok) return providerSignOutOf(response);
     if (response.status === 401 && this.refreshManager) {
       try {
         await this.refreshManager.refresh();
       } catch (cause) {
-        if (cause?.status === 401) return;
+        if (cause?.status === 401) return 'unknown';
         console.warn('[auth] Logout could not check the refresh session; it may still be active', cause);
         throw new LogoutError(`Logout failed: refresh check ${cause?.status || 0}`, cause?.status || 0, { cause });
       }
       const retried = await this._postLogout();
-      if (retried.ok) return;
+      if (retried.ok) return providerSignOutOf(retried);
       console.warn(`[auth] Logout refused after a successful refresh (${retried.status}); the server session is still active`);
       throw new LogoutError(`Logout failed after refresh: ${retried.status}`, retried.status);
     }
-    if (response.status === 401) return; // no refresh manager: no refresh credential to check
+    if (response.status === 401) return 'unknown'; // no refresh manager: no refresh credential to check
     console.warn(`[auth] Logout refused (${response.status}); the server session is still active`);
     throw new LogoutError(`Logout failed: ${response.status}`, response.status);
   }

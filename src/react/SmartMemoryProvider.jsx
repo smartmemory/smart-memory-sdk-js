@@ -35,9 +35,8 @@ export function SmartMemoryProvider({ children, ...config }) {
     return unsubscribe;
   }, [client]);
 
-  const logout = useCallback(async () => {
-    await client.auth.logout();
-  }, [client]);
+  // Resolves to { providerSignOut } (AuthCore.logout): apps that hold a provider session read it.
+  const logout = useCallback(() => client.auth.logout(), [client]);
 
   const hasRole = useCallback((role) => {
     return client.auth.hasRole(role);

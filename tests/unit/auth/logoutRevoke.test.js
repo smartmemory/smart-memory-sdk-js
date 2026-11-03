@@ -50,7 +50,9 @@ function fakeService() {
     if (path === '/auth/logout') {
       if (!live) return json(401, { detail: 'Not authenticated' });
       server.revoked = true;
-      return new Response(null, { status: 204 });
+      // SVC-2.0-LOGOUT-CLERK-REVOKE-1: the server says whether it ended the Clerk session too.
+      const providerHeaders = server.providerSignOut ? { 'x-sm-provider-signout': server.providerSignOut } : {};
+      return new Response(null, { status: 204, headers: providerHeaders });
     }
     return json(404, { detail: 'Not found' });
   }
@@ -101,6 +103,21 @@ describe('logout revokes the server session', () => {
     expect(reloaded.isAuthenticated()).toBe(false);
   });
 
+  it.each([
+    ['revoked', 'revoked'],
+    ['failed', 'failed'],
+    ['none', 'none'],
+    [undefined, 'unknown'], // a server without the header
+    ['bogus', 'unknown'],
+  ])('logout resolves the server provider sign-out answer (%s -> %s)', async (header, expected) => {
+    server.providerSignOut = header;
+    const auth = cookieAuth();
+    await auth.bootstrapSession();
+
+    await expect(auth.logout()).resolves.toEqual({ providerSignOut: expected });
+    expect(server.revoked).toBe(true);
+  });
+
   it('a refused logout throws LogoutError and keeps the session visible', async () => {
     document.cookie = 'sm_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     const auth = cookieAuth();
@@ -131,7 +148,8 @@ describe('logout revokes the server session', () => {
     await auth.bootstrapSession();
     server.revoked = true;
 
-    await expect(auth.logout()).resolves.toBeUndefined();
+    // Nothing left to end, and no server answer about the provider session.
+    await expect(auth.logout()).resolves.toEqual({ providerSignOut: 'unknown' });
     expect(auth.isAuthenticated()).toBe(false);
   });
 

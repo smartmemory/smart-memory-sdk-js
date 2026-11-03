@@ -191,6 +191,12 @@ is a failure. During logout a refused refresh never clears identity on its own. 
 unreachable logout rejects with `LogoutError` (`status`, 0 = no response) and keeps the local
 identity, because the server session is still alive: show the error, do not report sign-out.
 
+On success `auth.logout()` resolves to `{ providerSignOut }`, read from the server's
+`X-SM-Provider-Signout` header: `'revoked'` (the server also ended the identity-provider session,
+so no tab can sign back in from it), `'failed'` (it could not: the app must still sign out of the
+provider), `'none'` (the session did not come from a provider session) or `'unknown'` (no answer,
+for example a session that was already gone or an older server: treat like `'failed'`).
+
 ## Domain APIs
 
 ### Expertise Layer
