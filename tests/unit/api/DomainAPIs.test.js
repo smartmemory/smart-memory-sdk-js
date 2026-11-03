@@ -373,6 +373,15 @@ describe('TeamAPI', () => {
 
     expect(api.delete).toHaveBeenCalledWith('/memory/teams/t-1/members/u-1');
   });
+
+  it('should set and clear a member read-only flag', async () => {
+    const api = mockBaseAPI();
+    const teams = new TeamAPI(api);
+    await teams.setMemberReadOnly('t-1', 'u-1', true);
+    expect(api.put).toHaveBeenCalledWith('/memory/teams/t-1/members/u-1/read-only', { read_only: true });
+    await teams.setMemberReadOnly('t-1', 'u-1', false);
+    expect(api.put).toHaveBeenLastCalledWith('/memory/teams/t-1/members/u-1/read-only', { read_only: false });
+  });
 });
 
 describe('ProfileAPI', () => {
