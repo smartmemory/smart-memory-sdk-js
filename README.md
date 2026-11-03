@@ -185,7 +185,9 @@ const client = new SmartMemoryClient({
 ```
 
 `auth.logout()` POSTs `endpoints.logout` (with the CSRF echo in cookie mode) and clears local
-state only once the server confirms (2xx; a 401 triggers one refresh and a retry, and counts as done only if the refresh is 401 too). A refused or
+state only once the server confirms: a 2xx, or a 401 whose one refresh is also 401 (nothing left
+to end). A 401 with a successful refresh retries once, and only a 2xx retry counts: a second 401
+is a failure. During logout a refused refresh never clears identity on its own. A refused or
 unreachable logout rejects with `LogoutError` (`status`, 0 = no response) and keeps the local
 identity, because the server session is still alive: show the error, do not report sign-out.
 

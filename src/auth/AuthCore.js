@@ -23,6 +23,8 @@ export class AuthCore {
     this.sessionRevision = 0;
     // Bumped on every successful refresh so a session check started before it is discarded.
     this.tokenEpoch = 0;
+    // Logouts in progress: while one runs, a refused refresh leaves identity to logout().
+    this._logoutsInFlight = 0;
     this.config = config;
     this.connection = new ConnectionStatus();
     this.mode = config.mode;
@@ -67,8 +69,10 @@ export class AuthCore {
           this.notifyListeners();
           config.onTokenRefresh?.(token);
         },
-        // A rejected refresh alone does not end the session: /auth/me decides.
-        onRefreshFailed: () => this.clearIfSessionLost()
+        // A rejected refresh alone does not end the session: /auth/me decides. During a
+        // logout, logout() decides instead, so a refused refresh cannot clear identity
+        // ahead of its fail-closed LogoutError.
+        onRefreshFailed: () => (this._logoutsInFlight > 0 ? undefined : this.clearIfSessionLost())
       });
     } else {
       this.refreshManager = null;
@@ -306,33 +310,46 @@ export class AuthCore {
     }
 
     if (this.endpoints.logout) {
-      // The server must confirm the session ended before the app says so: a refused
-      // or unreachable logout leaves the cookie session alive, and a reload would
-      // restore it. Local identity is kept so the UI still matches the server.
-      let response = await this._postLogout();
-      // 401 says the access credential is dead, not that the session is: a live
-      // refresh cookie would bring it back on reload. Refresh once and retry; only a
-      // refresh the server rejects with 401 proves there is nothing left to end.
-      if (response.status === 401 && this.refreshManager) {
-        let refreshed = false;
-        try {
-          await this.refreshManager.refresh();
-          refreshed = true;
-        } catch (cause) {
-          if (cause?.status !== 401) {
-            console.warn('[auth] Logout could not check the refresh session; it may still be active', cause);
-            throw new LogoutError(`Logout failed: refresh check ${cause?.status || 0}`, cause?.status || 0, { cause });
-          }
-        }
-        if (refreshed) response = await this._postLogout();
-      }
-      if (!response.ok && response.status !== 401) {
-        console.warn(`[auth] Logout refused (${response.status}); the server session is still active`);
-        throw new LogoutError(`Logout failed: ${response.status}`, response.status);
+      this._logoutsInFlight++;
+      try {
+        await this._revokeServerSession();
+      } finally {
+        this._logoutsInFlight--;
       }
     }
 
     this.clearLocalAuth({ reason: 'user' });
+  }
+
+  /**
+   * @private The server must confirm the session ended before the app says so: a refused
+   * or unreachable logout leaves the cookie session alive, and a reload would restore it.
+   * Throws LogoutError (local identity kept, so the UI still matches the server) unless:
+   * - the logout POST is 2xx, or
+   * - it is 401 and one refresh is also 401: nothing is left to end.
+   * A 401 says the access credential is dead, not that the session is: a live refresh
+   * cookie would bring it back on reload. So a 401 refreshes once and retries once, and
+   * after a successful refresh only a 2xx retry counts (a second 401 is a failure).
+   */
+  async _revokeServerSession() {
+    const response = await this._postLogout();
+    if (response.ok) return;
+    if (response.status === 401 && this.refreshManager) {
+      try {
+        await this.refreshManager.refresh();
+      } catch (cause) {
+        if (cause?.status === 401) return;
+        console.warn('[auth] Logout could not check the refresh session; it may still be active', cause);
+        throw new LogoutError(`Logout failed: refresh check ${cause?.status || 0}`, cause?.status || 0, { cause });
+      }
+      const retried = await this._postLogout();
+      if (retried.ok) return;
+      console.warn(`[auth] Logout refused after a successful refresh (${retried.status}); the server session is still active`);
+      throw new LogoutError(`Logout failed after refresh: ${retried.status}`, retried.status);
+    }
+    if (response.status === 401) return; // no refresh manager: no refresh credential to check
+    console.warn(`[auth] Logout refused (${response.status}); the server session is still active`);
+    throw new LogoutError(`Logout failed: ${response.status}`, response.status);
   }
 
   /** @private One POST to `endpoints.logout`; a network failure becomes LogoutError status 0. */

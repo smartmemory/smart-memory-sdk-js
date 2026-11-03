@@ -19,7 +19,8 @@ const USER = { id: 'u1', tenant_id: 't1', default_workspace_id: 'w1' };
 const json = (status, body) => new Response(body == null ? null : JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
 function fakeService() {
-  const server = { revoked: false, calls: [], jar: { sm_access_token: 'cookie-access', sm_refresh_token: 'cookie-refresh' } };
+  // forced: path -> statuses answered in order before the normal behaviour (scripted sequences).
+  const server = { revoked: false, calls: [], forced: {}, jar: { sm_access_token: 'cookie-access', sm_refresh_token: 'cookie-refresh' } };
   server.fetch = vi.fn(async (url, init = {}) => {
     const response = respond(url, init);
     server.calls.at(-1).status = response.status;
@@ -32,6 +33,8 @@ function fakeService() {
     const cookieSession = init.credentials === 'include' && !!server.jar.sm_access_token;
     const bearer = headers.get('authorization')?.startsWith('Bearer ');
     server.calls.push({ path, method, headers, body: init.body });
+    const forced = server.forced[path]?.shift();
+    if (forced) return forced === 204 ? new Response(null, { status: 204 }) : json(forced, { detail: `forced ${forced}` });
     if (method === 'POST' && cookieSession && !bearer && headers.get('x-csrf-token') !== CSRF) {
       return json(403, { detail: 'CSRF token missing' });
     }
@@ -142,6 +145,57 @@ describe('logout revokes the server session', () => {
     expect(server.calls.filter(call => call.path === '/auth/logout').map(call => call.status)).toEqual([401, 204]);
     expect(server.revoked).toBe(true);
     expect(auth.isAuthenticated()).toBe(false);
+  });
+
+  it('a second logout 401 after a successful refresh is a LogoutError, identity kept', async () => {
+    const auth = cookieAuth();
+    await auth.bootstrapSession();
+    const states = [];
+    auth.addListener(state => states.push(state.isAuthenticated));
+    server.calls.length = 0;
+    // The org-context case: refresh succeeds, the access check still answers 401.
+    server.forced['/auth/logout'] = [401, 401];
+
+    const error = await auth.logout().catch(e => e);
+
+    expect(server.calls.map(call => `${call.path} ${call.status}`)).toEqual([
+      '/auth/logout 401', '/auth/refresh 200', '/auth/logout 401',
+    ]);
+    expect(error).toBeInstanceOf(LogoutError);
+    expect(error.status).toBe(401);
+    expect(server.revoked).toBe(false);
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.getCurrentUser()).toEqual(USER);
+    expect(states).not.toContain(false);
+  });
+
+  it('a refresh 403 during logout throws before any identity clear, and never probes /auth/me', async () => {
+    const auth = cookieAuth();
+    await auth.bootstrapSession();
+    const states = [];
+    auth.addListener(state => states.push(state.isAuthenticated));
+    server.calls.length = 0;
+    // Expired access cookie, live refresh cookie, CSRF mismatch on refresh: the probe
+    // /auth/me (cookie only) would say 401 and clear identity if it ran.
+    server.forced['/auth/logout'] = [401];
+    server.forced['/auth/refresh'] = [403];
+    server.forced['/auth/me'] = [401];
+
+    const error = await auth.logout().catch(e => e);
+
+    expect(server.calls.map(call => `${call.path} ${call.status}`)).toEqual([
+      '/auth/logout 401', '/auth/refresh 403',
+    ]);
+    expect(error).toBeInstanceOf(LogoutError);
+    expect(error.status).toBe(403);
+    expect(auth.isAuthenticated()).toBe(true);
+    expect(auth.getCurrentUser()).toEqual(USER);
+    expect(states).not.toContain(false);
+    // Outside a logout the same refused refresh still lets /auth/me decide.
+    server.forced['/auth/refresh'] = [403];
+    await auth.refreshToken().catch(() => {});
+    await vi.waitFor(() => expect(auth.isAuthenticated()).toBe(false));
+    expect(server.calls.map(call => call.path).slice(-2)).toEqual(['/auth/refresh', '/auth/me']);
   });
 
   it('without endpoints.logout only local auth is cleared (no request)', async () => {
