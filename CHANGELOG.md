@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **AUTH-ORG-DOMAIN-SSO-1 rescope (c):** new `teams.setMemberReadOnly(teamId, userId, readOnly)` (`PUT /memory/teams/{team_id}/members/{member_user_id}/read-only`, body `{ read_only }`): an organization admin sets or clears another member's read-only flag (session only, never an API key or the caller's own membership; an admin target is 409). The team, member list and permissions responses now carry `read_only`.
+
 ## [1.5.15] - 2026-10-29
 
 Published to npm (pre-approved on a green gate, owner 2026-10-29).

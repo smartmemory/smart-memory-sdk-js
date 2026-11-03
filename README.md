@@ -287,6 +287,7 @@ client.teams.getMembers(teamId);
 client.teams.addMember(teamId, userId, 'admin');
 client.teams.updateMember(teamId, userId, 'member');
 client.teams.removeMember(teamId, userId);
+client.teams.setMemberReadOnly(teamId, userId, true); // org admin only; responses carry read_only
 ```
 
 ### Other APIs
