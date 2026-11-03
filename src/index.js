@@ -4,7 +4,7 @@
 export { SmartMemoryClient } from './api/SmartMemoryClient.js';
 
 // Auth
-export { AuthCore } from './auth/AuthCore.js';
+export { AuthCore, LogoutError } from './auth/AuthCore.js';
 export { TokenManager } from './auth/TokenManager.js';
 export { CLERK_APPEARANCE, exchangeClerkSession, getClerkTokenWithRetry } from './auth/clerkWeb.js';
 

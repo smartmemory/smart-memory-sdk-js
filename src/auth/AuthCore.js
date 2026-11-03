@@ -9,6 +9,15 @@ import { SSOManager } from './SSOManager.js';
 const IDENTITY_GONE_404 = new Set(['User not found', 'Tenant not found', 'Default team not found']);
 const SESSION_CHECK_TIMEOUT_MS = 10000;
 
+/** The server did not confirm a logout: its session may still be active. `status` 0 = no response. */
+export class LogoutError extends Error {
+  constructor(message, status = 0, options) {
+    super(message, options);
+    this.name = 'LogoutError';
+    this.status = status;
+  }
+}
+
 export class AuthCore {
   constructor(config) {
     this.sessionRevision = 0;
@@ -34,7 +43,10 @@ export class AuthCore {
 
     this.tokenManager = new TokenManager({
       storage: config.storage || 'localStorage',
-      keys: config.tokenKeys
+      keys: config.tokenKeys,
+      // Cookie auth: the HttpOnly cookies are the durable credential, so script-readable
+      // Web Storage never holds an access or refresh token (INSIGHTS-2.0-LOGOUT-REVOKE-1).
+      persistCredentials: !this.useCookieAuth
     });
 
     // Only set up refresh manager for non-apiKey modes
@@ -292,18 +304,47 @@ export class AuthCore {
     }
 
     if (this.endpoints.logout) {
-      try {
-        await fetch(`${this.apiBaseUrl}${this.endpoints.logout}`, {
-          ...this.getRequestOptions(),
-          method: 'POST',
-          headers: this.getAuthHeaders()
-        });
-      } catch (e) {
-        console.warn('Logout request failed:', e);
+      // The server must confirm the session ended before the app says so: a refused
+      // or unreachable logout leaves the cookie session alive, and a reload would
+      // restore it. Local identity is kept so the UI still matches the server.
+      let response = await this._postLogout();
+      // 401 says the access credential is dead, not that the session is: a live
+      // refresh cookie would bring it back on reload. Refresh once and retry; only a
+      // refresh the server rejects with 401 proves there is nothing left to end.
+      if (response.status === 401 && this.refreshManager) {
+        let refreshed = false;
+        try {
+          await this.refreshManager.refresh();
+          refreshed = true;
+        } catch (cause) {
+          if (cause?.status !== 401) {
+            console.warn('[auth] Logout could not check the refresh session; it may still be active', cause);
+            throw new LogoutError(`Logout failed: refresh check ${cause?.status || 0}`, cause?.status || 0, { cause });
+          }
+        }
+        if (refreshed) response = await this._postLogout();
+      }
+      if (!response.ok && response.status !== 401) {
+        console.warn(`[auth] Logout refused (${response.status}); the server session is still active`);
+        throw new LogoutError(`Logout failed: ${response.status}`, response.status);
       }
     }
 
     this.clearLocalAuth({ reason: 'user' });
+  }
+
+  /** @private One POST to `endpoints.logout`; a network failure becomes LogoutError status 0. */
+  async _postLogout() {
+    try {
+      return await (this.config.fetchFn || globalThis.fetch.bind(globalThis))(
+        `${this.apiBaseUrl}${this.endpoints.logout}`,
+        // POST through getRequestOptions so a cookie session carries the CSRF echo.
+        this.getRequestOptions({ method: 'POST', headers: this.getAuthHeaders() })
+      );
+    } catch (cause) {
+      console.warn('[auth] Logout request failed; the server session may still be active', cause);
+      throw new LogoutError(`Logout request failed: ${cause?.message || cause}`, 0, { cause });
+    }
   }
 
   async refreshToken() {

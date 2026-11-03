@@ -167,8 +167,10 @@ const client = new SmartMemoryClient({
   // Optional
   endpoints: {
     refresh: '/auth/refresh',   // token refresh
-    logout: '/auth/logout'      // optional override
+    logout: '/auth/logout'      // set it: without it logout() only clears local state
   },
+  // With useCookieAuth, access/refresh tokens stay in memory (the HttpOnly cookies are the
+  // durable credential); this storage holds the user, tenant and workspace only.
   storage: 'localStorage',      // 'localStorage' | 'sessionStorage' | 'memory'
   tokenKeys: {                   // custom storage key names
     access: 'smart_memory_auth_token',
@@ -180,6 +182,11 @@ const client = new SmartMemoryClient({
   onTokenRefresh: (newToken) => {}  // callback after successful refresh
 });
 ```
+
+`auth.logout()` POSTs `endpoints.logout` (with the CSRF echo in cookie mode) and clears local
+state only once the server confirms (2xx; a 401 triggers one refresh and a retry, and counts as done only if the refresh is 401 too). A refused or
+unreachable logout rejects with `LogoutError` (`status`, 0 = no response) and keeps the local
+identity, because the server session is still alive: show the error, do not report sign-out.
 
 ## Domain APIs
 
