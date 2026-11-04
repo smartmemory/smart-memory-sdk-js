@@ -12,6 +12,7 @@ export { CLERK_APPEARANCE, exchangeClerkSession, getClerkTokenWithRetry } from '
 export { MemoryAPI } from './api/MemoryAPI.js';
 export { DecisionAPI } from './api/DecisionAPI.js';
 export { OpinionAPI } from './api/OpinionAPI.js';
+export { PatternAPI } from './api/PatternAPI.js';
 export { GraphAPI } from './api/GraphAPI.js';
 export { VectorAPI } from './api/VectorAPI.js';
 export { TeamAPI } from './api/TeamAPI.js';
