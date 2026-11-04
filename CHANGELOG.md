@@ -1,3 +1,5 @@
+- SM-EVIDENCE-TYPE-1 (2026-11-04; service routes on smart-memory-service `wk/SM-EVIDENCE-TYPE-1`): `DecisionAPI.recordEvidence(record)` (`POST /memory/evidence`, a Compose `ev:` record, idempotent on its id), `getEvidence(evidenceId)` (`GET /memory/evidence/{id}`, node id or `ev:` ref, URL-encoded) and `linkDecisionEvidence(decisionId, evidenceId)` (`POST /memory/decisions/{id}/evidence`, confidence unchanged). Tests in `tests/unit/api/DomainAPIs.test.js`.
+
 # Changelog
 
 ## [Unreleased]

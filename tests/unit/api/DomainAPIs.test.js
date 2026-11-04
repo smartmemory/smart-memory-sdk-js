@@ -57,6 +57,39 @@ describe('DecisionAPI', () => {
     });
   });
 
+  it('should link evidence to a decision (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.linkDecisionEvidence('d-1', 'ev:0123456789abcdef');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/evidence', {
+      evidence_id: 'ev:0123456789abcdef'
+    });
+  });
+
+  it('should record a Compose evidence receipt (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    const record = {
+      id: 'ev:0123456789abcdef',
+      evidence: { kind: 'sha', repo: '/r', sha: 'afee2c429d3e', at: '2026-11-04T15:00:00Z', by: 'sm20-main' },
+      checked_at: '2026-11-04T15:00:05Z',
+      checks: ['commit exists'],
+      subject: { unit: 'SM-EVIDENCE-TYPE-1' }
+    };
+    await decisions.recordEvidence(record);
+
+    expect(api.post).toHaveBeenCalledWith('/memory/evidence', { record });
+  });
+
+  it('should read an evidence receipt by ref, URL-encoded (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.getEvidence('ev:0123456789abcdef');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/evidence/ev%3A0123456789abcdef');
+  });
+
   it('should search decisions by topic', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
