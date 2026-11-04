@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- SM-EVIDENCE-TYPE-1 (2026-11-04; service routes on smart-memory-service `wk/SM-EVIDENCE-TYPE-1`): `DecisionAPI.recordEvidence(record)` (`POST /memory/evidence`, a Compose `ev:` record, idempotent on its id), `getEvidence(evidenceId)` (`GET /memory/evidence/{id}`, node id or `ev:` ref, URL-encoded) and `linkDecisionEvidence(decisionId, evidenceId)` (`POST /memory/decisions/{id}/evidence`, confidence unchanged). Tests in `tests/unit/api/DomainAPIs.test.js`.
 - ci, CI-2.0-MANUAL-ONLY-SWEEP-1 (2.0 port of main GH-ACTIONS-MANUAL-1, owner policy 2026-10-29): the Actions workflow triggers on this line are `workflow_dispatch` only (no push or pull_request triggers). Workflow trigger blocks only, no job body change.
 
 - **SDK-JS-401-KEEPS-IDENTITY-1:** a rejected call no longer signs the app out while the cookie session is valid. Every site that cleared local identity on a 401 (`RefreshManager` definitive refresh failure, the second 401 in `fetchWithRecovery`, the SSE 401 in `subscribeProgress`) now goes through `AuthCore.clearIfSessionLost()`, which probes `GET /auth/me` (cookie only in cookie mode) and clears only when it answers 401/403. A 200 keeps the identity (and drops the rejected bearer), a network error, 429 or 5xx keeps it too, and concurrent failures share one probe. `RefreshManager` awaits `onRefreshFailed`. Tests: `tests/unit/fetch/keepsIdentity.test.js` (one row per shape through `BaseAPI` and `createAuthFetch`, red at base), existing clear-auth rows in `recovery.test.js` and `progress.test.ts` now stub `/auth/me` 401.

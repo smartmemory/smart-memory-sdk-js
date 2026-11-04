@@ -10,10 +10,15 @@
  *   POST /memory/decisions/{decision_id}/supersede
  *   POST /memory/decisions/{decision_id}/retract
  *   POST /memory/decisions/{decision_id}/reinforce
+ *   POST /memory/decisions/{decision_id}/evidence     (SM-EVIDENCE-TYPE-1)
  *   POST /memory/decisions/{decision_id}/contradict
  *   GET  /memory/decisions/{decision_id}/provenance
  *   GET  /memory/decisions/{decision_id}/causal-chain
  *   POST /memory/decisions/{decision_id}/conflicts
+ *
+ * Evidence receipts (SM-EVIDENCE-TYPE-1, routes/evidence.py):
+ *   POST /memory/evidence
+ *   GET  /memory/evidence/{evidence_id}
  *
  * Legacy reasoning proxies (kept for backward compatibility):
  *   POST /memory/reasoning/proof
@@ -218,6 +223,41 @@ export class DecisionAPI {
     return this.api.post(`/memory/decisions/${decisionId}/reinforce`, {
       evidence_id: evidenceId
     });
+  }
+
+  /**
+   * Link a stored evidence receipt to a live decision (SM-EVIDENCE-TYPE-1).
+   * Confidence is unchanged (reinforce raises it); linking twice adds nothing.
+   * The service answers 404 for a missing decision or evidence, 409 for a superseded or
+   * retracted decision and 422 for a node that is not evidence.
+   * @param {string} decisionId
+   * @param {string} evidenceId - the evidence node id or the Compose `ev:` ref
+   * @returns {Promise<{decision_id: string, evidence_id: string, evidence_ids: string[], confidence: number}>}
+   */
+  async linkDecisionEvidence(decisionId, evidenceId) {
+    return this.api.post(`/memory/decisions/${encodeURIComponent(decisionId)}/evidence`, {
+      evidence_id: evidenceId
+    });
+  }
+
+  /**
+   * Store one checked Compose evidence receipt as an `evidence` memory (SM-EVIDENCE-TYPE-1).
+   * Saving the same record again is a no-op; a different body under a stored id is refused (409).
+   * @param {Object} record - Compose `contracts/evidence.schema.json#/definitions/record`:
+   *   id (`ev:` + 16 hex), evidence (kind-specific, with `at` and `by`), checked_at, checks, subject?
+   * @returns {Promise<Object>} evidence_id, evidence_ref, kind, subject, checker, observed_at,
+   *   checked_at, checks, payload and the round-tripped `record`
+   */
+  async recordEvidence(record) {
+    return this.api.post('/memory/evidence', { record });
+  }
+
+  /**
+   * Read one evidence receipt by node id or `ev:` ref (SM-EVIDENCE-TYPE-1); 404 when absent.
+   * @param {string} evidenceId
+   */
+  async getEvidence(evidenceId) {
+    return this.api.get(`/memory/evidence/${encodeURIComponent(evidenceId)}`);
   }
 
   /**
