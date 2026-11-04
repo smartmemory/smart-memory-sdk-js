@@ -19,6 +19,15 @@
  *   POST /memory/reasoning/proof
  *   POST /memory/reasoning/fuzzy-confidence
  */
+
+/**
+ * `<sep>as_of=<value>` when `asOf` is set, else '' (SM-ASOF-DECISIONS-1): a call
+ * without it requests exactly the URL it requested before.
+ */
+function asOfQuery(asOf, sep) {
+  return asOf === undefined || asOf === null ? '' : `${sep}as_of=${encodeURIComponent(asOf)}`;
+}
+
 export class DecisionAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -83,6 +92,10 @@ export class DecisionAPI {
    *   provenance subgraph contains this memory id. Filters compose in-query so
    *   the response never silently truncates below `limit` when more matches exist.
    *   Unknown or out-of-scope memory ids return an empty list (never 404).
+   * @param {string} [params.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1), sent as
+   *   `as_of` (`params.as_of` also works): the decisions active at that instant, at
+   *   the version live then. Omitted means now. Does not combine with
+   *   `provenance_memory_id` (400).
    *
    * Every returned decision carries three Dempster-Shafer belief reads derived from
    * its reinforce/contradict evidence (CORE-DECISION-BELIEF-SURFACE-1):
@@ -94,7 +107,9 @@ export class DecisionAPI {
    * since it reads 0.5 for both.
    */
   async list(params = {}) {
-    const qs = new URLSearchParams(params).toString();
+    const { asOf, ...rest } = params;
+    if (asOf !== undefined && asOf !== null) rest.as_of = asOf;
+    const qs = new URLSearchParams(rest).toString();
     return this.api.get(`/memory/decisions${qs ? '?' + qs : ''}`);
   }
 
@@ -102,6 +117,11 @@ export class DecisionAPI {
    * Search for active decisions related to a topic.
    * @param {string} topic
    * @param {number} [limit=20]
+   * @param {Object} [options]
+   * @param {string} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
+   *   the decision state at that instant (status, statement and version live then, never
+   *   notes added later). Sent as `as_of` only when set; omitted means now. A bad value is
+   *   a 400 `invalid_as_of`.
    *
    * Every returned decision carries three Dempster-Shafer belief reads derived from
    * its reinforce/contradict evidence (CORE-DECISION-BELIEF-SURFACE-1):
@@ -112,8 +132,10 @@ export class DecisionAPI {
    * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
    * since it reads 0.5 for both.
    */
-  async search(topic, limit = 20) {
-    return this.api.get(`/memory/decisions/search?topic=${encodeURIComponent(topic)}&limit=${limit}`);
+  async search(topic, limit = 20, { asOf } = {}) {
+    return this.api.get(
+      `/memory/decisions/search?topic=${encodeURIComponent(topic)}&limit=${limit}${asOfQuery(asOf, '&')}`,
+    );
   }
 
   /**
@@ -178,8 +200,8 @@ export class DecisionAPI {
    * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
    * since it reads 0.5 for both.
    */
-  async get(decisionId) {
-    return this.api.get(`/memory/decisions/${decisionId}`);
+  async get(decisionId, { asOf } = {}) {
+    return this.api.get(`/memory/decisions/${decisionId}${asOfQuery(asOf, '?')}`);
   }
 
   /**
@@ -234,9 +256,14 @@ export class DecisionAPI {
   /**
    * Get full provenance chain for a decision.
    * @param {string} decisionId
+   * @param {Object} [options]
+   * @param {string} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
+   *   the decision state at that instant (status, statement and version live then, never
+   *   notes added later). Sent as `as_of` only when set; omitted means now. A bad value is
+   *   a 400 `invalid_as_of`.
    */
-  async getProvenance(decisionId) {
-    return this.api.get(`/memory/decisions/${decisionId}/provenance`);
+  async getProvenance(decisionId, { asOf } = {}) {
+    return this.api.get(`/memory/decisions/${decisionId}/provenance${asOfQuery(asOf, '?')}`);
   }
 
   /**

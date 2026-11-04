@@ -28,6 +28,9 @@ export class RecallAPI {
    *   (~300 tokens); the default sections go degenerate at that size, and the card
    *   is content-bounded so a typical workspace renders far under it. Passing
    *   both `preset` and `sections` is rejected with a 400.
+   * @param {string} [params.asOf] ISO 8601 instant (SM-ASOF-DECISIONS-1), sent as the
+   *   body key `as_of`: pack the decisions as they stood then. Sections with no history
+   *   (active plan, anchors) are dropped and listed in `manifest.dropped_sections`.
    *
    * `null` and `undefined` are treated identically for both optional params and
    * omitted from the wire body. `null` is what you get from `JSON.parse`, from a
@@ -37,7 +40,7 @@ export class RecallAPI {
    * body shape reaches the route from every client.
    * @returns {Promise<Object>} RecallPack — `{ block, manifest }`.
    */
-  async pack({ budgetTokens, query, sections, preset } = {}) {
+  async pack({ budgetTokens, query, sections, preset, asOf } = {}) {
     const body = { budget_tokens: budgetTokens };
     if (query !== undefined && query !== null) body.query = query;
     if (sections !== undefined && sections !== null) {
@@ -47,6 +50,7 @@ export class RecallAPI {
       }));
     }
     if (preset !== undefined && preset !== null) body.preset = preset;
+    if (asOf !== undefined && asOf !== null) body.as_of = asOf;
     return this.api.post('/memory/recall/pack', body);
   }
 }
