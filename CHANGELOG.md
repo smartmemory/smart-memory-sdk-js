@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- WEB-2.0-STALE-TAB-VERSION-CHECK-TWIN-1: Additive recovery API: export `installVersionCheck` and `LazyFallback` with parsing and timing helpers, preserving existing exports. Port main d0d974e to 2.0.
+
 - **SM-ASOF-DECISIONS-1:** optional `asOf` (ISO 8601) on `decisions.get(id, { asOf })`, `decisions.getProvenance(id, { asOf })`, `decisions.search(topic, limit, { asOf })`, `decisions.list({ asOf })` (`as_of` also accepted), `policy.getBundle({ asOf })` (the `as_of` query param) and `recall.pack({ asOf })` (the `as_of` body key). Each read answers from the decision state at that instant (status, statement and version live then, never notes added later); the recall manifest lists `dropped_sections` (active plan, anchors have no history). Sent only when set (`null`/`undefined` omitted), so a call without it requests the same URL or body as before. A bad value is the server's 400 `invalid_as_of`. Tests: `tests/unit/api/DecisionAsOf.test.js`.
 
 - ci, CI-2.0-MANUAL-ONLY-SWEEP-1 (2.0 port of main GH-ACTIONS-MANUAL-1, owner policy 2026-10-29): the Actions workflow triggers on this line are `workflow_dispatch` only (no push or pull_request triggers). Workflow trigger blocks only, no job body change.

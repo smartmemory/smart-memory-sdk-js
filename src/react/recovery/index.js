@@ -16,3 +16,5 @@ export {
   resetChunkReloadStateForTests,
 } from './chunkReload.js';
 export { useSessionDraft } from './useSessionDraft.js';
+export { installVersionCheck, parseEntrySrc, VERSION_CHECK_MIN_INTERVAL_MS } from './versionCheck.js';
+export { LazyFallback, LAZY_FALLBACK_SPINNER_MS, LAZY_FALLBACK_RELOAD_MS } from './LazyFallback.jsx';
