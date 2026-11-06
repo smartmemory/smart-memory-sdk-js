@@ -248,6 +248,48 @@ client.decisions.getProofTree(decisionId, 5);
 client.decisions.getFuzzyConfidence(decisionId);
 ```
 
+### Site validity schedules
+
+`SM-SCOPED-VALIDITY-1` adds `businessScope: { site }` and `validAt` to memory search
+and decision list, search, get and provenance reads. A site is an exact business key.
+Tenant and workspace authorization still come from the authenticated client.
+Omitting `validAt` uses the service's request-start time. `asOf` on decision reads
+and `asOfDate` on memory search select the independent transaction history.
+
+```javascript
+const scopeGoLives = [
+  { scope: { site: 'A' }, valid_from: new Date('2026-02-01T00:00:00Z') },
+  { scope: { site: 'B' }, valid_from: '2026-02-15T00:00:00Z' },
+];
+const scheduled = await client.decisions.supersede(decisionId, {
+  new_content: 'Amended CRF guidance', reason: 'Site rollout', scopeGoLives,
+});
+const effective = { businessScope: { site: 'B' }, validAt: new Date('2026-02-08T00:00:00Z') };
+await client.decisions.get(decisionId, effective);
+await client.decisions.list(effective);
+await client.decisions.search('CRF guidance', 20, effective);
+await client.decisions.getProvenance(decisionId, effective);
+await client.memories.search('CRF guidance', { ...effective, topK: 1 });
+
+await client.memories.supersede(oldId, { content: 'Amended rule', reason: 'Rollout', scopeGoLives });
+await client.memories.supersedeLink(oldId, existingNewId, 'Rollout', { scopeGoLives });
+// Initial decision schedules use the same option.
+await client.decisions.create({ content: 'Original rule', scopeGoLives: [
+  { scope: null, valid_from: '2026-01-01T00:00:00Z' },
+] });
+```
+
+Dates serialize to UTC ISO strings. Schedule entry fields stay `scope` and
+`valid_from`. An explicit `scope: null` schedules the sponsor default. Activated
+exact-site entries take precedence, with sponsor fallback until a site's activation.
+Site-only rollouts preserve the predecessor for other sites and the sponsor.
+Scoped replacements return `{ status: 'scheduled', old_item_id, new_item_id,
+scope_go_lives, recorded_at }`. Legacy calls without these options keep their
+existing request shapes and responses. `validFrom` on replacement writes is the
+legacy global effective date and cannot combine with `scopeGoLives`.
+Invalid schedules and conflicts reject with `APIError`, retaining `status` and
+server `detail`. Replacement methods do not automatically retry these errors.
+
 ### Graph
 
 ```javascript

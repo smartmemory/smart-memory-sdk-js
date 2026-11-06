@@ -35,7 +35,19 @@ function isHttpUrl(source) {
 // refuses with a 422 on POST /memory/search, plus `metadata_filter` itself, which this SDK does not accept.
 const SEARCH_FILTER_NEAR_MISS_OPTIONS = new Set([
   'filters', 'filter', 'metadata_filter', 'metadata_filters', 'metadataFilters', 'where', 'meta_filter',
+  'business_scope', 'valid_at', 'businessScopes', 'scope_go_lives', 'scopeGoLives',
 ]);
+
+/** Convert opt-in replacement qualifiers without changing nested contract field names. */
+export function validityWriteOptions({ scopeGoLives, validFrom }) {
+  const body = {};
+  if (scopeGoLives != null) body.scope_go_lives = scopeGoLives.map(entry => ({
+    ...entry,
+    valid_from: entry.valid_from instanceof Date ? entry.valid_from.toISOString() : entry.valid_from,
+  }));
+  if (validFrom != null) body.valid_from = validFrom instanceof Date ? validFrom.toISOString() : validFrom;
+  return body;
+}
 
 export class MemoryAPI {
   constructor(baseAPI) {
@@ -177,12 +189,19 @@ export class MemoryAPI {
     return this._save(path, body, { idempotencyKey, expectedRevision, method: 'patch' });
   }
 
-  async supersede(id, { content, memoryType, metadata = {}, reason }) {
+  /**
+   * Create a replacement. A scopeGoLives rollout preserves the predecessor outside activated sites.
+   * @param {string} id
+   * @param {{content: string, memoryType?: string, metadata?: Object, reason?: string,
+   *   scopeGoLives?: Array<{scope: {site: string}|null, valid_from: string|Date}>, validFrom?: string|Date}} options
+   */
+  async supersede(id, { content, memoryType, metadata = {}, reason, scopeGoLives, validFrom }) {
     return this.api.post(`/memory/${encodeURIComponent(id)}/supersede`, {
       content,
       memory_type: memoryType,
       metadata,
-      reason
+      reason,
+      ...validityWriteOptions({ scopeGoLives, validFrom })
     });
   }
 
@@ -199,13 +218,17 @@ export class MemoryAPI {
    * @param {string} id - The OLD item (the one being superseded)
    * @param {string} newItemId - The NEW item; must already exist and be in scope
    * @param {string} [reason] - Optional human-readable reason
+   * @param {{scopeGoLives?: Array<{scope: {site: string}|null, valid_from: string|Date}>,
+   *   validFrom?: string|Date}} [options] Scoped schedule or legacy global effective date.
+   *   Scoped writes return a scheduled receipt and do not globally close the predecessor.
    * @throws 400 if `newItemId` equals `id`; 404 if either item is missing *or*
    *   out of scope (deliberately indistinguishable); 409 if the store declined.
    */
-  async supersedeLink(id, newItemId, reason = null) {
+  async supersedeLink(id, newItemId, reason = null, { scopeGoLives, validFrom } = {}) {
     return this.api.post(`/memory/${encodeURIComponent(id)}/supersede-link`, {
       new_item_id: newItemId,
-      reason
+      reason,
+      ...validityWriteOptions({ scopeGoLives, validFrom })
     });
   }
 
@@ -299,6 +322,8 @@ export class MemoryAPI {
    * @param {string|Date|null} [options.asOfDate=null] - Transaction-time travel
    *   (PLAT-AUDITABLE-MEMORY-1): return what the system believed at this
    *   ISO-8601 instant. Date objects serialize to ISO automatically.
+   * @param {{site: string}|null} [options.businessScope] Exact business site, independent of security scope.
+   * @param {string|Date|null} [options.validAt] Business effective instant. Omitted uses request-start now.
    * @param {boolean} [options.asOfStrict=false] - Only meaningful with asOfDate
    *   (PLAT-AUDITABLE-MEMORY-1 gap #2). Default returns results that could not be
    *   resolved, each carrying `as_of_resolution: 'unresolved'`, and summarises them
@@ -350,13 +375,13 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, ...unknownOptions } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, businessScope = null, validAt = null, ...unknownOptions } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
     // DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1: an unknown option is dropped, so a misspelt filter name
     // would search the whole workspace without a signal. Refuse the near-miss names instead.
     for (const name of Object.keys(unknownOptions)) {
       if (SEARCH_FILTER_NEAR_MISS_OPTIONS.has(name)) {
-        throw new Error(`Unknown search option '${name}': the filter option is named 'metadataFilter'`);
+        throw new Error(`Unknown search option '${name}': the filter option is named 'metadataFilter'; scoped options are named businessScope and validAt`);
       }
     }
     // DEV-ONBOARD-FU-SCOPED-SEARCH-1: the server validates the grammar and refuses scope keys (422).
@@ -377,6 +402,8 @@ export class MemoryAPI {
       }
       body.channel_weights = channelWeights;
     }
+    if (businessScope != null) body.business_scope = businessScope;
+    if (validAt != null) body.valid_at = validAt instanceof Date ? validAt.toISOString() : validAt;
     if (reranker != null) body.reranker = reranker;
     for (const [key, value] of Object.entries({ since, until })) {
       if (value != null) body[key] = value instanceof Date ? value.toISOString() : value;

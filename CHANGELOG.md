@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- **SM-SCOPED-VALIDITY-1 U10:** add `businessScope` and `validAt` to memory search and decision reads, `scopeGoLives` to decision creation and both generic and decision replacement forms, and `validFrom` to replacement writes. Date values serialize to UTC ISO strings and nested schedule fields retain the contract's snake_case names. Unset options preserve existing request shapes. Golden SDK tests use the real isolated local service and canonical boundary fixture.
+
 - WEB-2.0-STALE-TAB-VERSION-CHECK-TWIN-1: Additive recovery API: export `installVersionCheck` and `LazyFallback` with parsing and timing helpers, preserving existing exports. Port main d0d974e to 2.0.
 
 - **SM-ASOF-DECISIONS-1:** optional `asOf` (ISO 8601) on `decisions.get(id, { asOf })`, `decisions.getProvenance(id, { asOf })`, `decisions.search(topic, limit, { asOf })`, `decisions.list({ asOf })` (`as_of` also accepted), `policy.getBundle({ asOf })` (the `as_of` query param) and `recall.pack({ asOf })` (the `as_of` body key). Each read answers from the decision state at that instant (status, statement and version live then, never notes added later); the recall manifest lists `dropped_sections` (active plan, anchors have no history). Sent only when set (`null`/`undefined` omitted), so a call without it requests the same URL or body as before. A bad value is the server's 400 `invalid_as_of`. Tests: `tests/unit/api/DecisionAsOf.test.js`.

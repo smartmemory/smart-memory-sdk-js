@@ -25,12 +25,17 @@
  *   POST /memory/reasoning/fuzzy-confidence
  */
 
-/**
- * `<sep>as_of=<value>` when `asOf` is set, else '' (SM-ASOF-DECISIONS-1): a call
- * without it requests exactly the URL it requested before.
- */
-function asOfQuery(asOf, sep) {
-  return asOf === undefined || asOf === null ? '' : `${sep}as_of=${encodeURIComponent(asOf)}`;
+import { validityWriteOptions } from './MemoryAPI.js';
+
+/** Add the optional business and independent transaction qualifiers, encoded once. */
+function validityQuery({ asOf, businessScope, validAt }, sep) {
+  const params = [];
+  for (const [key, value] of Object.entries({ as_of: asOf, business_scope: businessScope, valid_at: validAt })) {
+    if (value == null) continue;
+    const encoded = key === 'business_scope' ? JSON.stringify(value) : value instanceof Date ? value.toISOString() : value;
+    params.push(`${key}=${encodeURIComponent(encoded)}`);
+  }
+  return params.length ? sep + params.join('&') : '';
 }
 
 export class DecisionAPI {
@@ -49,6 +54,7 @@ export class DecisionAPI {
    * @param {string[]} [params.evidenceIds]
    * @param {string} [params.domain]
    * @param {string[]} [params.tags]
+   * @param {Array<{scope: {site: string}|null, valid_from: string|Date}>} [params.scopeGoLives]
    * @param {string} [params.agentId] - Producing agent id (CORE-AGENT-ATTRIBUTION-1).
    *   When omitted, the backend auto-populates from scope.resolve_agent_id() —
    *   non-null only when the caller's user_type=='agent'.
@@ -65,7 +71,8 @@ export class DecisionAPI {
     rejectedAlternatives = null,
     rationale = null,
     constraints = null,
-    agentId = null
+    agentId = null,
+    scopeGoLives
   }) {
     return this.api.post('/memory/decisions/create', {
       content,
@@ -79,13 +86,16 @@ export class DecisionAPI {
       rejected_alternatives: rejectedAlternatives,
       rationale,
       constraints,
-      agent_id: agentId
+      agent_id: agentId,
+      ...validityWriteOptions({ scopeGoLives })
     });
   }
 
   /**
    * List active decisions with optional filters.
    * @param {Object} [params] - Query parameters
+   * @param {{site: string}} [params.businessScope] Exact business site, independent of security scope.
+   * @param {string|Date} [params.validAt] Business effective instant, defaults to request-start now.
    * @param {string} [params.domain] - Filter by domain
    * @param {string} [params.decision_type] - Filter by decision type
    * @param {number} [params.min_confidence=0.0] - Minimum confidence (0..1)
@@ -112,8 +122,10 @@ export class DecisionAPI {
    * since it reads 0.5 for both.
    */
   async list(params = {}) {
-    const { asOf, ...rest } = params;
-    if (asOf !== undefined && asOf !== null) rest.as_of = asOf;
+    const { asOf, businessScope, validAt, ...rest } = params;
+    if (asOf !== undefined && asOf !== null) rest.as_of = asOf instanceof Date ? asOf.toISOString() : asOf;
+    if (businessScope != null) rest.business_scope = JSON.stringify(businessScope);
+    if (validAt != null) rest.valid_at = validAt instanceof Date ? validAt.toISOString() : validAt;
     const qs = new URLSearchParams(rest).toString();
     return this.api.get(`/memory/decisions${qs ? '?' + qs : ''}`);
   }
@@ -123,7 +135,9 @@ export class DecisionAPI {
    * @param {string} topic
    * @param {number} [limit=20]
    * @param {Object} [options]
-   * @param {string} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
+   * @param {{site: string}} [options.businessScope] Exact site.
+   * @param {string|Date} [options.validAt] Business effective instant.
+   * @param {string|Date} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
    *   the decision state at that instant (status, statement and version live then, never
    *   notes added later). Sent as `as_of` only when set; omitted means now. A bad value is
    *   a 400 `invalid_as_of`.
@@ -137,9 +151,9 @@ export class DecisionAPI {
    * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
    * since it reads 0.5 for both.
    */
-  async search(topic, limit = 20, { asOf } = {}) {
+  async search(topic, limit = 20, { asOf, businessScope, validAt } = {}) {
     return this.api.get(
-      `/memory/decisions/search?topic=${encodeURIComponent(topic)}&limit=${limit}${asOfQuery(asOf, '&')}`,
+      `/memory/decisions/search?topic=${encodeURIComponent(topic)}&limit=${limit}${validityQuery({ asOf, businessScope, validAt }, '&')}`,
     );
   }
 
@@ -205,14 +219,17 @@ export class DecisionAPI {
    * "not yet known" (high `ignorance`) -- a distinction `stability` cannot express,
    * since it reads 0.5 for both.
    */
-  async get(decisionId, { asOf } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}${asOfQuery(asOf, '?')}`);
+  /** @param {{asOf?: string|Date, businessScope?: {site: string}, validAt?: string|Date}} [options] */
+  async get(decisionId, { asOf, businessScope, validAt } = {}) {
+    return this.api.get(`/memory/decisions/${decisionId}${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
-   * Replace a decision with a new one, marking the old as superseded.
+   * Replace a decision globally, or schedule a site rollout without globally closing its predecessor.
    * @param {string} decisionId
    * @param {Object} data
+   * @param {Array<{scope: {site: string}|null, valid_from: string|Date}>} [data.scopeGoLives]
+   * @param {string|Date} [data.validFrom] Legacy global date, incompatible with scopeGoLives.
    * @param {string} data.new_content
    * @param {string} [data.new_decision_type='inference']
    * @param {number} [data.new_confidence=0.8]
@@ -222,7 +239,10 @@ export class DecisionAPI {
    * @param {string[]|null} [data.constraints=null]
    */
   async supersede(decisionId, data = {}) {
-    return this.api.post(`/memory/decisions/${decisionId}/supersede`, data);
+    const { scopeGoLives, validFrom, ...rest } = data;
+    return this.api.post(`/memory/decisions/${decisionId}/supersede`, {
+      ...rest, ...validityWriteOptions({ scopeGoLives, validFrom }),
+    });
   }
 
   /**
@@ -297,13 +317,15 @@ export class DecisionAPI {
    * Get full provenance chain for a decision.
    * @param {string} decisionId
    * @param {Object} [options]
-   * @param {string} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
+   * @param {{site: string}} [options.businessScope] Exact site.
+   * @param {string|Date} [options.validAt] Business effective instant.
+   * @param {string|Date} [options.asOf] - ISO 8601 instant (SM-ASOF-DECISIONS-1): answer from
    *   the decision state at that instant (status, statement and version live then, never
    *   notes added later). Sent as `as_of` only when set; omitted means now. A bad value is
    *   a 400 `invalid_as_of`.
    */
-  async getProvenance(decisionId, { asOf } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}/provenance${asOfQuery(asOf, '?')}`);
+  async getProvenance(decisionId, { asOf, businessScope, validAt } = {}) {
+    return this.api.get(`/memory/decisions/${decisionId}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
