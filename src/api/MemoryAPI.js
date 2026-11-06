@@ -376,8 +376,9 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, businessScope = null, validAt = null, ...unknownOptions } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, failIfConflicted = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, businessScope = null, validAt = null, ...unknownOptions } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    if (failIfConflicted) body.fail_if_conflicted = failIfConflicted;
     // DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1: an unknown option is dropped, so a misspelt filter name
     // would search the whole workspace without a signal. Refuse the near-miss names instead.
     for (const name of Object.keys(unknownOptions)) {
