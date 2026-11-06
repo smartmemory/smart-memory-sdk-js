@@ -57,6 +57,9 @@ export class BaseAPI {
    * @param {RequestInit & { signal?: AbortSignal }} [options]
    */
   async request(endpoint, options = {}) {
+    const { __submitScopeGuard: checkScope, ...requestOptions } = options;
+    options = requestOptions;
+    checkScope?.();
     const url = `${this.baseURL}${endpoint}`;
     const headers = {
       ...(isRawBody(options.body) ? {} : { 'Content-Type': 'application/json' }),
@@ -66,12 +69,13 @@ export class BaseAPI {
     const config = this.auth.getRequestOptions({ ...options, headers });
 
     try {
-      const response = await fetchWithRecovery(this.auth, retry => this.fetchFn(
-        url, this.auth.getRequestOptions({
+      const response = await fetchWithRecovery(this.auth, retry => {
+        checkScope?.();
+        return this.fetchFn(url, this.auth.getRequestOptions({
           ...config, headers: this.auth.getAuthHeaders(headers),
           ...(retry ? { __isRetry: true } : {})
-        })
-      ), { source: url, signal: options.signal, retry: !options.__isRetry });
+        }));
+      }, { source: url, signal: options.signal, retry: !options.__isRetry });
 
       if (response.status === 401) {
         // Do not globally revoke cookie sessions from passive request failures.
@@ -88,6 +92,7 @@ export class BaseAPI {
 
       return await response.json();
     } catch (error) {
+      checkScope?.();
       if (error.recoverable === false) throw new APIError('Authentication required', 401, 'auth_expired');
       if (error instanceof APIError || error.name === 'SessionRefreshError') throw error;
       if (isAbortError(error)) throw error;

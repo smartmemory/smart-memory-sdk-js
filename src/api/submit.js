@@ -6,7 +6,7 @@
  * `fetch/recovery.js` (which replays only a 401 after token refresh, with the same serialized request).
  */
 import { APIError } from '../errors/APIError.js';
-import { AdmissionConflictError } from '../errors/ReceiptErrors.js';
+import { AdmissionConflictError, SubmitScopeChangedError } from '../errors/ReceiptErrors.js';
 import { admissionErrorOf } from './receipt.js';
 
 export const MAX_ATTEMPTS = 4;
@@ -102,6 +102,22 @@ export async function submitWithRetry(send, { idempotencyKey, deadlineMs = Infin
       attempt += 1;
     }
   }
+}
+
+/** Bind a logical submission to its auth scope, while permitting same-session token refresh. */
+export function submissionOptions(api) {
+  const auth = api.auth;
+  if (!auth) return null; // Custom transports own their authentication.
+  const snapshot = () => JSON.stringify([
+    api.baseURL, auth.mode, auth.useCookieAuth, auth.sessionRevision,
+    auth.getCurrentUser?.()?.id ?? auth.currentUser?.id ?? null, auth.getTenantId?.(),
+    new Headers(auth.getAuthHeaders()).get('X-Workspace-Id'),
+    auth.mode === 'apiKey' ? auth.getCurrentToken?.() ?? auth.currentToken : null,
+  ]);
+  const initial = snapshot();
+  return { __submitScopeGuard: () => {
+    if (snapshot() !== initial) throw new SubmitScopeChangedError();
+  } };
 }
 
 /**

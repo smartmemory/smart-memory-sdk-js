@@ -504,3 +504,11 @@ Search uses `lexical` with default weight 0.8. Replace removed `contains` and `k
 Use `memory.search(query, {channelWeights: {lexical: 0}})`. The optional JS property forwards `channel_weights` without a REST signature change.
 
 Quiesce old writers before first-open indexing. Verify the engine capability pin and use `sm rebuild --lexical` for recovery. [Migration, targets and measured limitations](https://github.com/smartmemory/smart-memory-docs/blob/main/docs/features/CORE-LEXICAL-INDEX-1/migration.md).
+
+### SDK-2.0-RETRY-SAFETY-1
+
+Each save or stage submission binds its retries to the initial workspace, tenant,
+principal, session and API endpoint. A change raises `SubmitScopeChangedError`
+(`code=submit_scope_changed`) before another send, including a 401 recovery replay.
+The error retains `idempotencyKey`. Token refresh for the same session and principal
+can proceed. Check the original workspace before deliberately submitting again.

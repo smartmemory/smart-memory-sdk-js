@@ -24,7 +24,7 @@ import { APIError } from '../errors/APIError.js';
 import { StageChainError, STAGE_CHAIN_CODES, UnsupportedReceiptError } from '../errors/ReceiptErrors.js';
 import { decodeReceipt } from './receipt.js';
 import { awaitReceipt } from './awaitReceipt.js';
-import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
+import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest, submissionOptions } from './submit.js';
 
 const MAX_TRACKED_RUNS = 1000;
 
@@ -52,9 +52,10 @@ export class PipelineAPI {
     const key = resolveIdempotencyKey(idempotencyKey);
     const body = snapshotRequest({ ...rest, idempotency_key: key });
     const path = `/memory/pipeline/${stage}`;
+    const options = submissionOptions(this.api);
     let raw;
     try {
-      raw = await submitWithRetry(() => this.api.post(path, body), { idempotencyKey: key });
+      raw = await submitWithRetry(() => this.api.post(path, body, ...(options ? [options] : [])), { idempotencyKey: key });
     } catch (error) {
       throw mapStageError(mapAdmissionError(error));
     }

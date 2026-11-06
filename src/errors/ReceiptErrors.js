@@ -43,6 +43,14 @@ export class AdmissionConflictError extends APIError {
   }
 }
 
+export class SubmitScopeChangedError extends APIError {
+  constructor() {
+    super('Submission scope changed. Check the original workspace before submitting again.', 0, 'submit_scope_changed');
+    this.name = 'SubmitScopeChangedError';
+    this.code = 'submit_scope_changed';
+  }
+}
+
 export const STAGE_CHAIN_CODES = Object.freeze([
   'stage_result_pending',
   'stage_result_expired',

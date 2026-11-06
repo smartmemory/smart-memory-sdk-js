@@ -17,7 +17,7 @@
 
 import { decodeReceipt, legacyNoStatus } from './receipt.js'; // legacyNoStatus: TODO(SVC-INGEST-WAIT-STATUS-1)
 import { awaitReceipt } from './awaitReceipt.js';
-import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest } from './submit.js';
+import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest, submissionOptions } from './submit.js';
 
 let warnedLegacyDocumentIngest = false;
 
@@ -66,7 +66,8 @@ export class MemoryAPI {
   async _save(path, body, { idempotencyKey, method = 'post', expectedRevision, legacyBridge = false } = {}) {
     const key = resolveIdempotencyKey(idempotencyKey);
     const request = snapshotRequest({ ...body, idempotency_key: key });
-    const send = () => this.api[method](path, request);
+    const options = submissionOptions(this.api);
+    const send = () => this.api[method](path, request, ...(options ? [options] : []));
     let raw;
     try {
       raw = await submitWithRetry(send, { idempotencyKey: key });
