@@ -1,5 +1,9 @@
 - SM-EVIDENCE-TYPE-1 (2026-11-04; service routes on smart-memory-service `wk/SM-EVIDENCE-TYPE-1`): `DecisionAPI.recordEvidence(record)` (`POST /memory/evidence`, a Compose `ev:` record, idempotent on its id), `getEvidence(evidenceId)` (`GET /memory/evidence/{id}`, node id or `ev:` ref, URL-encoded) and `linkDecisionEvidence(decisionId, evidenceId)` (`POST /memory/decisions/{id}/evidence`, confidence unchanged). Tests in `tests/unit/api/DomainAPIs.test.js`.
 
+## SVC-2.0-SAVE-KEY-REPLAY-1
+
+- Document hosted save-key replay across add, ingest, document and conversation routes, scoped conflicts, 30-day retention and current-authority checks.
+
 - SDK-2.0-RETRY-SAFETY-1: Abort save and stage retries with SubmitScopeChangedError when workspace or auth scope changes, including auth recovery.
 
 # Changelog

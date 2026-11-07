@@ -104,6 +104,11 @@ export class MemoryAPI {
   /**
    * Create a memory item.
    *
+   * Hosted add, ingest, document and conversation saves replay the original receipt for the
+   * same key and body in the same tenant, workspace, user and route. Changed bodies return
+   * 409 idempotency_conflict. Bindings last 30 days, then retry_key_expired requires explicit
+   * new-save consent with a new key. Current authority and subject visibility gate replays.
+   *
    * Resolves to a 2.0 save receipt (`SaveReceipt`), not the stored item: `receipt.item_id`,
    * `receipt.run_id`, `receipt.revision`, `String(receipt)` is `'mem_123 (stored)'`. Use
    * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Transport loss is retried up
