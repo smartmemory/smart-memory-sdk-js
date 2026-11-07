@@ -57,6 +57,8 @@ export class MemoryAPI {
   /**
    * One logical save: mint (or reuse) the `idempotency_key`, send the identical body up to four
    * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
+   * Add and conversation ingestion make one attempt until server key admission exists.
+   * Ambiguous failures raise WriteOutcomeUnknown.
    * The whole request is snapshotted before the first send, so every attempt carries the same bytes
    * even if the caller changes a nested object while one is in flight.
    * `legacyBridge` (add and ingest only, never an edit) also reads the pre-receipt body
@@ -70,7 +72,10 @@ export class MemoryAPI {
     const send = () => this.api[method](path, request, ...(options ? [options] : []));
     let raw;
     try {
-      raw = await submitWithRetry(send, { idempotencyKey: key });
+      raw = await submitWithRetry(send, {
+        idempotencyKey: key,
+        retrySafe: !['/memory/add', '/memory/ingest/conversation'].includes(path),
+      });
     } catch (error) {
       throw mapAdmissionError(error, { expectedRevision });
     }
