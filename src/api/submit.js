@@ -67,8 +67,83 @@ export function snapshotRequest(body) {
 }
 
 /**
+ * Run a write with at most four attempts, retrying only HTTP 429 admission refusals.
+ * Fetch network errors cannot prove the request was unsent. 408, 5xx and transport loss
+ * surface once, carrying `idempotencyKey` and `attempts`. Hosted 2.0.0 does not replay
+ * request keys yet (SVC-2.0-SAVE-KEY-REPLAY-1), and stages are not replay-safe until
+ * server stage replay ships. Check the outcome before an explicit retry.
+ * Full jitter uses 0-200/0-400/0-800 ms windows, with Retry-After as a minimum on 429.
+ *
+ * @param {() => Promise<any>} send
+ * @param {{idempotencyKey: string, retrySafe?: boolean, deadlineMs?: number, sleep?: (ms:number)=>Promise<void>, random?: ()=>number, now?: ()=>number}} options
+ */
+export async function submitWithRetry(send, { idempotencyKey, retrySafe = true, deadlineMs = Infinity, sleep = defaultSleep, random = Math.random, now = () => globalThis.performance.now() } = {}) {
+  const start = now();
+  let attempt = 1;
+  for (;;) {
+    try {
+      return await send();
+    } catch (error) {
+      const fail = (reason) => {
+        if (error && typeof error === 'object') {
+          error.idempotencyKey = idempotencyKey;
+          error.attempts = attempt;
+        }
+        console.warn(`[save] giving up after ${attempt} attempt(s) with key ${idempotencyKey}: ${reason}; check the write outcome before retrying`);
+        throw error;
+      };
+      if (!retrySafe && isRetryable(error) && (!(error instanceof APIError) || error.status !== 429)) throw new WriteOutcomeUnknown(error, idempotencyKey);
       if (!(error instanceof APIError) || error.status !== 429) {
         if (error && typeof error === 'object') {
           error.idempotencyKey = idempotencyKey;
           error.attempts = attempt;
         }
+        throw error;
+      }
+      if (attempt >= MAX_ATTEMPTS) fail(`attempts exhausted (${error.message})`);
+      let delay = random() * BACKOFF_WINDOWS_MS[attempt - 1];
+      if (Number.isFinite(error.retryAfterMs)) {
+        delay = Math.max(delay, error.retryAfterMs);
+      }
+      if (now() - start + delay > deadlineMs) fail('the retry delay does not fit the caller deadline');
+      console.warn(`[save] attempt ${attempt} failed (${error.status || 'transport loss'}); retrying with the same key in ${Math.round(delay)} ms`);
+      await sleep(delay);
+      attempt += 1;
+    }
+  }
+}
+
+/** Bind a logical submission to its auth scope, while permitting same-session token refresh. */
+export function submissionOptions(api) {
+  const auth = api.auth;
+  if (!auth) return null; // Custom transports own their authentication.
+  const snapshot = () => JSON.stringify([
+    api.baseURL, auth.mode, auth.useCookieAuth, auth.sessionRevision,
+    auth.getCurrentUser?.()?.id ?? auth.currentUser?.id ?? null, auth.getTenantId?.(),
+    new Headers(auth.getAuthHeaders()).get('X-Workspace-Id'),
+    auth.mode === 'apiKey' ? auth.getCurrentToken?.() ?? auth.currentToken : null,
+  ]);
+  const initial = snapshot();
+  return { __submitScopeGuard: () => {
+    if (snapshot() !== initial) throw new SubmitScopeChangedError();
+  } };
+}
+
+/**
+ * Map a 409 pre-admission rejection to `AdmissionConflictError` (scoped code from the contract's
+ * `admission_error`). Any other error, including a 409 with no scoped code, is returned untouched.
+ */
+export function mapAdmissionError(error, { expectedRevision = null } = {}) {
+  if (!(error instanceof APIError) || error.status !== 409) return error;
+  const found = admissionErrorOf(error.detail);
+  if (!found) return error;
+  const mapped = new AdmissionConflictError(found.found.message || found.found.code, found.found.code, {
+    status: 409,
+    detail: error.detail,
+    expectedRevision: found.body.expected_revision ?? expectedRevision,
+    currentRevision: found.body.current_revision ?? null,
+  });
+  if (error.idempotencyKey) mapped.idempotencyKey = error.idempotencyKey;
+  mapped.attempts = error.attempts;
+  return mapped;
+}
