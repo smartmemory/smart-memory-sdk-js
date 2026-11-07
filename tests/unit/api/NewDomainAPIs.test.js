@@ -1285,6 +1285,15 @@ describe('PipelineAPI', () => {
     expect(receipt.occurrence_id).toBe('occ_1');
   });
 
+  it.each(['dual_node', 'single_node', 'memory_only'])('should send storage_strategy %s unchanged', async (strategy) => {
+    const api = mockBaseAPI();
+    api.post.mockResolvedValue(STAGE_PENDING);
+    await new PipelineAPI(api).runStorage({ run_id: 'run_1', storage_strategy: strategy });
+
+    expect(api.post.mock.calls[0][0]).toBe('/memory/pipeline/storage');
+    expect(api.post.mock.calls[0][1].storage_strategy).toBe(strategy);
+  });
+
   it('should get pipeline state', async () => {
     const api = mockBaseAPI();
     const pipeline = new PipelineAPI(api);

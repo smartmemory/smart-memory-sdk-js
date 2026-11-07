@@ -1,3 +1,7 @@
+## Unreleased - SDK-2.0-STAGE-STORAGE-STRATEGY-FU-1 (2026-11-08)
+
+- `PipelineAPI.runStorage` documents `request.storage_strategy` as `'dual_node'|'single_node'|'memory_only'` (default `dual_node`). The service now answers any other value with a 422 naming them (field is a `Literal` in `smart-memory-common`).
+
 ## Unreleased - D-0139 on-top merge resolution
 
 - Preserve complete SDK files while combining non-admitted-route guards with safe retry and scope binding.
