@@ -237,8 +237,8 @@ describe('probe 3: awaitReceipt', () => {
 });
 
 describe('probe 4: one idempotency key, bounded same-key retry', () => {
-  it('fails 3 times (transport loss) then succeeds: 4 calls, one key, identical bodies', async () => {
-    const failures = [net(), net(), net()];
+  it('fails 3 times (429 admission refusal) then succeeds: 4 calls, one key, identical bodies', async () => {
+    const failures = [http(429), http(429), http(429)];
     const { baseAPI, memory } = memoryWith(async () => { if (failures.length) throw failures.shift(); return { ...RECEIPT }; });
     const receipt = await memory.create({ content: 'x' });
     expect(receipt.run_id).toBe('run_1');
@@ -251,8 +251,9 @@ describe('probe 4: one idempotency key, bounded same-key retry', () => {
 
   // One row per status class the policy decides: calls made when every attempt fails that way.
   const POLICY = [
-    ['transport loss', () => net(), 4],
-    ...[408, 429, 500, 502, 503, 504].map(s => [`HTTP ${s}`, () => http(s), 4]),
+    ['transport loss', () => net(), 1],
+    ...[429].map(s => [`HTTP ${s}`, () => http(s), 4]),
+    ...[408, 500, 502, 503, 504].map(s => [`HTTP ${s}`, () => http(s), 1]),
     ...[400, 401, 403, 404, 409, 422].map(s => [`HTTP ${s}`, () => http(s), 1]),
   ];
   it.each(POLICY)('%s: calls made and the key rides on the final error', async (_name, make, calls) => {
@@ -282,10 +283,10 @@ describe('probe 4: one idempotency key, bounded same-key retry', () => {
     await expect(memory.create({ content: 'a', idempotencyKey: 'bad key!' })).rejects.toThrow(TypeError);
   });
 
-  it('Retry-After is a minimum on 429/503 and a delay that misses the deadline throws with the key', async () => {
+  it('Retry-After is a minimum on 429 and a delay that misses the deadline throws with the key', async () => {
     const sleep = vi.fn(async () => {});
     let n = 0;
-    const send = async () => { if (n++ < 1) throw http(503, null, { retryAfterMs: 2000 }); return 'ok'; };
+    const send = async () => { if (n++ < 1) throw http(429, null, { retryAfterMs: 2000 }); return 'ok'; };
     await expect(submitWithRetry(send, { idempotencyKey: 'k', sleep, random: () => 0 })).resolves.toBe('ok');
     expect(sleep).toHaveBeenCalledWith(2000);
 
@@ -298,7 +299,7 @@ describe('probe 4: one idempotency key, bounded same-key retry', () => {
 
   it('jitter windows are 0-200, 0-400 and 0-800 ms', async () => {
     const sleep = vi.fn(async () => {});
-    await submitWithRetry(async () => { throw net(); }, { idempotencyKey: 'k', sleep, random: () => 1 }).catch(() => {});
+    await submitWithRetry(async () => { throw http(429); }, { idempotencyKey: 'k', sleep, random: () => 1 }).catch(() => {});
     expect(sleep.mock.calls.map(c => Math.round(c[0]))).toEqual([200, 400, 800]);
   });
 
@@ -350,7 +351,7 @@ describe('probe 5: edit precondition', () => {
   const EDIT = { ...RECEIPT, subject: { kind: 'edit', item_id: 'mem_123' }, expected_revision: 1, revision: 2 };
 
   it('sends expected_revision, retries under one key and resolves to a receipt', async () => {
-    const failures = [net()];
+    const failures = [http(429)];
     const { baseAPI, memory } = memoryWith(async () => {}, { patch: vi.fn(async () => { if (failures.length) throw failures.shift(); return { ...EDIT }; }) });
     const receipt = await memory.update('mem_123', { content: 'y' }, { expectedRevision: 1 });
     expect(receipt).toBeInstanceOf(SaveReceipt);
@@ -490,8 +491,8 @@ describe('probe 6: G129 and stage chains', () => {
     await expect(pipeline.runStorage({ run_id: 'p' })).rejects.toBe(original);
   });
 
-  it('stage submissions retry transport loss under one key', async () => {
-    const failures = [net(), http(503)];
+  it('stage submissions retry admission refusal under one key', async () => {
+    const failures = [http(429), http(429)];
     const { api, pipeline } = pipelineWith(async () => { if (failures.length) throw failures.shift(); return { ...STAGE_PENDING }; });
     await pipeline.runExtraction({ content: 'x' });
     expect(api.post).toHaveBeenCalledTimes(3);
