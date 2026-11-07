@@ -2,7 +2,8 @@
  * Retry identity and bounded submission retry (ST14 / G55 / G178).
  *
  * One `idempotency_key` is minted per logical save or public stage submission and sent in the
- * request body, byte-identical on every attempt. Hosted writes have no replay guarantee. The retry sits at this save/stage layer, never in
+ * request body, byte-identical on every attempt. Hosted writes have no replay guarantee.
+ * The retry sits at this save/stage layer, never in
  * `fetch/recovery.js` (which replays only a 401 after token refresh, with the same serialized request).
  */
 import { APIError } from '../errors/APIError.js';

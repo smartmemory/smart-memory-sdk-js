@@ -127,7 +127,8 @@ export class MemoryAPI {
    *   behaviour untouched. **Only valid with `usePipeline: false`** — the server
    *   answers 400 for the combination rather than silently ignoring it, because
    *   the ingestion pipeline has no per-item override.
-   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
+   * @param {string} [options.idempotencyKey] - Request identity. Hosted 2.0.0 does not replay keys yet
+   *   (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before retrying an ambiguous failure.
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async create({
@@ -587,7 +588,8 @@ export class MemoryAPI {
    * @param {string} [options.chunkStrategy] - paragraph | sentence | markdown | recursive.
    * @param {boolean} [options.reference] - Mark nodes as reference material.
    * @param {Object} [options.context] - Ingestion context.
-   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
+   * @param {string} [options.idempotencyKey] - Request identity. Hosted 2.0.0 does not replay keys yet
+   *   (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before retrying an ambiguous failure.
    * Resolves to a 2.0 save receipt (`subject.kind` `document_save`; `receipt.document_id`).
    * The deprecated `(content, { source, title })` form is accepted when
    * `options.source` is an HTTP(S) URL. Its content and title are ignored.
