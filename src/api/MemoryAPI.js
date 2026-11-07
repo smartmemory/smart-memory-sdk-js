@@ -57,8 +57,6 @@ export class MemoryAPI {
   /**
    * One logical save: mint (or reuse) the `idempotency_key`, send the identical body up to four
    * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
-   * Add and conversation ingestion make one attempt until server key admission exists.
-   * Ambiguous failures raise WriteOutcomeUnknown.
    * The whole request is snapshotted before the first send, so every attempt carries the same bytes
    * even if the caller changes a nested object while one is in flight.
    * `legacyBridge` (add and ingest only, never an edit) also reads the pre-receipt body
@@ -72,10 +70,7 @@ export class MemoryAPI {
     const send = () => this.api[method](path, request, ...(options ? [options] : []));
     let raw;
     try {
-      raw = await submitWithRetry(send, {
-        idempotencyKey: key,
-        retrySafe: !['/memory/add', '/memory/ingest/conversation'].includes(path),
-      });
+      raw = await submitWithRetry(send, { idempotencyKey: key });
     } catch (error) {
       throw mapAdmissionError(error, { expectedRevision });
     }
@@ -84,7 +79,6 @@ export class MemoryAPI {
 
   /**
    * Read the scoped status of a save, edit or stage run (`GET /memory/status/{run_id}`).
-   * Hosted 2.0.0 answers HTTP 404 until SVC-INGEST-WAIT-STATUS-1 provides status reads.
    * @param {string|{status_url: string}} target A `run_id` or a receipt.
    * @param {{waitMs?: number, signal?: AbortSignal}} [options] `waitMs` holds the read (at most 10000).
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
@@ -181,9 +175,8 @@ export class MemoryAPI {
    *   (preserving memory_type and node_category).
    * @param {Object} [options]
    * @param {string|number} [options.expectedRevision] - G131 edit precondition, sent as
-   *   `expected_revision`. Hosted 2.0.0 refuses it before writing with HTTP 422
-   *   `expected_revision_unsupported` until hosted CAS is available. On a server supporting CAS,
-   *   the call resolves to a save receipt and a stale revision rejects with
+   *   `expected_revision`. With it the call is an admitted edit: it resolves to a save receipt, is
+   *   retried like a save under one `idempotency_key`, and a stale revision rejects with
    *   `AdmissionConflictError` (`code: 'revision_conflict'`, `currentRevision`), never retried.
    *   Without it the request is the legacy PATCH and resolves to the raw response.
    * @param {string} [options.idempotencyKey] - Reuse a persisted key (only used with `expectedRevision`).
@@ -511,9 +504,9 @@ export class MemoryAPI {
    * Ingest content through the full extraction pipeline.
    *
    * Resolves to a 2.0 save receipt (`SaveReceipt`, `subject.kind` `item_save`), not the 1.x
-   * `created`/`unchanged`/`replaced`/`held` body. Hosted 2.0.0 does not return extraction
-   * results or provide wait/status support (SVC-INGEST-WAIT-STATUS-1). A receipt does not
-   * promise that extraction has completed.
+   * `created`/`unchanged`/`replaced`/`held` body. The receipt only says the save was admitted:
+   * wait for the terminal outcome with {@link MemoryAPI#awaitReceipt}, then read what extraction
+   * kept from the receipt `result`.
    *
    * @param {string} content
    * @param {{profileName?: string|null, extractorName?: string, context?: object, idempotencyKey?: string}} [options]

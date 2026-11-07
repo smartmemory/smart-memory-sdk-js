@@ -6,7 +6,7 @@
  * `fetch/recovery.js` (which replays only a 401 after token refresh, with the same serialized request).
  */
 import { APIError } from '../errors/APIError.js';
-import { AdmissionConflictError, SubmitScopeChangedError, WriteOutcomeUnknown } from '../errors/ReceiptErrors.js';
+import { AdmissionConflictError, SubmitScopeChangedError } from '../errors/ReceiptErrors.js';
 import { admissionErrorOf } from './receipt.js';
 
 export const MAX_ATTEMPTS = 4;
@@ -70,13 +70,12 @@ export function snapshotRequest(body) {
  * `Retry-After` (`error.retryAfterMs`) as a minimum on 429/503. When that minimum cannot fit the
  * caller's `deadlineMs`, or attempts run out, the last error is thrown with `idempotencyKey`
  * attached so a later explicit retry reuses the same key. 400/401/403/404/409/422 and a
- * typed `retry_key_expired` are never retried. `retrySafe: false` makes one attempt and raises
- * `WriteOutcomeUnknown` on ambiguous failure for routes without key admission.
+ * typed `retry_key_expired` are never retried.
  *
  * @param {() => Promise<any>} send
- * @param {{idempotencyKey: string, retrySafe?: boolean, deadlineMs?: number, sleep?: (ms:number)=>Promise<void>, random?: ()=>number, now?: ()=>number}} options
+ * @param {{idempotencyKey: string, deadlineMs?: number, sleep?: (ms:number)=>Promise<void>, random?: ()=>number, now?: ()=>number}} options
  */
-export async function submitWithRetry(send, { idempotencyKey, retrySafe = true, deadlineMs = Infinity, sleep = defaultSleep, random = Math.random, now = () => globalThis.performance.now() } = {}) {
+export async function submitWithRetry(send, { idempotencyKey, deadlineMs = Infinity, sleep = defaultSleep, random = Math.random, now = () => globalThis.performance.now() } = {}) {
   const start = now();
   let attempt = 1;
   for (;;) {
@@ -88,7 +87,6 @@ export async function submitWithRetry(send, { idempotencyKey, retrySafe = true, 
         console.warn(`[save] giving up after ${attempt} attempt(s) with key ${idempotencyKey}: ${reason}; reuse the key for an explicit retry`);
         throw error;
       };
-      if (!retrySafe && isRetryable(error)) throw new WriteOutcomeUnknown(error, idempotencyKey);
       if (!isRetryable(error)) {
         if (error && typeof error === 'object') error.idempotencyKey = idempotencyKey;
         throw error;

@@ -240,7 +240,7 @@ describe('probe 4: one idempotency key, bounded same-key retry', () => {
   it('fails 3 times (transport loss) then succeeds: 4 calls, one key, identical bodies', async () => {
     const failures = [net(), net(), net()];
     const { baseAPI, memory } = memoryWith(async () => { if (failures.length) throw failures.shift(); return { ...RECEIPT }; });
-    const receipt = await memory.ingest('x');
+    const receipt = await memory.create({ content: 'x' });
     expect(receipt.run_id).toBe('run_1');
     expect(baseAPI.post).toHaveBeenCalledTimes(4);
     const bodies = baseAPI.post.mock.calls.map(c => JSON.stringify(c[1]));
@@ -257,7 +257,7 @@ describe('probe 4: one idempotency key, bounded same-key retry', () => {
   ];
   it.each(POLICY)('%s: calls made and the key rides on the final error', async (_name, make, calls) => {
     const { baseAPI, memory } = memoryWith(async () => { throw make(); });
-    const error = await memory.ingest('x').catch(e => e);
+    const error = await memory.create({ content: 'x' }).catch(e => e);
     expect(error).toBeInstanceOf(APIError);
     expect(baseAPI.post).toHaveBeenCalledTimes(calls);
     expect(error.idempotencyKey).toBe(baseAPI.post.mock.calls[0][1].idempotency_key);
