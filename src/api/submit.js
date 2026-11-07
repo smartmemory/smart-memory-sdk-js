@@ -1,9 +1,8 @@
 /**
- * Retry identity and bounded submission retry (ST14 / G55 / G178).
+ * Retry identity and bounded same-key submission retry (ST14 / G55 / G178).
  *
  * One `idempotency_key` is minted per logical save or public stage submission and sent in the
- * request body, byte-identical on every attempt. Hosted writes have no replay guarantee.
- * The retry sits at this save/stage layer, never in
+ * request body, byte-identical on every attempt. The retry sits at this save/stage layer, never in
  * `fetch/recovery.js` (which replays only a 401 after token refresh, with the same serialized request).
  */
 import { APIError } from '../errors/APIError.js';
@@ -12,7 +11,6 @@ import { admissionErrorOf } from './receipt.js';
 
 export const MAX_ATTEMPTS = 4;
 export const BACKOFF_WINDOWS_MS = Object.freeze([200, 400, 800]);
-// Read polling can retry ambiguous outcomes because it does not execute a write.
 export const RETRYABLE_STATUS = Object.freeze([408, 429, 500, 502, 503, 504]);
 export const GENERATED_KEY_RE = /^sm2_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const CALLER_KEY_RE = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -67,12 +65,13 @@ export function snapshotRequest(body) {
 }
 
 /**
- * Run a write with at most four attempts, retrying only HTTP 429 admission refusals.
- * Fetch network errors cannot prove the request was unsent. 408, 5xx and transport loss
- * surface once, carrying `idempotencyKey` and `attempts`. Hosted 2.0.0 does not replay
- * request keys yet (SVC-2.0-SAVE-KEY-REPLAY-1), and stages are not replay-safe until
- * server stage replay ships. Check the outcome before an explicit retry.
- * Full jitter uses 0-200/0-400/0-800 ms windows, with Retry-After as a minimum on 429.
+ * Run `send` (one POST/PATCH of an already-built body) with at most four attempts. Retries only
+ * transport loss and 408/429/500/502/503/504, after full jitter within 0-200/0-400/0-800 ms, honoring
+ * `Retry-After` (`error.retryAfterMs`) as a minimum on 429/503. When that minimum cannot fit the
+ * caller's `deadlineMs`, or attempts run out, the last error is thrown with `idempotencyKey`
+ * attached so a later explicit retry reuses the same key. 400/401/403/404/409/422 and a
+ * typed `retry_key_expired` are never retried. `retrySafe: false` makes one attempt and raises
+ * `WriteOutcomeUnknown` on ambiguous failure for routes without key admission.
  *
  * @param {() => Promise<any>} send
  * @param {{idempotencyKey: string, retrySafe?: boolean, deadlineMs?: number, sleep?: (ms:number)=>Promise<void>, random?: ()=>number, now?: ()=>number}} options
@@ -85,24 +84,18 @@ export async function submitWithRetry(send, { idempotencyKey, retrySafe = true, 
       return await send();
     } catch (error) {
       const fail = (reason) => {
-        if (error && typeof error === 'object') {
-          error.idempotencyKey = idempotencyKey;
-          error.attempts = attempt;
-        }
-        console.warn(`[save] giving up after ${attempt} attempt(s) with key ${idempotencyKey}: ${reason}; check the write outcome before retrying`);
+        if (error && typeof error === 'object') error.idempotencyKey = idempotencyKey;
+        console.warn(`[save] giving up after ${attempt} attempt(s) with key ${idempotencyKey}: ${reason}; reuse the key for an explicit retry`);
         throw error;
       };
-      if (!retrySafe && isRetryable(error) && (!(error instanceof APIError) || error.status !== 429)) throw new WriteOutcomeUnknown(error, idempotencyKey);
-      if (!(error instanceof APIError) || error.status !== 429) {
-        if (error && typeof error === 'object') {
-          error.idempotencyKey = idempotencyKey;
-          error.attempts = attempt;
-        }
+      if (!retrySafe && isRetryable(error)) throw new WriteOutcomeUnknown(error, idempotencyKey);
+      if (!isRetryable(error)) {
+        if (error && typeof error === 'object') error.idempotencyKey = idempotencyKey;
         throw error;
       }
       if (attempt >= MAX_ATTEMPTS) fail(`attempts exhausted (${error.message})`);
       let delay = random() * BACKOFF_WINDOWS_MS[attempt - 1];
-      if (Number.isFinite(error.retryAfterMs)) {
+      if ((error.status === 429 || error.status === 503) && Number.isFinite(error.retryAfterMs)) {
         delay = Math.max(delay, error.retryAfterMs);
       }
       if (now() - start + delay > deadlineMs) fail('the retry delay does not fit the caller deadline');
@@ -144,6 +137,5 @@ export function mapAdmissionError(error, { expectedRevision = null } = {}) {
     currentRevision: found.body.current_revision ?? null,
   });
   if (error.idempotencyKey) mapped.idempotencyKey = error.idempotencyKey;
-  mapped.attempts = error.attempts;
   return mapped;
 }

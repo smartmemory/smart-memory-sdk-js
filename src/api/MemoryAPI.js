@@ -55,10 +55,10 @@ export class MemoryAPI {
   }
 
   /**
-   * One logical save: mint (or reuse) the `idempotency_key`, retry only a 429 refusal
-   * up to four attempts with identical bytes, and decode the 2.0 receipt.
-   * Hosted 2.0.0 does not replay request keys yet (SVC-2.0-SAVE-KEY-REPLAY-1).
-   * A lost response, 408 or 5xx surfaces once. Check the outcome before retrying.
+   * One logical save: mint (or reuse) the `idempotency_key`, send the identical body up to four
+   * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
+   * Add and conversation ingestion make one attempt until server key admission exists.
+   * Ambiguous failures raise WriteOutcomeUnknown.
    * The whole request is snapshotted before the first send, so every attempt carries the same bytes
    * even if the caller changes a nested object while one is in flight.
    * `legacyBridge` (add and ingest only, never an edit) also reads the pre-receipt body
@@ -112,10 +112,8 @@ export class MemoryAPI {
    *
    * Resolves to a 2.0 save receipt (`SaveReceipt`), not the stored item: `receipt.item_id`,
    * `receipt.run_id`, `receipt.revision`, `String(receipt)` is `'mem_123 (stored)'`. Use
-   * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Only 429 refusals retry automatically,
-   * up to four attempts with one `idempotency_key`. Hosted 2.0.0 does not replay keys yet
-   * (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before explicitly retrying transport loss,
-   * 408 or 5xx failures, including when passing a persisted `idempotencyKey`.
+   * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Transport loss is retried up
+   * to four attempts with one `idempotency_key`; pass `idempotencyKey` to reuse a persisted key.
    *
    * Provenance like `retrieved_context_ids` travels inside `metadata` — the storage
    * layer lifts it onto the server-side MemoryItem; no dedicated option exists
@@ -133,8 +131,7 @@ export class MemoryAPI {
    *   behaviour untouched. **Only valid with `usePipeline: false`** — the server
    *   answers 400 for the combination rather than silently ignoring it, because
    *   the ingestion pipeline has no per-item override.
-   * @param {string} [options.idempotencyKey] - Request identity. Hosted 2.0.0 does not replay keys yet
-   *   (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before retrying an ambiguous failure.
+   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async create({
@@ -596,8 +593,7 @@ export class MemoryAPI {
    * @param {string} [options.chunkStrategy] - paragraph | sentence | markdown | recursive.
    * @param {boolean} [options.reference] - Mark nodes as reference material.
    * @param {Object} [options.context] - Ingestion context.
-   * @param {string} [options.idempotencyKey] - Request identity. Hosted 2.0.0 does not replay keys yet
-   *   (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before retrying an ambiguous failure.
+   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
    * Resolves to a 2.0 save receipt (`subject.kind` `document_save`; `receipt.document_id`).
    * The deprecated `(content, { source, title })` form is accepted when
    * `options.source` is an HTTP(S) URL. Its content and title are ignored.

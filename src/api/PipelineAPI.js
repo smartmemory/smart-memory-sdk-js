@@ -37,7 +37,6 @@ export class PipelineAPI {
 
   /**
    * One public stage submission under one `idempotency_key` (ST14), decoded to a receipt.
-   * Stages are not replay-safe until server stage replay ships. Only 429 is retried.
    * @private
    */
   async _stage(stage, request) {
@@ -274,6 +273,5 @@ function mapStageError(error, { run_id: fallbackRunId = null } = {}) {
     status: error.status, detail: error.detail, run_id: body.run_id ?? null, retryable: body.retryable === true,
   });
   if (error.idempotencyKey) mapped.idempotencyKey = error.idempotencyKey;
-  mapped.attempts = error.attempts;
   return mapped;
 }
