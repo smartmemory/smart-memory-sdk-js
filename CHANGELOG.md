@@ -14,6 +14,7 @@
 
 - CLIENT-2.0-HOSTED-SURFACE-PARITY-1: document hosted 2.0.0 status reads as HTTP 404 and expected_revision edits as HTTP 422 expected_revision_unsupported. Remove the ingestion receipt extraction-result promise.
 - **SDKJS-2.0-SUMMARY-QUERY-PARAMS-1:** encode summary list filters, paging and delta snapshot IDs in URL query parameters. Omit null and undefined fields and preserve false and zero values. Regression tests exercise the real BaseAPI transport.
+- SDKJS-2.0-RECOVERY-DRAFT-BOUNDARY-1: Load the destination session draft on scope changes without copying the previous scope's input. Warn with the storage key and no content when draft storage fails. Show the chunk or auth fallback after the existing 10 second reload timeout if navigation is cancelled, and clear the timer on unmount.
 
 - **SM-SCOPED-VALIDITY-1 U10:** add `businessScope` and `validAt` to memory search and decision reads, `scopeGoLives` to decision creation and both generic and decision replacement forms, and `validFrom` to replacement writes. Date values serialize to UTC ISO strings and nested schedule fields retain the contract's snake_case names. Unset options preserve existing request shapes. Golden SDK tests use the real isolated local service and canonical boundary fixture.
 
