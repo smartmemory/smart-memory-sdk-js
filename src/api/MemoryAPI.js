@@ -108,8 +108,10 @@ export class MemoryAPI {
    *
    * Resolves to a 2.0 save receipt (`SaveReceipt`), not the stored item: `receipt.item_id`,
    * `receipt.run_id`, `receipt.revision`, `String(receipt)` is `'mem_123 (stored)'`. Use
-   * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Transport loss is retried up
-   * to four attempts with one `idempotency_key`; pass `idempotencyKey` to reuse a persisted key.
+   * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Only 429 refusals retry automatically,
+   * up to four attempts with one `idempotency_key`. Hosted 2.0.0 does not replay keys yet
+   * (SVC-2.0-SAVE-KEY-REPLAY-1). Check the outcome before explicitly retrying transport loss,
+   * 408 or 5xx failures, including when passing a persisted `idempotencyKey`.
    *
    * Provenance like `retrieved_context_ids` travels inside `metadata` — the storage
    * layer lifts it onto the server-side MemoryItem; no dedicated option exists
