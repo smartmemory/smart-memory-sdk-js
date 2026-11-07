@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+- SDKJS-2.0-STAGE-RETRY-NO-REPLAY-1: save and stage submissions retry only 429. Ambiguous 408, 5xx and fetch failures surface once with the key and attempt count. Hosted 2.0.0 request keys and stage calls have no replay guarantee. Status polling and guarded 401 refresh retain their policies.
+
 - **SM-SCOPED-VALIDITY-1 U10:** add `businessScope` and `validAt` to memory search and decision reads, `scopeGoLives` to decision creation and both generic and decision replacement forms, and `validFrom` to replacement writes. Date values serialize to UTC ISO strings and nested schedule fields retain the contract's snake_case names. Unset options preserve existing request shapes. Golden SDK tests use the real isolated local service and canonical boundary fixture.
 
 - WEB-2.0-STALE-TAB-VERSION-CHECK-TWIN-1: Additive recovery API: export `installVersionCheck` and `LazyFallback` with parsing and timing helpers, preserving existing exports. Port main d0d974e to 2.0.
