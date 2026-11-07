@@ -70,6 +70,7 @@ describe('shared recovery module (WEB-BLANK-AFTER-IDLE-1)', () => {
     container.remove();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it.each(ROWS)('$name', async (row) => {
@@ -95,6 +96,33 @@ describe('shared recovery module (WEB-BLANK-AFTER-IDLE-1)', () => {
     expect(onAuthFailure).toHaveBeenCalledTimes(row.authCallback ? 1 : 0);
     expect(banner).toHaveBeenCalledTimes(row.bannerEvent ? 1 : 0);
     if (action === 'handled') expect(mocks.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { name: 'chunk', error: new TypeError(CHUNK), text: 'A new version of SmartMemory is available.' },
+    { name: 'auth', error: new SessionRefreshError('Refresh failed: 401', 401), text: 'Something went wrong on this page.' },
+  ])('shows the $name fallback when reload returns without navigating', async ({ error, text }) => {
+    vi.useFakeTimers();
+    await act(async () => root.render(boundaryTree(error)));
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toBe('');
+    act(() => vi.advanceTimersByTime(recovery.CHUNK_RELOAD_INFLIGHT_MS - 1));
+    expect(container.textContent).toBe('');
+    act(() => vi.advanceTimersByTime(1));
+    expect(container.textContent).toContain(text);
+    expect(container.querySelector('button').textContent).toBe('Reload');
+    expect(recovery.isChunkReloadInFlight()).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears a pending reload timeout on unmount', async () => {
+    vi.useFakeTimers();
+    await act(async () => root.render(boundaryTree(new TypeError(CHUNK))));
+    const before = vi.getTimerCount();
+    act(() => root.render(<p>replacement</p>));
+    expect(vi.getTimerCount()).toBe(before - 1);
+    act(() => vi.advanceTimersByTime(recovery.CHUNK_RELOAD_INFLIGHT_MS));
+    expect(container.textContent).toBe('replacement');
   });
 
   it('window hooks: a prompt event shows the banner over a live app, and unhandledrejection is wired', async () => {

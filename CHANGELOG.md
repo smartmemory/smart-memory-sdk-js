@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+- SDKJS-2.0-RECOVERY-DRAFT-BOUNDARY-1: Add regression coverage for draft scope changes, refused persistence and cancelled recovery reloads.
+
 - **SM-SCOPED-VALIDITY-1 U10:** add `businessScope` and `validAt` to memory search and decision reads, `scopeGoLives` to decision creation and both generic and decision replacement forms, and `validFrom` to replacement writes. Date values serialize to UTC ISO strings and nested schedule fields retain the contract's snake_case names. Unset options preserve existing request shapes. Golden SDK tests use the real isolated local service and canonical boundary fixture.
 
 - WEB-2.0-STALE-TAB-VERSION-CHECK-TWIN-1: Additive recovery API: export `installVersionCheck` and `LazyFallback` with parsing and timing helpers, preserving existing exports. Port main d0d974e to 2.0.
