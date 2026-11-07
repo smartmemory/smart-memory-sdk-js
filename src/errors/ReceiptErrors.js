@@ -74,3 +74,16 @@ export class StageChainError extends APIError {
     this.retryable = retryable;
   }
 }
+
+/** A possibly committed write on a route without server idempotency admission. */
+export class WriteOutcomeUnknown extends APIError {
+  constructor(cause, idempotencyKey) {
+    super('Write outcome is unconfirmed. Check existing records before retrying to avoid a duplicate. '
+      + 'This route does not deduplicate idempotency keys.', cause.status, cause.detail);
+    this.name = 'WriteOutcomeUnknown';
+    this.code = 'write_outcome_unknown';
+    this.cause = cause;
+    this.idempotencyKey = idempotencyKey;
+    this.attempts = 1;
+  }
+}
