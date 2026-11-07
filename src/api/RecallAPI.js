@@ -40,8 +40,9 @@ export class RecallAPI {
    * body shape reaches the route from every client.
    * @returns {Promise<Object>} RecallPack — `{ block, manifest }`.
    */
-  async pack({ budgetTokens, query, sections, preset, asOf } = {}) {
+  async pack({ budgetTokens, query, sections, preset, asOf, failIfConflicted = false } = {}) {
     const body = { budget_tokens: budgetTokens };
+    if (failIfConflicted) body.fail_if_conflicted = failIfConflicted;
     if (query !== undefined && query !== null) body.query = query;
     if (sections !== undefined && sections !== null) {
       body.sections = sections.map(({ name, cap_tokens: capTokensSnake, capTokens }) => ({
