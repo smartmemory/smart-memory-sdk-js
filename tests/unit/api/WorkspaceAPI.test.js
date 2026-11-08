@@ -5,6 +5,7 @@ function mockBaseAPI() {
   return {
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
+    patch: vi.fn().mockResolvedValue({}),
     delete: vi.fn().mockResolvedValue(null)
   };
 }
@@ -110,5 +111,63 @@ describe('WorkspaceAPI', () => {
     await workspaces.listTeamWorkspaces('team/1');
 
     expect(api.get).toHaveBeenCalledWith('/memory/teams/team%2F1/workspaces');
+  });
+});
+
+describe('WorkspaceAPI supersession policy (OUTREACH-MARIUS-HITL-SURFACE-1)', () => {
+  const SETTINGS = {
+    scope: 'workspace',
+    scope_id: 'ws1',
+    version: 3,
+    stated: { review: { supersession: 'retire' } },
+    effective: { review: { supersession: 'retire' } },
+    source: { review: { supersession: 'workspace' } },
+    read_only: {}
+  };
+
+  it('reads the review.supersession knob from the settings route', async () => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce(SETTINGS);
+    const workspaces = new WorkspaceAPI(api);
+    await expect(workspaces.getSupersessionPolicy('ws 1')).resolves.toEqual({
+      workspaceId: 'ws1', policy: 'retire', source: 'workspace', stated: 'retire', version: 3
+    });
+    expect(api.get).toHaveBeenCalledWith('/memory/workspaces/ws%201/settings');
+  });
+
+  it.each(['retire', 'propose', null])('patches the knob to %s with If-Match', async policy => {
+    const api = mockBaseAPI();
+    api.patch.mockResolvedValueOnce(SETTINGS);
+    const workspaces = new WorkspaceAPI(api);
+    await workspaces.setSupersessionPolicy('ws9', policy, { ifMatch: 3 });
+    expect(api.patch).toHaveBeenCalledWith(
+      '/memory/workspaces/ws9/settings',
+      { stated: { review: { supersession: policy } } },
+      { headers: { 'If-Match': '3' } }
+    );
+  });
+
+  it('sends no If-Match when none is given', async () => {
+    const api = mockBaseAPI();
+    const workspaces = new WorkspaceAPI(api);
+    await workspaces.setSupersessionPolicy('ws9', 'propose');
+    expect(api.patch.mock.calls[0][2]).toEqual({});
+  });
+
+  it('rejects an unknown policy before any request', async () => {
+    const api = mockBaseAPI();
+    const workspaces = new WorkspaceAPI(api);
+    await expect(workspaces.setSupersessionPolicy('ws9', 'delete')).rejects.toThrow(TypeError);
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it.each([403, 404, 409, 400, 500])('passes a %i through', async status => {
+    const api = mockBaseAPI();
+    const error = Object.assign(new Error('refused'), { status });
+    api.get.mockRejectedValueOnce(error);
+    api.patch.mockRejectedValueOnce(error);
+    const workspaces = new WorkspaceAPI(api);
+    await expect(workspaces.getSupersessionPolicy('ws1')).rejects.toMatchObject({ status });
+    await expect(workspaces.setSupersessionPolicy('ws1', 'propose')).rejects.toMatchObject({ status });
   });
 });

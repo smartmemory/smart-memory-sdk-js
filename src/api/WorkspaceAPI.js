@@ -1,5 +1,6 @@
 const LIFECYCLE_CAPABILITY = 'lifecycle.v1';
 const LIFECYCLE_UNSUPPORTED = () => ({ supported: false });
+const SUPERSESSION_POLICIES = ['retire', 'propose', null];
 
 export class WorkspaceAPI {
   constructor(baseAPI) {
@@ -104,4 +105,42 @@ export class WorkspaceAPI {
   async listTeamWorkspaces(teamId) {
     return this.api.get(`/memory/teams/${encodeURIComponent(teamId)}/workspaces`);
   }
+
+  /**
+   * Read the workspace's supersession policy (`review.supersession` on the workspace settings route, WS-MGMT-16).
+   * `retire` lets a newer fact retire the older one at once; `propose` files a conflict review instead.
+   * Returns `{ workspaceId, policy, source, stated, version }`; pass `version` as `ifMatch` to `setSupersessionPolicy`.
+   */
+  async getSupersessionPolicy(workspaceId) {
+    const settings = await this.api.get(`/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`);
+    return supersessionView(workspaceId, settings);
+  }
+
+  /**
+   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Needs the edit grant on the
+   * workspace (a viewer gets 403); an API key or agent may only tighten (set `propose`). `ifMatch` sends `If-Match`
+   * (a stale version is a 409).
+   */
+  async setSupersessionPolicy(workspaceId, policy, { ifMatch } = {}) {
+    if (!SUPERSESSION_POLICIES.includes(policy)) {
+      throw new TypeError("policy must be 'retire', 'propose' or null");
+    }
+    const options = ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
+    const settings = await this.api.patch(
+      `/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`,
+      { stated: { review: { supersession: policy } } },
+      options
+    );
+    return supersessionView(workspaceId, settings);
+  }
+}
+
+function supersessionView(workspaceId, settings) {
+  return {
+    workspaceId: settings?.scope_id ?? workspaceId,
+    policy: settings?.effective?.review?.supersession ?? null,
+    source: settings?.source?.review?.supersession ?? null,
+    stated: settings?.stated?.review?.supersession ?? null,
+    version: settings?.version ?? null
+  };
 }

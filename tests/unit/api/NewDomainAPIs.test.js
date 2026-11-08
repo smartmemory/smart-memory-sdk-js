@@ -706,6 +706,33 @@ describe('ReasoningAPI', () => {
       decision_id: 'd-1'
     });
   });
+
+  it('lists conflict reviews with paging defaults (OUTREACH-MARIUS-HITL-SURFACE-1)', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.listReviews();
+    expect(api.get).toHaveBeenCalledWith('/memory/reasoning/reviews?status=open&limit=50&offset=0');
+    await reasoning.listReviews({ status: 'resolved', limit: 10, offset: 20 });
+    expect(api.get).toHaveBeenLastCalledWith('/memory/reasoning/reviews?status=resolved&limit=10&offset=20');
+  });
+
+  it('settles a review with action and reason only, the id URL-encoded', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.settleReview('../workspaces/x', { action: 'keep_b', reason: 'Checked the sheet' });
+    expect(api.post).toHaveBeenCalledWith('/memory/reasoning/reviews/..%2Fworkspaces%2Fx/settle', {
+      action: 'keep_b',
+      reason: 'Checked the sheet'
+    });
+  });
+
+  it.each([404, 403, 409, 422, 500])('passes a %i from settle through', async status => {
+    const api = mockBaseAPI();
+    api.post.mockRejectedValueOnce(Object.assign(new Error('refused'), { status }));
+    const reasoning = new ReasoningAPI(api);
+    await expect(reasoning.settleReview('conflict_a', { action: 'keep_a', reason: 'r' }))
+      .rejects.toMatchObject({ status });
+  });
 });
 
 // ============================================================

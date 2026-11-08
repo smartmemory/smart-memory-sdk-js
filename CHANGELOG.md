@@ -1,3 +1,8 @@
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 (2026-11-08)
+
+- Conflict review queue: `ReasoningAPI.listReviews({status, limit, offset})` (`GET /memory/reasoning/reviews`, workspace from auth) and `settleReview(reviewId, {action, reason})` (`POST /memory/reasoning/reviews/{id}/settle`, id URL-encoded, never sends an actor: the server records the authenticated caller). Errors pass through (404 unknown or foreign review, 403, 409 conflicting or stale decision, 422).
+- Supersession policy: `WorkspaceAPI.getSupersessionPolicy(workspaceId)` and `setSupersessionPolicy(workspaceId, 'retire'|'propose'|null, {ifMatch})` over the WS-MGMT-16 settings knob `review.supersession`; return `{workspaceId, policy, source, stated, version}`. An unknown policy throws `TypeError` before any request. Contract: smart-memory-docs `docs/features/OUTREACH-MARIUS-HITL-SURFACE-1/review-queue-contract.json`.
+
 ## Unreleased - SDK-2.0-STAGE-STORAGE-STRATEGY-FU-1 (2026-11-08)
 
 - `PipelineAPI.runStorage` documents `request.storage_strategy` as `'dual_node'|'single_node'|'memory_only'` (default `dual_node`). The service now answers any other value with a 422 naming them (field is a `Literal` in `smart-memory-common`).

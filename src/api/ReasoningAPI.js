@@ -10,6 +10,8 @@
  *   POST /memory/reasoning/query
  *   POST /memory/reasoning/proof
  *   POST /memory/reasoning/fuzzy-confidence
+ *   GET  /memory/reasoning/reviews
+ *   POST /memory/reasoning/reviews/{review_id}/settle
  */
 export class ReasoningAPI {
   constructor(baseAPI) {
@@ -118,5 +120,33 @@ export class ReasoningAPI {
     return this.api.post('/memory/reasoning/fuzzy-confidence', {
       decision_id: decisionId
     });
+  }
+
+  // === CONFLICT REVIEW QUEUE (OUTREACH-MARIUS-HITL-SURFACE-1) ===
+
+  /**
+   * List the conflict reviews of the caller's workspace (workspace comes from auth, never a parameter).
+   * @param {Object} [params]
+   * @param {'open'|'resolved'} [params.status='open']
+   * @param {number} [params.limit=50] 1..500
+   * @param {number} [params.offset=0]
+   * @returns {Promise<{items: Object[], status: string, limit: number, offset: number}>}
+   */
+  async listReviews({ status = 'open', limit = 50, offset = 0 } = {}) {
+    const query = new URLSearchParams({ status, limit: String(limit), offset: String(offset) });
+    return this.api.get(`/memory/reasoning/reviews?${query}`);
+  }
+
+  /**
+   * Settle one review. The server records the authenticated caller as the actor; the body never names one
+   * (a body `actor` is a 422). An identical retry returns the stored receipt; a different decision is a 409.
+   * Errors: 404 unknown or another workspace's review, 403 refused, 409 conflict or stale, 422 bad body.
+   * @param {string} reviewId
+   * @param {Object} params
+   * @param {'keep_a'|'keep_b'|'keep_both'} params.action
+   * @param {string} params.reason non-blank, up to 2000 characters
+   */
+  async settleReview(reviewId, { action, reason }) {
+    return this.api.post(`/memory/reasoning/reviews/${encodeURIComponent(reviewId)}/settle`, { action, reason });
   }
 }
