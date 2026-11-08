@@ -1,3 +1,7 @@
+## Unreleased - BILL-2.0-SPINE-PURGE-DECISION-1 (2026-11-08)
+
+- Docs only: `WorkspaceAPI.delete` now says what happens after the 30-day restore window. Content is erased for good, and the workspace's billing records are kept 7 years for accounting, marked deleted and never shown. No behaviour change in the SDK.
+
 ## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 (2026-11-08)
 
 - Conflict review queue: `ReasoningAPI.listReviews({status, limit, offset})` (`GET /memory/reasoning/reviews`, workspace from auth) and `settleReview(reviewId, {action, reason})` (`POST /memory/reasoning/reviews/{id}/settle`, id URL-encoded, never sends an actor: the server records the authenticated caller). Errors pass through (404 unknown or foreign review, 403, 409 conflicting or stale decision, 422).

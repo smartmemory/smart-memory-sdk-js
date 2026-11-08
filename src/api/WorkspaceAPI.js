@@ -57,7 +57,11 @@ export class WorkspaceAPI {
     return this.api.patch(`/memory/workspaces/${encodeURIComponent(workspaceId)}`, body);
   }
 
-  /** Hide a workspace. Resolves to `{ workspace_id, state: 'hidden', restore_until }` (202). */
+  /**
+   * Hide a workspace. Resolves to `{ workspace_id, state: 'hidden', restore_until }` (202).
+   * A team admin can restore it until `restore_until` (30 days). After that its content is erased for good.
+   * Its billing records (credit ledger and usage-limit counters) are kept 7 years for accounting, marked deleted and never shown.
+   */
   async delete(workspaceId) {
     if (!(await this._lifecycleSupported())) return LIFECYCLE_UNSUPPORTED();
     return this.api.delete(`/memory/workspaces/${encodeURIComponent(workspaceId)}`);
