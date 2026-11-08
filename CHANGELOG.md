@@ -1,3 +1,7 @@
+## Unreleased - REL-2.0-VERSION-BUMP-1: version 2.0.0 (2026-11-08)
+
+- Version set to 2.0.0 on the 2.0 branch (`package.json` and `VERSION`). No tag, no publish (D-0138).
+
 ## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 (2026-11-08)
 
 - Conflict review queue: `ReasoningAPI.listReviews({status, limit, offset})` (`GET /memory/reasoning/reviews`, workspace from auth) and `settleReview(reviewId, {action, reason})` (`POST /memory/reasoning/reviews/{id}/settle`, id URL-encoded, never sends an actor: the server records the authenticated caller). Errors pass through (404 unknown or foreign review, 403, 409 conflicting or stale decision, 422).
