@@ -1,3 +1,7 @@
+## Unreleased - WEB-POSTHOG-IDENTIFY-AUDIT-1 (2026-11-10)
+
+- `AnalyticsIdentity` logs one WARNING when it skips identify because posthog-js is not loaded yet (it used to return silently). Tests: identify only after authentication and before a later `captureException`; warn-once on a not-loaded client.
+
 ## SVC-2.0-SAVE-KEY-REPLAY-1
 
 - Document hosted save-key replay across add, ingest, document and conversation routes, scoped conflicts, 30-day retention and current-authority checks.

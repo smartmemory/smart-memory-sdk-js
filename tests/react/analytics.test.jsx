@@ -60,6 +60,7 @@ import { useAuthState } from '../../src/react/useAuthState.js';
 
 const {
   AnalyticsIdentity,
+  captureException,
   createAnalyticsConfig,
   resetAnalytics,
 } = analytics;
@@ -233,6 +234,40 @@ describe('@smartmemory/sdk-js/react/analytics', () => {
     expect(posthogMock.register.mock.invocationCallOrder[0]).toBeLessThan(
       posthogMock.identify.mock.invocationCallOrder[0],
     );
+  });
+
+  it('does not identify before authentication, and identifies before a later exception is captured', () => {
+    const user = { id: 'user-1', email: 'person@example.com' };
+    const { rerender } = render(
+      <AnalyticsIdentity user={null} isAuthenticated={false} workspaceId={null} />,
+    );
+    expect(posthogMock.identify).not.toHaveBeenCalled();
+
+    captureException(new TypeError('before sign-in'));
+    expect(posthogMock.identify).not.toHaveBeenCalled();
+
+    rerender(<AnalyticsIdentity user={user} isAuthenticated workspaceId={null} />);
+    captureException(new TypeError('after sign-in'));
+
+    expect(posthogMock.identify).toHaveBeenCalledTimes(1);
+    expect(posthogMock.identify.mock.calls[0][0]).toBe('user-1');
+    expect(posthogMock.captureException).toHaveBeenCalled();
+    expect(posthogMock.identify.mock.invocationCallOrder[0]).toBeLessThan(
+      posthogMock.captureException.mock.invocationCallOrder.at(-1),
+    );
+  });
+
+  it('warns once instead of silently skipping identify when posthog-js is not loaded yet', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    posthogMock.__loaded = false;
+    const user = { id: 'user-1', email: 'person@example.com' };
+
+    const { rerender } = render(<AnalyticsIdentity user={user} isAuthenticated workspaceId={null} />);
+    rerender(<AnalyticsIdentity user={{ ...user, email: 'b@example.com' }} isAuthenticated workspaceId={null} />);
+
+    expect(posthogMock.identify).not.toHaveBeenCalled();
+    expect(warn.mock.calls.filter(([m]) => String(m).includes('identify skipped'))).toHaveLength(1);
+    warn.mockRestore();
   });
 
   it('re-identifies when any identity property or active workspace changes', () => {

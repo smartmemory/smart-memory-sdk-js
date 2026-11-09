@@ -8,6 +8,25 @@ function activeClient() {
   return posthog;
 }
 
+let warnedNotLoaded = false;
+
+// No silent degradation: identify skipped because posthog-js was not initialised yet
+// (an app that inits inside PostHogProvider's effect runs this child effect first).
+function warnNotLoaded() {
+  if (warnedNotLoaded) {
+    return;
+  }
+  warnedNotLoaded = true;
+  console.warn(
+    '[analytics] identify skipped: posthog-js client is not loaded '
+    + '(init posthog at module scope before rendering, not inside PostHogProvider apiKey)',
+  );
+}
+
+export function resetIdentityWarnings() {
+  warnedNotLoaded = false;
+}
+
 export function AnalyticsIdentity({ user, isAuthenticated, workspaceId }) {
   const userId = user?.id;
   const email = user?.email;
@@ -17,6 +36,9 @@ export function AnalyticsIdentity({ user, isAuthenticated, workspaceId }) {
   useEffect(() => {
     const client = activeClient();
     if (!client) {
+      if (isAuthenticated && userId) {
+        warnNotLoaded();
+      }
       return;
     }
 
