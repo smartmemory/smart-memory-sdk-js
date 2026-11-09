@@ -2,6 +2,10 @@
 
 - `workspaces.create({ name, teamId?, description })`: `teamId` is optional. Without it (or null) the body carries no `team_id` and the service creates your own private workspace with no Team (WS-POLICY-10 B, OWNER D-0147).
 
+## Unreleased - WS-MGMT-16-FU sdk-js (2026-11-09)
+
+- Added `WorkspaceAPI.getWorkspaceSettings(workspaceId)`, `updateWorkspaceSettings(workspaceId, patch, { ifMatch })`, `getTenantSettings()` and `updateTenantSettings(patch, { ifMatch })` over `GET/PATCH /memory/workspaces/{id}/settings` and `/memory/tenant/settings` (contract `modules.settings`). `patch` is `{ block: { knob: value | null } }`; `If-Match` is sent when `ifMatch` is given. `getSupersessionPolicy` and `setSupersessionPolicy` now run on them, same return shapes.
+
 ## Unreleased - BILL-2.0-SPINE-PURGE-DECISION-1 (2026-11-08)
 
 - Docs only: `WorkspaceAPI.delete` now says what happens after the 30-day restore window. Content is erased for good, and the workspace's billing records are kept 7 years for accounting, marked deleted and never shown. No behaviour change in the SDK.
