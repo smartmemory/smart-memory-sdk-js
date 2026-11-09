@@ -116,8 +116,7 @@ export class WorkspaceAPI {
    * Returns `{ workspaceId, policy, source, stated, version }`; pass `version` as `ifMatch` to `setSupersessionPolicy`.
    */
   async getSupersessionPolicy(workspaceId) {
-    const settings = await this.api.get(`/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`);
-    return supersessionView(workspaceId, settings);
+    return supersessionView(workspaceId, await this.getWorkspaceSettings(workspaceId));
   }
 
   /**
@@ -129,14 +128,46 @@ export class WorkspaceAPI {
     if (!SUPERSESSION_POLICIES.includes(policy)) {
       throw new TypeError("policy must be 'retire', 'propose' or null");
     }
-    const options = ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
-    const settings = await this.api.patch(
-      `/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`,
-      { stated: { review: { supersession: policy } } },
-      options
-    );
+    const settings = await this.updateWorkspaceSettings(workspaceId, { review: { supersession: policy } }, { ifMatch });
     return supersessionView(workspaceId, settings);
   }
+
+  /**
+   * The workspace's layered settings record (WS-MGMT-16, contract `modules.settings`). Resolves to
+   * `{ scope, scope_id, version, stated, effective, source, read_only }`: per knob, `stated` is this workspace's
+   * override (`null` = inherit), `effective` the value in force and `source` `workspace`, `tenant` or `default`.
+   * Rejects with 403 (neutral `forbidden`) or 503 (store unavailable).
+   */
+  async getWorkspaceSettings(workspaceId) {
+    return this.api.get(`/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`);
+  }
+
+  /**
+   * Merge-patch the workspace's overrides. `patch` is `{ block: { knob: value | null } }`; `null` restores
+   * inheritance. `ifMatch` sends `If-Match` (a stale version is a 409 `settings_version_conflict`). Rejects with 403
+   * (`settings_loosen_refused`, `forbidden`), 409 or 503.
+   */
+  async updateWorkspaceSettings(workspaceId, patch, { ifMatch } = {}) {
+    return this.api.patch(
+      `/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`,
+      { stated: patch },
+      ifMatchOptions(ifMatch)
+    );
+  }
+
+  /** The caller tenant's settings defaults (tenant admin). Same record shape as `getWorkspaceSettings`. */
+  async getTenantSettings() {
+    return this.api.get('/memory/tenant/settings');
+  }
+
+  /** Merge-patch the tenant defaults (tenant admin); same `patch` and `ifMatch` rules as `updateWorkspaceSettings`. */
+  async updateTenantSettings(patch, { ifMatch } = {}) {
+    return this.api.patch('/memory/tenant/settings', { stated: patch }, ifMatchOptions(ifMatch));
+  }
+}
+
+function ifMatchOptions(ifMatch) {
+  return ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
 }
 
 function supersessionView(workspaceId, settings) {
