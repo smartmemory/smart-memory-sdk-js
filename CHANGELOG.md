@@ -1,3 +1,7 @@
+## Unreleased - WS-POLICY-10 B: members create private workspaces (2026-11-09)
+
+- `workspaces.create({ name, teamId?, description })`: `teamId` is optional. Without it (or null) the body carries no `team_id` and the service creates your own private workspace with no Team (WS-POLICY-10 B, OWNER D-0147).
+
 ## Unreleased - BILL-2.0-SPINE-PURGE-DECISION-1 (2026-11-08)
 
 - Docs only: `WorkspaceAPI.delete` now says what happens after the 30-day restore window. Content is erased for good, and the workspace's billing records are kept 7 years for accounting, marked deleted and never shown. No behaviour change in the SDK.

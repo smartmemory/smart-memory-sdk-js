@@ -73,12 +73,16 @@ export class WorkspaceAPI {
     return this.api.post(`/memory/workspaces/${encodeURIComponent(workspaceId)}/restore`);
   }
 
+  /**
+   * Create a workspace. With `teamId` it is shared with that Team (tenant administrators only). Without it, it is the
+   * caller's own private workspace with no Team, which nobody else can see (WS-POLICY-10 B): any member may create one
+   * with a signed-in session or their own unbound key; agent and workspace-bound keys get a 403. `team_id` is then left
+   * out of the body. The new workspace is not made the session default.
+   */
   async create({ name, teamId, description = null }) {
-    return this.api.post('/memory/workspaces', {
-      name,
-      description,
-      team_id: teamId
-    });
+    const body = { name, description };
+    if (teamId !== undefined && teamId !== null) body.team_id = teamId;
+    return this.api.post('/memory/workspaces', body);
   }
 
   async share(workspaceId, { teamId, permission }) {

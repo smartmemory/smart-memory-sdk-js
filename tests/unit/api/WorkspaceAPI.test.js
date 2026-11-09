@@ -50,6 +50,33 @@ describe('WorkspaceAPI', () => {
     });
   });
 
+  it('creates a private workspace with no team_id in the body when teamId is omitted (WS-POLICY-10 B)', async () => {
+    const api = mockBaseAPI();
+    const workspaces = new WorkspaceAPI(api);
+
+    await workspaces.create({ name: 'Scratch' });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/workspaces', { name: 'Scratch', description: null });
+  });
+
+  it('treats a null teamId as the private create', async () => {
+    const api = mockBaseAPI();
+    const workspaces = new WorkspaceAPI(api);
+
+    await workspaces.create({ name: 'Scratch', teamId: null, description: 'tmp' });
+
+    expect(api.post).toHaveBeenCalledWith('/memory/workspaces', { name: 'Scratch', description: 'tmp' });
+  });
+
+  it('rejects with the route error on a refused private create', async () => {
+    const api = mockBaseAPI();
+    const refused = Object.assign(new Error('Agents cannot administer a workspace'), { status: 403 });
+    api.post.mockRejectedValueOnce(refused);
+    const workspaces = new WorkspaceAPI(api);
+
+    await expect(workspaces.create({ name: 'Scratch' })).rejects.toBe(refused);
+  });
+
   it('shares a workspace with the contract request schema', async () => {
     const api = mockBaseAPI();
     const workspaces = new WorkspaceAPI(api);
