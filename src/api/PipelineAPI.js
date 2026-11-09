@@ -125,6 +125,7 @@ export class PipelineAPI {
   /**
    * Run storage pipeline stage. Resolves to a `stage_job` save receipt.
    * @param {Object} request - StorageRequest; `idempotencyKey` reuses a persisted key
+   * @param {('dual_node'|'single_node'|'memory_only')} [request.storage_strategy] default `dual_node`; any other value is a 422 naming these
    * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async runStorage(request) {

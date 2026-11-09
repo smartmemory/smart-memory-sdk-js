@@ -706,6 +706,33 @@ describe('ReasoningAPI', () => {
       decision_id: 'd-1'
     });
   });
+
+  it('lists conflict reviews with paging defaults (OUTREACH-MARIUS-HITL-SURFACE-1)', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.listReviews();
+    expect(api.get).toHaveBeenCalledWith('/memory/reasoning/reviews?status=open&limit=50&offset=0');
+    await reasoning.listReviews({ status: 'resolved', limit: 10, offset: 20 });
+    expect(api.get).toHaveBeenLastCalledWith('/memory/reasoning/reviews?status=resolved&limit=10&offset=20');
+  });
+
+  it('settles a review with action and reason only, the id URL-encoded', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.settleReview('../workspaces/x', { action: 'keep_b', reason: 'Checked the sheet' });
+    expect(api.post).toHaveBeenCalledWith('/memory/reasoning/reviews/..%2Fworkspaces%2Fx/settle', {
+      action: 'keep_b',
+      reason: 'Checked the sheet'
+    });
+  });
+
+  it.each([404, 403, 409, 422, 500])('passes a %i from settle through', async status => {
+    const api = mockBaseAPI();
+    api.post.mockRejectedValueOnce(Object.assign(new Error('refused'), { status }));
+    const reasoning = new ReasoningAPI(api);
+    await expect(reasoning.settleReview('conflict_a', { action: 'keep_a', reason: 'r' }))
+      .rejects.toMatchObject({ status });
+  });
 });
 
 // ============================================================
@@ -1283,6 +1310,15 @@ describe('PipelineAPI', () => {
     expect(receipt.run_id).toBe('run_stage_1');
     expect(receipt.subject.kind).toBe('stage_job');
     expect(receipt.occurrence_id).toBe('occ_1');
+  });
+
+  it.each(['dual_node', 'single_node', 'memory_only'])('should send storage_strategy %s unchanged', async (strategy) => {
+    const api = mockBaseAPI();
+    api.post.mockResolvedValue(STAGE_PENDING);
+    await new PipelineAPI(api).runStorage({ run_id: 'run_1', storage_strategy: strategy });
+
+    expect(api.post.mock.calls[0][0]).toBe('/memory/pipeline/storage');
+    expect(api.post.mock.calls[0][1].storage_strategy).toBe(strategy);
   });
 
   it('should get pipeline state', async () => {

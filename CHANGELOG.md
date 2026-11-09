@@ -1,14 +1,53 @@
-- SM-EVIDENCE-TYPE-1 (2026-11-04; service routes on smart-memory-service `wk/SM-EVIDENCE-TYPE-1`): `DecisionAPI.recordEvidence(record)` (`POST /memory/evidence`, a Compose `ev:` record, idempotent on its id), `getEvidence(evidenceId)` (`GET /memory/evidence/{id}`, node id or `ev:` ref, URL-encoded) and `linkDecisionEvidence(decisionId, evidenceId)` (`POST /memory/decisions/{id}/evidence`, confidence unchanged). Tests in `tests/unit/api/DomainAPIs.test.js`.
-
 ## SVC-2.0-SAVE-KEY-REPLAY-1
 
 - Document hosted save-key replay across add, ingest, document and conversation routes, scoped conflicts, 30-day retention and current-authority checks.
+
+## Unreleased - WS-POLICY-10 B: members create private workspaces (2026-11-09)
+
+- `workspaces.create({ name, teamId?, description })`: `teamId` is optional. Without it (or null) the body carries no `team_id` and the service creates your own private workspace with no Team (WS-POLICY-10 B, OWNER D-0147).
+
+## Unreleased - WS-MGMT-16-FU sdk-js (2026-11-09)
+
+- Added `WorkspaceAPI.getWorkspaceSettings(workspaceId)`, `updateWorkspaceSettings(workspaceId, patch, { ifMatch })`, `getTenantSettings()` and `updateTenantSettings(patch, { ifMatch })` over `GET/PATCH /memory/workspaces/{id}/settings` and `/memory/tenant/settings` (contract `modules.settings`). `patch` is `{ block: { knob: value | null } }`; `If-Match` is sent when `ifMatch` is given. `getSupersessionPolicy` and `setSupersessionPolicy` now run on them, same return shapes.
+
+## Unreleased - BILL-2.0-SPINE-PURGE-DECISION-1 (2026-11-08)
+
+- Docs only: `WorkspaceAPI.delete` now says what happens after the 30-day restore window. Content is erased for good, and the workspace's billing records are kept 7 years for accounting, marked deleted and never shown. No behaviour change in the SDK.
+
+## Unreleased - REL-2.0-VERSION-BUMP-1: version 2.0.0 (2026-11-08)
+
+- Version set to 2.0.0 on the 2.0 branch (`package.json` and `VERSION`). No tag, no publish (D-0138).
+
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 (2026-11-08)
+
+- Conflict review queue: `ReasoningAPI.listReviews({status, limit, offset})` (`GET /memory/reasoning/reviews`, workspace from auth) and `settleReview(reviewId, {action, reason})` (`POST /memory/reasoning/reviews/{id}/settle`, id URL-encoded, never sends an actor: the server records the authenticated caller). Errors pass through (404 unknown or foreign review, 403, 409 conflicting or stale decision, 422).
+- Supersession policy: `WorkspaceAPI.getSupersessionPolicy(workspaceId)` and `setSupersessionPolicy(workspaceId, 'retire'|'propose'|null, {ifMatch})` over the WS-MGMT-16 settings knob `review.supersession`; return `{workspaceId, policy, source, stated, version}`. An unknown policy throws `TypeError` before any request. Contract: smart-memory-docs `docs/features/OUTREACH-MARIUS-HITL-SURFACE-1/review-queue-contract.json`.
+
+## Unreleased - SDK-2.0-STAGE-STORAGE-STRATEGY-FU-1 (2026-11-08)
+
+- `PipelineAPI.runStorage` documents `request.storage_strategy` as `'dual_node'|'single_node'|'memory_only'` (default `dual_node`). The service now answers any other value with a 422 naming them (field is a `Literal` in `smart-memory-common`).
+
+## Unreleased - D-0139 on-top merge resolution
+
+- Preserve complete SDK files while combining non-admitted-route guards with safe retry and scope binding.
+
+- SM-EVIDENCE-TYPE-1 (2026-11-04; service routes on smart-memory-service `wk/SM-EVIDENCE-TYPE-1`): `DecisionAPI.recordEvidence(record)` (`POST /memory/evidence`, a Compose `ev:` record, idempotent on its id), `getEvidence(evidenceId)` (`GET /memory/evidence/{id}`, node id or `ev:` ref, URL-encoded) and `linkDecisionEvidence(decisionId, evidenceId)` (`POST /memory/decisions/{id}/evidence`, confidence unchanged). Tests in `tests/unit/api/DomainAPIs.test.js`.
+
+## Unreleased - RECALL-CONFLICT-FLAG-1 continuation
+
+- Forward failIfConflicted for search and recall packs while preserving response evidence.
 
 - SDK-2.0-RETRY-SAFETY-1: Abort save and stage retries with SubmitScopeChangedError when workspace or auth scope changes, including auth recovery.
 
 # Changelog
 
 ## [Unreleased]
+
+- CLIENT-2.0-HOSTED-SURFACE-PARITY-1 fix round 1: add and conversation ingestion make one attempt on ambiguous failures until server key admission exists. Export WriteOutcomeUnknown with the original status, detail, cause and key. Preserve receipt decoding and definite HTTP refusals.
+
+- CLIENT-2.0-HOSTED-SURFACE-PARITY-1: document hosted 2.0.0 status reads as HTTP 404 and expected_revision edits as HTTP 422 expected_revision_unsupported. Remove the ingestion receipt extraction-result promise.
+- **SDKJS-2.0-SUMMARY-QUERY-PARAMS-1:** encode summary list filters, paging and delta snapshot IDs in URL query parameters. Omit null and undefined fields and preserve false and zero values. Regression tests exercise the real BaseAPI transport.
+- SDKJS-2.0-RECOVERY-DRAFT-BOUNDARY-1: Load the destination session draft on scope changes without copying the previous scope's input. Warn with the storage key and no content when draft storage fails. Show the chunk or auth fallback after the existing 10 second reload timeout if navigation is cancelled, and clear the timer on unmount.
 
 - **SM-SCOPED-VALIDITY-1 U10:** add `businessScope` and `validAt` to memory search and decision reads, `scopeGoLives` to decision creation and both generic and decision replacement forms, and `validFrom` to replacement writes. Date values serialize to UTC ISO strings and nested schedule fields retain the contract's snake_case names. Unset options preserve existing request shapes. Golden SDK tests use the real isolated local service and canonical boundary fixture.
 

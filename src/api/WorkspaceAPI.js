@@ -1,5 +1,6 @@
 const LIFECYCLE_CAPABILITY = 'lifecycle.v1';
 const LIFECYCLE_UNSUPPORTED = () => ({ supported: false });
+const SUPERSESSION_POLICIES = ['retire', 'propose', null];
 
 export class WorkspaceAPI {
   constructor(baseAPI) {
@@ -56,7 +57,11 @@ export class WorkspaceAPI {
     return this.api.patch(`/memory/workspaces/${encodeURIComponent(workspaceId)}`, body);
   }
 
-  /** Hide a workspace. Resolves to `{ workspace_id, state: 'hidden', restore_until }` (202). */
+  /**
+   * Hide a workspace. Resolves to `{ workspace_id, state: 'hidden', restore_until }` (202).
+   * A team admin can restore it until `restore_until` (30 days). After that its content is erased for good.
+   * Its billing records (credit ledger and usage-limit counters) are kept 7 years for accounting, marked deleted and never shown.
+   */
   async delete(workspaceId) {
     if (!(await this._lifecycleSupported())) return LIFECYCLE_UNSUPPORTED();
     return this.api.delete(`/memory/workspaces/${encodeURIComponent(workspaceId)}`);
@@ -68,12 +73,16 @@ export class WorkspaceAPI {
     return this.api.post(`/memory/workspaces/${encodeURIComponent(workspaceId)}/restore`);
   }
 
+  /**
+   * Create a workspace. With `teamId` it is shared with that Team (tenant administrators only). Without it, it is the
+   * caller's own private workspace with no Team, which nobody else can see (WS-POLICY-10 B): any member may create one
+   * with a signed-in session or their own unbound key; agent and workspace-bound keys get a 403. `team_id` is then left
+   * out of the body. The new workspace is not made the session default.
+   */
   async create({ name, teamId, description = null }) {
-    return this.api.post('/memory/workspaces', {
-      name,
-      description,
-      team_id: teamId
-    });
+    const body = { name, description };
+    if (teamId !== undefined && teamId !== null) body.team_id = teamId;
+    return this.api.post('/memory/workspaces', body);
   }
 
   async share(workspaceId, { teamId, permission }) {
@@ -104,4 +113,73 @@ export class WorkspaceAPI {
   async listTeamWorkspaces(teamId) {
     return this.api.get(`/memory/teams/${encodeURIComponent(teamId)}/workspaces`);
   }
+
+  /**
+   * Read the workspace's supersession policy (`review.supersession` on the workspace settings route, WS-MGMT-16).
+   * `retire` lets a newer fact retire the older one at once; `propose` files a conflict review instead.
+   * Returns `{ workspaceId, policy, source, stated, version }`; pass `version` as `ifMatch` to `setSupersessionPolicy`.
+   */
+  async getSupersessionPolicy(workspaceId) {
+    return supersessionView(workspaceId, await this.getWorkspaceSettings(workspaceId));
+  }
+
+  /**
+   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Needs the edit grant on the
+   * workspace (a viewer gets 403); an API key or agent may only tighten (set `propose`). `ifMatch` sends `If-Match`
+   * (a stale version is a 409).
+   */
+  async setSupersessionPolicy(workspaceId, policy, { ifMatch } = {}) {
+    if (!SUPERSESSION_POLICIES.includes(policy)) {
+      throw new TypeError("policy must be 'retire', 'propose' or null");
+    }
+    const settings = await this.updateWorkspaceSettings(workspaceId, { review: { supersession: policy } }, { ifMatch });
+    return supersessionView(workspaceId, settings);
+  }
+
+  /**
+   * The workspace's layered settings record (WS-MGMT-16, contract `modules.settings`). Resolves to
+   * `{ scope, scope_id, version, stated, effective, source, read_only }`: per knob, `stated` is this workspace's
+   * override (`null` = inherit), `effective` the value in force and `source` `workspace`, `tenant` or `default`.
+   * Rejects with 403 (neutral `forbidden`) or 503 (store unavailable).
+   */
+  async getWorkspaceSettings(workspaceId) {
+    return this.api.get(`/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`);
+  }
+
+  /**
+   * Merge-patch the workspace's overrides. `patch` is `{ block: { knob: value | null } }`; `null` restores
+   * inheritance. `ifMatch` sends `If-Match` (a stale version is a 409 `settings_version_conflict`). Rejects with 403
+   * (`settings_loosen_refused`, `forbidden`), 409 or 503.
+   */
+  async updateWorkspaceSettings(workspaceId, patch, { ifMatch } = {}) {
+    return this.api.patch(
+      `/memory/workspaces/${encodeURIComponent(workspaceId)}/settings`,
+      { stated: patch },
+      ifMatchOptions(ifMatch)
+    );
+  }
+
+  /** The caller tenant's settings defaults (tenant admin). Same record shape as `getWorkspaceSettings`. */
+  async getTenantSettings() {
+    return this.api.get('/memory/tenant/settings');
+  }
+
+  /** Merge-patch the tenant defaults (tenant admin); same `patch` and `ifMatch` rules as `updateWorkspaceSettings`. */
+  async updateTenantSettings(patch, { ifMatch } = {}) {
+    return this.api.patch('/memory/tenant/settings', { stated: patch }, ifMatchOptions(ifMatch));
+  }
+}
+
+function ifMatchOptions(ifMatch) {
+  return ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
+}
+
+function supersessionView(workspaceId, settings) {
+  return {
+    workspaceId: settings?.scope_id ?? workspaceId,
+    policy: settings?.effective?.review?.supersession ?? null,
+    source: settings?.source?.review?.supersession ?? null,
+    stated: settings?.stated?.review?.supersession ?? null,
+    version: settings?.version ?? null
+  };
 }
