@@ -1,3 +1,7 @@
+## 2.0.1
+
+Version bump to 2.0.1, every SmartMemory repo reads the same version (REL-2.0-VERSION-BUMP-2.0.1-1).
+
 ## Unreleased - WEB-POSTHOG-IDENTIFY-AUDIT-1 (2026-11-10)
 
 - `AnalyticsIdentity` logs one WARNING when it skips identify because posthog-js is not loaded yet (it used to return silently). Tests: identify only after authentication and before a later `captureException`; warn-once on a not-loaded client.
