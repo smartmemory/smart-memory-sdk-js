@@ -452,11 +452,16 @@ export class MemoryAPI {
    * There is no fallback answer: a 502 comes back when the configured LLM errors or
    * returns nothing, rather than a synthesized reply.
    *
+   * `used_evidence_ids` lists the evidence ids the answer cites, in first-cited order.
+   * When nothing matches (no model call is made), `answer` is "No stored record matches
+   * this question."; when the model cites none of its evidence, it is "The answer could not
+   * be tied to a stored record." In both cases `grounded` is false.
+   *
    * @param {string} question - The natural-language question.
    * @param {Object} [options]
    * @param {number} [options.limit=5] - How many memories to retrieve as evidence (1-50).
    * @param {boolean} [options.reasoning=true] - When false, `reasoning` comes back empty.
-   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>}>}
+   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string, memory_type: (string|null), created_at: (string|null)}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>, used_evidence_ids: Array<string>, grounded: boolean}>}
    *   Relation rows carry both display labels and graph node ids; combine them as
    *   `${source_id}->${target_id}:${type}` to address the edge in a graph view.
    */
