@@ -1,3 +1,7 @@
+## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
+
+- `decisions.create` and `decisions.createPending` take `decidedBy` and `recommendedBy` (sent as `decided_by` / `recommended_by`, only when given). `decisions.supersede` documents `decided_by` / `recommended_by` for the replacement (its snake_case body already passes them through). Who decided and who recommended, as the caller states it: caller-supplied, not verified, never used for authorization. The service enforces the 256-character limit (422).
+
 ## Unreleased - CLAIMS-BUILD-02: ask returns the ids it cited (2026-11-14)
 
 - Docs (CLAIMS-02-FIX1): the `ask()` JSDoc names both fixed texts: "No stored record matches this question." when nothing matched, "The answer could not be tied to a stored record." when the model cited none of the evidence.

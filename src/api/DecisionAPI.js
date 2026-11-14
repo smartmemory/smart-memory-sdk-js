@@ -38,6 +38,14 @@ function validityQuery({ asOf, businessScope, validAt }, sep) {
   return params.length ? sep + params.join('&') : '';
 }
 
+/** CLAIMS-BUILD-20: the decision "who" fields, sent only when given. */
+function statedBy({ decidedBy, recommendedBy }) {
+  return {
+    ...(decidedBy != null ? { decided_by: decidedBy } : {}),
+    ...(recommendedBy != null ? { recommended_by: recommendedBy } : {})
+  };
+}
+
 export class DecisionAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -58,6 +66,9 @@ export class DecisionAPI {
    * @param {string} [params.agentId] - Producing agent id (CORE-AGENT-ATTRIBUTION-1).
    *   When omitted, the backend auto-populates from scope.resolve_agent_id() —
    *   non-null only when the caller's user_type=='agent'.
+   * @param {string} [params.decidedBy] - Who decided, as the caller states it (plain text, at most 256
+   *   characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
+   * @param {string} [params.recommendedBy] - Who recommended it, same rules as decidedBy.
    */
   async create({
     content,
@@ -72,7 +83,9 @@ export class DecisionAPI {
     rationale = null,
     constraints = null,
     agentId = null,
-    scopeGoLives
+    scopeGoLives,
+    decidedBy,
+    recommendedBy
   }) {
     return this.api.post('/memory/decisions/create', {
       content,
@@ -87,6 +100,7 @@ export class DecisionAPI {
       rationale,
       constraints,
       agent_id: agentId,
+      ...statedBy({ decidedBy, recommendedBy }),
       ...validityWriteOptions({ scopeGoLives })
     });
   }
@@ -173,14 +187,18 @@ export class DecisionAPI {
    * @param {string} [params.domain]
    * @param {string[]} [params.tags]
    * @param {string} [params.agentId]
+   * @param {string} [params.decidedBy] - Who decided, as the caller states it (plain text, at most 256
+   *   characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
+   * @param {string} [params.recommendedBy] - Who recommended it, same rules as decidedBy.
    */
-  async createPending({ content, requirements, domain = null, tags = null, agentId = null }) {
+  async createPending({ content, requirements, domain = null, tags = null, agentId = null, decidedBy, recommendedBy }) {
     return this.api.post('/memory/decisions/pending/create', {
       content,
       requirements,
       domain,
       tags,
-      agent_id: agentId
+      agent_id: agentId,
+      ...statedBy({ decidedBy, recommendedBy })
     });
   }
 
@@ -237,6 +255,9 @@ export class DecisionAPI {
    * @param {string[]|null} [data.rejected_alternatives=null]
    * @param {string|null} [data.rationale=null]
    * @param {string[]|null} [data.constraints=null]
+   * @param {string|null} [data.decided_by] Who decided the replacement, as the caller states it (plain text, at
+   *   most 256 characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
+   * @param {string|null} [data.recommended_by] Who recommended the replacement, same rules as decided_by.
    */
   async supersede(decisionId, data = {}) {
     const { scopeGoLives, validFrom, ...rest } = data;
