@@ -1,6 +1,7 @@
 ## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
 
 - `decisions.create` and `decisions.createPending` take `decidedBy` and `recommendedBy` (sent as `decided_by` / `recommended_by`, only when given). `decisions.supersede` documents `decided_by` / `recommended_by` for the replacement (its snake_case body already passes them through). Who decided and who recommended, as the caller states it: caller-supplied, not verified, never used for authorization. The service enforces the 256-character limit (422).
+- CLAIMS-20-FIX1: `decisions.supersede` also takes `decidedBy` / `recommendedBy` (snake_case still works). It now rejects a key the service does not accept, which used to be sent and silently ignored, and a field given in both spellings with different values (`TypeError`).
 
 ## Unreleased - CLAIMS-BUILD-02: ask returns the ids it cited (2026-11-14)
 

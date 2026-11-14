@@ -46,6 +46,27 @@ function statedBy({ decidedBy, recommendedBy }) {
   };
 }
 
+/** The body keys `POST /memory/decisions/{id}/supersede` accepts (SupersedeRequest), sent as given. */
+const SUPERSEDE_KEYS = new Set([
+  'new_content', 'new_decision_type', 'new_confidence', 'reason', 'rejected_alternatives', 'rationale', 'constraints',
+  'decided_by', 'recommended_by', 'valid_from', 'scope_go_lives'
+]);
+
+/**
+ * CLAIMS-20-FIX1: map supersede's camelCase spellings and refuse a key the service would silently ignore.
+ * @throws {TypeError} on an unknown key, or one field given in both spellings with different values
+ */
+function supersedeBody(data) {
+  const { scopeGoLives, validFrom, decidedBy, recommendedBy, ...rest } = data;
+  const unknown = Object.keys(rest).filter(key => !SUPERSEDE_KEYS.has(key));
+  if (unknown.length) throw new TypeError(`supersede: unknown field(s) ${unknown.join(', ')}`);
+  const stated = statedBy({ decidedBy, recommendedBy });
+  for (const [key, value] of Object.entries(stated)) {
+    if (rest[key] != null && rest[key] !== value) throw new TypeError(`supersede: ${key} given twice with different values`);
+  }
+  return { ...rest, ...stated, ...validityWriteOptions({ scopeGoLives, validFrom }) };
+}
+
 export class DecisionAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -255,15 +276,15 @@ export class DecisionAPI {
    * @param {string[]|null} [data.rejected_alternatives=null]
    * @param {string|null} [data.rationale=null]
    * @param {string[]|null} [data.constraints=null]
-   * @param {string|null} [data.decided_by] Who decided the replacement, as the caller states it (plain text, at
+   * @param {string|null} [data.decidedBy] Who decided the replacement, as the caller states it (plain text, at
    *   most 256 characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
-   * @param {string|null} [data.recommended_by] Who recommended the replacement, same rules as decided_by.
+   *   `data.decided_by` is accepted too.
+   * @param {string|null} [data.recommendedBy] Who recommended the replacement, same rules (`data.recommended_by` too).
+   * @throws {TypeError} on a key the service does not accept (it would be silently ignored), or a field given in both
+   *   spellings with different values.
    */
   async supersede(decisionId, data = {}) {
-    const { scopeGoLives, validFrom, ...rest } = data;
-    return this.api.post(`/memory/decisions/${decisionId}/supersede`, {
-      ...rest, ...validityWriteOptions({ scopeGoLives, validFrom }),
-    });
+    return this.api.post(`/memory/decisions/${decisionId}/supersede`, supersedeBody(data));
   }
 
   /**
