@@ -453,8 +453,9 @@ export class MemoryAPI {
    * returns nothing, rather than a synthesized reply.
    *
    * `used_evidence_ids` lists the evidence ids the answer cites, in first-cited order.
-   * When nothing matches (no model call is made) or the model cites none of its evidence,
-   * `answer` is "No stored record matches this question." and `grounded` is false.
+   * When nothing matches (no model call is made), `answer` is "No stored record matches
+   * this question."; when the model cites none of its evidence, it is "The answer could not
+   * be tied to a stored record." In both cases `grounded` is false.
    *
    * @param {string} question - The natural-language question.
    * @param {Object} [options]
