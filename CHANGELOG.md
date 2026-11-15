@@ -2,6 +2,7 @@
 
 - `DecisionAPI.restore(decisionId, reason)` posts to `/memory/decisions/{decisionId}/restore`.
 - Review fix round 1: new `src/api/pathId.js`. Every `DecisionAPI` method that puts a decision id in the path refuses, before any request, an id that could reach another route (`/`, `\\`, `.`, `..`, control characters, a route name such as `search`) and encodes any other id as one path segment.
+- `DecisionAPI.restore` doc: the lifecycle notes a decision read returns come from its history, and gain `retired_by` and `retracted_by`.
 
 ## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
 

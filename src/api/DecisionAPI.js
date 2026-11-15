@@ -304,6 +304,9 @@ export class DecisionAPI {
    * Restore a decision that a replacement wrongly retired, in one call (DECISION-RESTORE-ONE-ACTION-1).
    * The replacement stays active and the undone link is kept in history. Owner only.
    * Refusals: 404 not_found, 403 not_owner, 409 not_retired | scheduled | replaced_again | replacement_unreadable.
+   * A decision read's lifecycle notes in context_snapshot (retired_by, superseded_reason, superseded_at, retracted_by,
+   * retraction_reason, retracted_at, restored_by, restored_at, restore_reason, restored_from_replacement) come from
+   * the decision's history, not from what an update wrote under those names.
    * @param {string} decisionId - the retired (superseded) decision
    * @param {string} reason - why the retirement was wrong (required, not blank)
    * @returns {Promise<{decision_id: string, status: string, replacement_decision_id: string, replacement_rule: string, restored_at: string, restored_by: string}>}
