@@ -9,6 +9,7 @@
  *   GET  /memory/decisions/{decision_id}
  *   POST /memory/decisions/{decision_id}/supersede
  *   POST /memory/decisions/{decision_id}/retract
+ *   POST /memory/decisions/{decision_id}/restore      (DECISION-RESTORE-ONE-ACTION-1)
  *   POST /memory/decisions/{decision_id}/reinforce
  *   POST /memory/decisions/{decision_id}/evidence     (SM-EVIDENCE-TYPE-1)
  *   POST /memory/decisions/{decision_id}/contradict
@@ -294,6 +295,20 @@ export class DecisionAPI {
    */
   async retract(decisionId, reason) {
     return this.api.post(`/memory/decisions/${decisionId}/retract`, {
+      reason
+    });
+  }
+
+  /**
+   * Restore a decision that a replacement wrongly retired, in one call (DECISION-RESTORE-ONE-ACTION-1).
+   * The replacement stays active and the undone link is kept in history. Owner only.
+   * Refusals: 404 not_found, 403 not_owner, 409 not_retired | scheduled | replaced_again | replacement_unreadable.
+   * @param {string} decisionId - the retired (superseded) decision
+   * @param {string} reason - why the retirement was wrong (required, not blank)
+   * @returns {Promise<{decision_id: string, status: string, replacement_decision_id: string, replacement_rule: string, restored_at: string, restored_by: string}>}
+   */
+  async restore(decisionId, reason) {
+    return this.api.post(`/memory/decisions/${decisionId}/restore`, {
       reason
     });
   }

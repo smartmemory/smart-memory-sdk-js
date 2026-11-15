@@ -1,3 +1,7 @@
+## Unreleased - DECISION-RESTORE-ONE-ACTION-1: restore a wrongly retired decision (2026-11-15)
+
+- `DecisionAPI.restore(decisionId, reason)` posts to `/memory/decisions/{decisionId}/restore`.
+
 ## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
 
 - `decisions.create` and `decisions.createPending` take `decidedBy` and `recommendedBy` (sent as `decided_by` / `recommended_by`, only when given). `decisions.supersede` documents `decided_by` / `recommended_by` for the replacement (its snake_case body already passes them through). Who decided and who recommended, as the caller states it: caller-supplied, not verified, never used for authorization. The service enforces the 256-character limit (422).
