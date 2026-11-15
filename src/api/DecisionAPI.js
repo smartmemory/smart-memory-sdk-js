@@ -27,6 +27,7 @@
  */
 
 import { validityWriteOptions } from './MemoryAPI.js';
+import { pathId } from './pathId.js';
 
 /** Add the optional business and independent transaction qualifiers, encoded once. */
 function validityQuery({ asOf, businessScope, validAt }, sep) {
@@ -232,7 +233,7 @@ export class DecisionAPI {
    * @param {string} params.memoryId
    */
   async resolveRequirement(decisionId, { requirementId, memoryId }) {
-    return this.api.post(`/memory/decisions/pending/${decisionId}/resolve`, {
+    return this.api.post(`/memory/decisions/pending/${pathId(decisionId, '/memory/decisions/pending/')}/resolve`, {
       requirement_id: requirementId,
       memory_id: memoryId
     });
@@ -243,7 +244,7 @@ export class DecisionAPI {
    * @param {string} decisionId
    */
   async tryActivate(decisionId) {
-    return this.api.post(`/memory/decisions/pending/${decisionId}/activate`, {});
+    return this.api.post(`/memory/decisions/pending/${pathId(decisionId, '/memory/decisions/pending/')}/activate`, {});
   }
 
   /**
@@ -261,7 +262,7 @@ export class DecisionAPI {
    */
   /** @param {{asOf?: string|Date, businessScope?: {site: string}, validAt?: string|Date}} [options] */
   async get(decisionId, { asOf, businessScope, validAt } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}${validityQuery({ asOf, businessScope, validAt }, '?')}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
@@ -285,7 +286,7 @@ export class DecisionAPI {
    *   spellings with different values.
    */
   async supersede(decisionId, data = {}) {
-    return this.api.post(`/memory/decisions/${decisionId}/supersede`, supersedeBody(data));
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/supersede`, supersedeBody(data));
   }
 
   /**
@@ -294,7 +295,7 @@ export class DecisionAPI {
    * @param {string} reason
    */
   async retract(decisionId, reason) {
-    return this.api.post(`/memory/decisions/${decisionId}/retract`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/retract`, {
       reason
     });
   }
@@ -308,7 +309,7 @@ export class DecisionAPI {
    * @returns {Promise<{decision_id: string, status: string, replacement_decision_id: string, replacement_rule: string, restored_at: string, restored_by: string}>}
    */
   async restore(decisionId, reason) {
-    return this.api.post(`/memory/decisions/${decisionId}/restore`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/restore`, {
       reason
     });
   }
@@ -319,7 +320,7 @@ export class DecisionAPI {
    * @param {string} evidenceId
    */
   async reinforce(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${decisionId}/reinforce`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/reinforce`, {
       evidence_id: evidenceId
     });
   }
@@ -334,7 +335,7 @@ export class DecisionAPI {
    * @returns {Promise<{decision_id: string, evidence_id: string, evidence_ids: string[], confidence: number}>}
    */
   async linkDecisionEvidence(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${encodeURIComponent(decisionId)}/evidence`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/evidence`, {
       evidence_id: evidenceId
     });
   }
@@ -365,7 +366,7 @@ export class DecisionAPI {
    * @param {string} evidenceId
    */
   async contradict(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${decisionId}/contradict`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/contradict`, {
       evidence_id: evidenceId
     });
   }
@@ -382,7 +383,7 @@ export class DecisionAPI {
    *   a 400 `invalid_as_of`.
    */
   async getProvenance(decisionId, { asOf, businessScope, validAt } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
@@ -393,7 +394,7 @@ export class DecisionAPI {
    * @param {number} [options.maxDepth=3]
    */
   async getCausalChain(decisionId, { direction = 'both', maxDepth = 3 } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}/causal-chain?direction=${direction}&max_depth=${maxDepth}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/causal-chain?direction=${direction}&max_depth=${maxDepth}`);
   }
 
   /**
@@ -403,7 +404,7 @@ export class DecisionAPI {
    */
   async findConflicts(decisionId, minContest = 0) {
     return this.api.post(
-      `/memory/decisions/${decisionId}/conflicts?min_contest=${encodeURIComponent(minContest)}`
+      `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/conflicts?min_contest=${encodeURIComponent(minContest)}`
     );
   }
 

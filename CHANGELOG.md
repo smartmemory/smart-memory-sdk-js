@@ -1,6 +1,7 @@
 ## Unreleased - DECISION-RESTORE-ONE-ACTION-1: restore a wrongly retired decision (2026-11-15)
 
 - `DecisionAPI.restore(decisionId, reason)` posts to `/memory/decisions/{decisionId}/restore`.
+- Review fix round 1: new `src/api/pathId.js`. Every `DecisionAPI` method that puts a decision id in the path refuses, before any request, an id that could reach another route (`/`, `\\`, `.`, `..`, control characters, a route name such as `search`) and encodes any other id as one path segment.
 
 ## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
 
