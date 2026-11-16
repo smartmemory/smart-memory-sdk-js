@@ -1,3 +1,5 @@
+## 2.0.2
+
 ## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 8: an API key can approve a held decision (2026-11-16)
 
 - `workspaces.setReviewApproval` accepts `'person_or_key'` (the service default since part 8: a signed-in person or an API key approves). JSDoc names the three values.
