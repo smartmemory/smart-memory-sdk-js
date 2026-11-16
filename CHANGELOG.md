@@ -1,5 +1,7 @@
 ## 2.0.2
 
+- REL-2-0-2-MERGED-TIP-1: `setSupersessionPolicy` JSDoc now says turning the review hold off (`'retire'`, or `null` when the inherited value is retire) needs a workspace owner or admin. Docs only.
+
 ## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 8: an API key can approve a held decision (2026-11-16)
 
 - `workspaces.setReviewApproval` accepts `'person_or_key'` (the service default since part 8: a signed-in person or an API key approves). JSDoc names the three values.

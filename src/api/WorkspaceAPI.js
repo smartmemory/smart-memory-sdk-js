@@ -125,9 +125,10 @@ export class WorkspaceAPI {
   }
 
   /**
-   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Needs the edit grant on the
-   * workspace (a viewer gets 403); an API key or agent may only tighten (set `propose`). `ifMatch` sends `If-Match`
-   * (a stale version is a 409).
+   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Setting `propose` needs the
+   * edit grant (a viewer gets 403). Setting `'retire'`, or `null` when the inherited value is retire, turns the review
+   * hold off and needs a workspace owner or admin (an editor gets 403 `privacy_loosen_admin_required`). An API key or
+   * agent may only tighten. `ifMatch` sends `If-Match` (a stale version is a 409).
    */
   async setSupersessionPolicy(workspaceId, policy, { ifMatch } = {}) {
     if (!SUPERSESSION_POLICIES.includes(policy)) {
