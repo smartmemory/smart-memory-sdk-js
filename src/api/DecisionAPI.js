@@ -282,6 +282,10 @@ export class DecisionAPI {
    *   most 256 characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
    *   `data.decided_by` is accepted too.
    * @param {string|null} [data.recommendedBy] Who recommended the replacement, same rules (`data.recommended_by` too).
+   * @returns {Promise<{old_decision_id: string, new_decision_id: string|null, status: string, review_id?: string}>}
+   *   `status` is `'superseded'`, or `'held_for_review'` when the workspace's supersession policy is `propose`: then
+   *   nothing was replaced, the old decision stays active, `new_decision_id` is null and `review_id` names the review
+   *   that decides it (accept with `client.reasoning.settleReview(reviewId, {action: 'keep_b', reason})`).
    * @throws {TypeError} on a key the service does not accept (it would be silently ignored), or a field given in both
    *   spellings with different values.
    */

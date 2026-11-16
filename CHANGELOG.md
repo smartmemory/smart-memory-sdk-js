@@ -1,3 +1,7 @@
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 2: a replacing decision waits for a person in propose mode (2026-11-16)
+
+- `client.decisions.supersede` documents the `held_for_review` answer (`review_id`, `new_decision_id` null) a propose workspace returns. No code change: the response is returned as sent.
+
 ## Unreleased - DECISION-RESTORE-ONE-ACTION-1: restore a wrongly retired decision (2026-11-15)
 
 - `DecisionAPI.restore(decisionId, reason)` posts to `/memory/decisions/{decisionId}/restore`.
