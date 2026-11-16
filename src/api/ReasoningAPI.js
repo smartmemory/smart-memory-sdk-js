@@ -142,9 +142,9 @@ export class ReasoningAPI {
    * Settle one review. The server records the authenticated caller as the actor; the body never names one
    * (a body `actor` is a 422). An identical retry returns the stored receipt; a different decision is a 409.
    * Errors: 404 unknown or another workspace's review, 403 refused, 409 conflict or stale, 422 bad body.
-   * By default (`review.approval` = `person_only`) only a signed-in person may settle: an API key, an agent or a hosted
-   * connector session gets a 403 whose `message` is the service's sentence ("Only a person can approve reviews in this
-   * workspace ..."), unchanged; show it as is.
+   * By default (`review.approval` = `person_or_key`) a signed-in person or an API key may settle: an agent or a hosted
+   * connector session gets a 403 whose `message` is the service's sentence ("Only a person or an API key can approve
+   * reviews in this workspace ..."), unchanged; show it as is. Under `person_only` a key gets that 403 too.
    * @param {string} reviewId
    * @param {Object} params
    * @param {'keep_a'|'keep_b'|'keep_both'} params.action

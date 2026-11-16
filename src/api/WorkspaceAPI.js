@@ -1,7 +1,7 @@
 const LIFECYCLE_CAPABILITY = 'lifecycle.v1';
 const LIFECYCLE_UNSUPPORTED = () => ({ supported: false });
 const SUPERSESSION_POLICIES = ['retire', 'propose', null];
-const REVIEW_APPROVALS = ['person_only', 'anyone', null];
+const REVIEW_APPROVALS = ['person_only', 'person_or_key', 'anyone', null];
 
 export class WorkspaceAPI {
   constructor(baseAPI) {
@@ -139,21 +139,22 @@ export class WorkspaceAPI {
 
   /**
    * Who may settle (approve) reviews in the workspace (`review.approval`, OUTREACH-MARIUS-HITL-SURFACE-1 part 7).
-   * `person_only` is the default: only a signed-in person, never an API key, an agent or a hosted connector session.
-   * `anyone` lets any caller with write access settle. Returns `{ workspaceId, policy, source, stated, version }`.
+   * `person_or_key` is the default (part 8): a signed-in person or an API key, never an agent or a hosted connector
+   * session. `person_only` keeps keys out. `anyone` lets any caller with write access settle. Returns `{ workspaceId, policy, source, stated, version }`.
    */
   async getReviewApproval(workspaceId) {
     return supersessionView(workspaceId, await this.getWorkspaceSettings(workspaceId), 'approval');
   }
 
   /**
-   * Set who may settle reviews: `'person_only'`, `'anyone'`, or `null` to inherit. Anyone but a signed-in person (an
-   * API key, an agent, a hosted connector session) may only tighten (set `person_only`); a loosening call rejects
-   * with 403 `settings_loosen_refused`. `ifMatch` sends `If-Match`.
+   * Set who may settle reviews: `'person_only'`, `'person_or_key'`, `'anyone'`, or `null` to inherit (the default,
+   * `person_or_key`). Anyone but a signed-in person (an API key, an agent, a hosted connector session) may only
+   * tighten (set `person_only`); a loosening call rejects with 403 `settings_loosen_refused`. A signed-in person
+   * loosens only with the workspace admin grant (403 `privacy_loosen_admin_required` otherwise). `ifMatch` sends `If-Match`.
    */
   async setReviewApproval(workspaceId, approval, { ifMatch } = {}) {
     if (!REVIEW_APPROVALS.includes(approval)) {
-      throw new TypeError("approval must be 'person_only', 'anyone' or null");
+      throw new TypeError("approval must be 'person_only', 'person_or_key', 'anyone' or null");
     }
     const settings = await this.updateWorkspaceSettings(workspaceId, { review: { approval } }, { ifMatch });
     return supersessionView(workspaceId, settings, 'approval');

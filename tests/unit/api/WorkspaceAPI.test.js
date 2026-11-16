@@ -220,7 +220,7 @@ describe('WorkspaceAPI review approval (OUTREACH-MARIUS-HITL-SURFACE-1 part 7)',
     expect(api.get).toHaveBeenCalledWith('/memory/workspaces/ws1/settings');
   });
 
-  it.each(['person_only', 'anyone', null])('patches review.approval to %s', async approval => {
+  it.each(['person_only', 'person_or_key', 'anyone', null])('patches review.approval to %s', async approval => {
     const api = mockBaseAPI();
     api.patch.mockResolvedValueOnce(SETTINGS);
     const workspaces = new WorkspaceAPI(api);
