@@ -130,7 +130,8 @@ export class ReasoningAPI {
    * @param {'open'|'resolved'} [params.status='open']
    * @param {number} [params.limit=50] 1..500
    * @param {number} [params.offset=0]
-   * @returns {Promise<{items: Object[], status: string, limit: number, offset: number}>}
+   * @returns {Promise<{items: Object[], total: number, status: string, limit: number, offset: number}>} `total` counts
+   *   the reviews of that status in the workspace (a page may hold fewer rows, never more).
    */
   async listReviews({ status = 'open', limit = 50, offset = 0 } = {}) {
     const query = new URLSearchParams({ status, limit: String(limit), offset: String(offset) });
@@ -141,6 +142,9 @@ export class ReasoningAPI {
    * Settle one review. The server records the authenticated caller as the actor; the body never names one
    * (a body `actor` is a 422). An identical retry returns the stored receipt; a different decision is a 409.
    * Errors: 404 unknown or another workspace's review, 403 refused, 409 conflict or stale, 422 bad body.
+   * By default (`review.approval` = `person_only`) only a signed-in person may settle: an API key, an agent or a hosted
+   * connector session gets a 403 whose `message` is the service's sentence ("Only a person can approve reviews in this
+   * workspace ..."), unchanged; show it as is.
    * @param {string} reviewId
    * @param {Object} params
    * @param {'keep_a'|'keep_b'|'keep_both'} params.action

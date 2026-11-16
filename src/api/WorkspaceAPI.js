@@ -1,6 +1,7 @@
 const LIFECYCLE_CAPABILITY = 'lifecycle.v1';
 const LIFECYCLE_UNSUPPORTED = () => ({ supported: false });
 const SUPERSESSION_POLICIES = ['retire', 'propose', null];
+const REVIEW_APPROVALS = ['person_only', 'anyone', null];
 
 export class WorkspaceAPI {
   constructor(baseAPI) {
@@ -137,6 +138,28 @@ export class WorkspaceAPI {
   }
 
   /**
+   * Who may settle (approve) reviews in the workspace (`review.approval`, OUTREACH-MARIUS-HITL-SURFACE-1 part 7).
+   * `person_only` is the default: only a signed-in person, never an API key, an agent or a hosted connector session.
+   * `anyone` lets any caller with write access settle. Returns `{ workspaceId, policy, source, stated, version }`.
+   */
+  async getReviewApproval(workspaceId) {
+    return supersessionView(workspaceId, await this.getWorkspaceSettings(workspaceId), 'approval');
+  }
+
+  /**
+   * Set who may settle reviews: `'person_only'`, `'anyone'`, or `null` to inherit. Anyone but a signed-in person (an
+   * API key, an agent, a hosted connector session) may only tighten (set `person_only`); a loosening call rejects
+   * with 403 `settings_loosen_refused`. `ifMatch` sends `If-Match`.
+   */
+  async setReviewApproval(workspaceId, approval, { ifMatch } = {}) {
+    if (!REVIEW_APPROVALS.includes(approval)) {
+      throw new TypeError("approval must be 'person_only', 'anyone' or null");
+    }
+    const settings = await this.updateWorkspaceSettings(workspaceId, { review: { approval } }, { ifMatch });
+    return supersessionView(workspaceId, settings, 'approval');
+  }
+
+  /**
    * The workspace's layered settings record (WS-MGMT-16, contract `modules.settings`). Resolves to
    * `{ scope, scope_id, version, stated, effective, source, read_only }`: per knob, `stated` is this workspace's
    * override (`null` = inherit), `effective` the value in force and `source` `workspace`, `tenant` or `default`.
@@ -174,12 +197,12 @@ function ifMatchOptions(ifMatch) {
   return ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
 }
 
-function supersessionView(workspaceId, settings) {
+function supersessionView(workspaceId, settings, knob = 'supersession') {
   return {
     workspaceId: settings?.scope_id ?? workspaceId,
-    policy: settings?.effective?.review?.supersession ?? null,
-    source: settings?.source?.review?.supersession ?? null,
-    stated: settings?.stated?.review?.supersession ?? null,
+    policy: settings?.effective?.review?.[knob] ?? null,
+    source: settings?.source?.review?.[knob] ?? null,
+    stated: settings?.stated?.review?.[knob] ?? null,
     version: settings?.version ?? null
   };
 }

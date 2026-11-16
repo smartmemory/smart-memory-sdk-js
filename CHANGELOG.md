@@ -1,3 +1,8 @@
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 7: only a person approves by default (2026-11-16)
+
+- Only a person approves a review by default now (service side). New `workspaces.getReviewApproval` and `workspaces.setReviewApproval` (`'person_only'`, `'anyone'` or `null` to inherit, anything else throws before a request).
+- `reasoning.listReviews` documents `total`, and a refused settle throws with the service's 403 sentence as the message.
+
 ## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 2: a replacing decision waits for a person in propose mode (2026-11-16)
 
 - `client.decisions.supersede` documents the `held_for_review` answer (`review_id`, `new_decision_id` null) a propose workspace returns. No code change: the response is returned as sent.
