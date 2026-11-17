@@ -13,7 +13,7 @@
 
 /** Static path segments the service has directly under each decision prefix an id follows. */
 export const RESERVED_SEGMENTS = Object.freeze({
-  '/memory/decisions/': new Set(['create', 'pending', 'search']),
+  '/memory/decisions/': new Set(['create', 'pending', 'search', 'auto-changes']),
   '/memory/decisions/pending/': new Set(['create']),
 });
 

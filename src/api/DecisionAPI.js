@@ -14,6 +14,9 @@
  *   POST /memory/decisions/{decision_id}/evidence     (SM-EVIDENCE-TYPE-1)
  *   POST /memory/decisions/{decision_id}/contradict
  *   GET  /memory/decisions/{decision_id}/provenance
+ *   GET  /memory/decisions/{decision_id}/history      (STUDIO-DECISION-VIEW-1)
+ *   GET  /memory/decisions/{decision_id}/sites        (STUDIO-DECISION-VIEW-1)
+ *   GET  /memory/decisions/auto-changes               (STUDIO-DECISION-VIEW-1)
  *   GET  /memory/decisions/{decision_id}/causal-chain
  *   POST /memory/decisions/{decision_id}/conflicts
  *
@@ -38,6 +41,34 @@ function validityQuery({ asOf, businessScope, validAt }, sep) {
     params.push(`${key}=${encodeURIComponent(encoded)}`);
   }
   return params.length ? sep + params.join('&') : '';
+}
+
+/** `?a=1&b=2` from the set values (dates as ISO strings, each encoded once), plus repeated `extra` pairs; '' when none. */
+function queryString(values, extra = []) {
+  const params = [];
+  for (const [key, value] of [...Object.entries(values), ...extra]) {
+    if (value == null) continue;
+    params.push(`${key}=${encodeURIComponent(value instanceof Date ? value.toISOString() : value)}`);
+  }
+  return params.length ? `?${params.join('&')}` : '';
+}
+
+/**
+ * Make a named refusal readable on a thrown APIError: `code` (the service's name, e.g. `stale_proposal`), `reason`
+ * (its sentence, also `error.message`) and `retryable` (the same request may be sent again, nothing was written).
+ * The service body is `{detail: {code, message, retryable}}` or `{detail: "sentence"}`.
+ */
+function nameRefusal(error) {
+  const inner = error?.detail?.detail;
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    if (typeof inner.code === 'string' && inner.code) error.code = inner.code;
+    error.reason = typeof inner.message === 'string' ? inner.message : error.message;
+    error.retryable = inner.retryable === true;
+  } else if (error && typeof error === 'object') {
+    error.reason = typeof inner === 'string' ? inner : error.message;
+    error.retryable = false;
+  }
+  return error;
 }
 
 /** CLAIMS-BUILD-20: the decision "who" fields, sent only when given. */
@@ -391,6 +422,51 @@ export class DecisionAPI {
    */
   async getProvenance(decisionId, { asOf, businessScope, validAt } = {}) {
     return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
+  }
+
+  /**
+   * A decision's dated history, newest first (STUDIO-DECISION-VIEW-1): every version and event (recorded, edited,
+   * replaced, retracted, restored, review answers, evidence links) with who and why. Who is an actor string
+   * `<kind>:<id>` such as `human:alice`.
+   * @param {string} decisionId
+   * @param {{limit?: number, before?: string|Date, asOf?: string|Date}} [options] `limit` 1 to 500 (service default
+   *   100); `before` pages (entries strictly older); `asOf` keeps entries at or before that instant.
+   * @returns {Promise<{decision_id: string, entries: Array<Object>, start: {at: string|null, kind: 'recorded'|'migrated'|'unknown', note: string}, truncated: boolean}>}
+   * @throws {APIError} 404 for an unknown decision (a decision you cannot read answers the same); 400 `invalid_before`
+   *   or `invalid_as_of`; 422 for a `limit` out of range.
+   */
+  async getHistory(decisionId, { limit, before, asOf } = {}) {
+    const query = queryString({ limit, before, as_of: asOf });
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/history${query}`);
+  }
+
+  /**
+   * Which rule of a decision's chain is in force at each site on one date, in one call (STUDIO-DECISION-VIEW-1).
+   * @param {string} decisionId
+   * @param {{at?: string|Date, scopes?: Array<{site: string}>}} [options] `at` is the date asked about (default now);
+   *   `scopes` names extra sites to answer for even when no rule lists them.
+   * @returns {Promise<{decision_id: string, at: string, all_sites: boolean, all_sites_from: string|null,
+   *   rows: Array<{scope: Object, in_force: {decision_id: string|null, visible: boolean, from: string}|null,
+   *   next: {decision_id: string|null, visible: boolean, from: string}|null}>}>}
+   *   `all_sites` true means the rule applies everywhere from `all_sites_from` and `rows` is empty. `in_force` null
+   *   means no rule of the chain is in force at that site on that date, never a default rule.
+   * @throws {APIError} 404 for an unknown decision; 400 `invalid_scope` or `invalid_at_or_scope`.
+   */
+  async getSites(decisionId, { at, scopes } = {}) {
+    const query = queryString({ at }, (scopes || []).map(scope => ['scope', JSON.stringify(scope)]));
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/sites${query}`);
+  }
+
+  /**
+   * Rules the note reader replaced or retracted by itself, with no person approving (STUDIO-DECISION-VIEW-1).
+   * Undo is `restore(oldDecisionId, reason)`.
+   * @param {{since?: string|Date, status?: 'unchecked'|'checked'|'undone'|'all', limit?: number, offset?: number}} [options]
+   * @returns {Promise<{items: Array<Object>, total: number, unchecked_count: number, notify: boolean,
+   *   supersession: 'retire'|'propose', since: string}>}
+   * @throws {APIError} 400 `invalid_status` or `invalid_since`.
+   */
+  async listAutoChanges({ since, status, limit, offset } = {}) {
+    return this.api.get(`/memory/decisions/auto-changes${queryString({ since, status, limit, offset })}`);
   }
 
   /**

@@ -1,3 +1,9 @@
+## Unreleased - STUDIO-DECISION-VIEW-1 U5: the three decision reads (2026-11-18)
+
+- `decisions.getHistory(id, { limit, before, asOf })`, `decisions.getSites(id, { at, scopes })` and `decisions.listAutoChanges({ since, status, limit, offset })` read `/memory/decisions/{id}/history`, `/memory/decisions/{id}/sites` and `/memory/decisions/auto-changes`. A refusal is the usual `APIError` (404 unknown decision, 400 `invalid_before`, `invalid_as_of`, `invalid_scope`, `invalid_status`).
+- `auto-changes` is now a reserved decision id (it is a route name): `decisions.get('auto-changes')` throws `Invalid id` before any request.
+- Tests use recorded responses (contract and the U4 report), not a live service.
+
 ## 2.0.2
 
 - REL-2-0-2-MERGED-TIP-1: `setSupersessionPolicy` JSDoc now says turning the review hold off (`'retire'`, or `null` when the inherited value is retire) needs a workspace owner or admin. Docs only.
