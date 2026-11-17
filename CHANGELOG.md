@@ -1,3 +1,26 @@
+## 2.0.2
+
+- REL-2-0-2-MERGED-TIP-1: `setSupersessionPolicy` JSDoc now says turning the review hold off (`'retire'`, or `null` when the inherited value is retire) needs a workspace owner or admin. Docs only.
+
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 8: an API key can approve a held decision (2026-11-16)
+
+- `workspaces.setReviewApproval` accepts `'person_or_key'` (the service default since part 8: a signed-in person or an API key approves). JSDoc names the three values.
+
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 7: only a person approves by default (2026-11-16)
+
+- Only a person approves a review by default now (service side). New `workspaces.getReviewApproval` and `workspaces.setReviewApproval` (`'person_only'`, `'anyone'` or `null` to inherit, anything else throws before a request).
+- `reasoning.listReviews` documents `total`, and a refused settle throws with the service's 403 sentence as the message.
+
+## Unreleased - OUTREACH-MARIUS-HITL-SURFACE-1 part 2: a replacing decision waits for a person in propose mode (2026-11-16)
+
+- `client.decisions.supersede` documents the `held_for_review` answer (`review_id`, `new_decision_id` null) a propose workspace returns. No code change: the response is returned as sent.
+
+## Unreleased - DECISION-RESTORE-ONE-ACTION-1: restore a wrongly retired decision (2026-11-15)
+
+- `DecisionAPI.restore(decisionId, reason)` posts to `/memory/decisions/{decisionId}/restore`.
+- Review fix round 1: new `src/api/pathId.js`. Every `DecisionAPI` method that puts a decision id in the path refuses, before any request, an id that could reach another route (`/`, `\\`, `.`, `..`, control characters, a route name such as `search`) and encodes any other id as one path segment.
+- `DecisionAPI.restore` doc: the lifecycle notes a decision read returns come from its history, and gain `retired_by` and `retracted_by`.
+
 ## Unreleased - CLAIMS-BUILD-20: optional decidedBy and recommendedBy on decisions (2026-11-14)
 
 - `decisions.create` and `decisions.createPending` take `decidedBy` and `recommendedBy` (sent as `decided_by` / `recommended_by`, only when given). `decisions.supersede` documents `decided_by` / `recommended_by` for the replacement (its snake_case body already passes them through). Who decided and who recommended, as the caller states it: caller-supplied, not verified, never used for authorization. The service enforces the 256-character limit (422).

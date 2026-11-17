@@ -1,6 +1,7 @@
 const LIFECYCLE_CAPABILITY = 'lifecycle.v1';
 const LIFECYCLE_UNSUPPORTED = () => ({ supported: false });
 const SUPERSESSION_POLICIES = ['retire', 'propose', null];
+const REVIEW_APPROVALS = ['person_only', 'person_or_key', 'anyone', null];
 
 export class WorkspaceAPI {
   constructor(baseAPI) {
@@ -124,9 +125,10 @@ export class WorkspaceAPI {
   }
 
   /**
-   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Needs the edit grant on the
-   * workspace (a viewer gets 403); an API key or agent may only tighten (set `propose`). `ifMatch` sends `If-Match`
-   * (a stale version is a 409).
+   * Set the supersession policy: `'retire'`, `'propose'`, or `null` to inherit. Setting `propose` needs the
+   * edit grant (a viewer gets 403). Setting `'retire'`, or `null` when the inherited value is retire, turns the review
+   * hold off and needs a workspace owner or admin (an editor gets 403 `privacy_loosen_admin_required`). An API key or
+   * agent may only tighten. `ifMatch` sends `If-Match` (a stale version is a 409).
    */
   async setSupersessionPolicy(workspaceId, policy, { ifMatch } = {}) {
     if (!SUPERSESSION_POLICIES.includes(policy)) {
@@ -134,6 +136,29 @@ export class WorkspaceAPI {
     }
     const settings = await this.updateWorkspaceSettings(workspaceId, { review: { supersession: policy } }, { ifMatch });
     return supersessionView(workspaceId, settings);
+  }
+
+  /**
+   * Who may settle (approve) reviews in the workspace (`review.approval`, OUTREACH-MARIUS-HITL-SURFACE-1 part 7).
+   * `person_or_key` is the default (part 8): a signed-in person or an API key, never an agent or a hosted connector
+   * session. `person_only` keeps keys out. `anyone` lets any caller with write access settle. Returns `{ workspaceId, policy, source, stated, version }`.
+   */
+  async getReviewApproval(workspaceId) {
+    return supersessionView(workspaceId, await this.getWorkspaceSettings(workspaceId), 'approval');
+  }
+
+  /**
+   * Set who may settle reviews: `'person_only'`, `'person_or_key'`, `'anyone'`, or `null` to inherit (the default,
+   * `person_or_key`). Anyone but a signed-in person (an API key, an agent, a hosted connector session) may only
+   * tighten (set `person_only`); a loosening call rejects with 403 `settings_loosen_refused`. A signed-in person
+   * loosens only with the workspace admin grant (403 `privacy_loosen_admin_required` otherwise). `ifMatch` sends `If-Match`.
+   */
+  async setReviewApproval(workspaceId, approval, { ifMatch } = {}) {
+    if (!REVIEW_APPROVALS.includes(approval)) {
+      throw new TypeError("approval must be 'person_only', 'person_or_key', 'anyone' or null");
+    }
+    const settings = await this.updateWorkspaceSettings(workspaceId, { review: { approval } }, { ifMatch });
+    return supersessionView(workspaceId, settings, 'approval');
   }
 
   /**
@@ -174,12 +199,12 @@ function ifMatchOptions(ifMatch) {
   return ifMatch === undefined || ifMatch === null ? {} : { headers: { 'If-Match': String(ifMatch) } };
 }
 
-function supersessionView(workspaceId, settings) {
+function supersessionView(workspaceId, settings, knob = 'supersession') {
   return {
     workspaceId: settings?.scope_id ?? workspaceId,
-    policy: settings?.effective?.review?.supersession ?? null,
-    source: settings?.source?.review?.supersession ?? null,
-    stated: settings?.stated?.review?.supersession ?? null,
+    policy: settings?.effective?.review?.[knob] ?? null,
+    source: settings?.source?.review?.[knob] ?? null,
+    stated: settings?.stated?.review?.[knob] ?? null,
     version: settings?.version ?? null
   };
 }

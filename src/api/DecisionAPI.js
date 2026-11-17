@@ -9,6 +9,7 @@
  *   GET  /memory/decisions/{decision_id}
  *   POST /memory/decisions/{decision_id}/supersede
  *   POST /memory/decisions/{decision_id}/retract
+ *   POST /memory/decisions/{decision_id}/restore      (DECISION-RESTORE-ONE-ACTION-1)
  *   POST /memory/decisions/{decision_id}/reinforce
  *   POST /memory/decisions/{decision_id}/evidence     (SM-EVIDENCE-TYPE-1)
  *   POST /memory/decisions/{decision_id}/contradict
@@ -26,6 +27,7 @@
  */
 
 import { validityWriteOptions } from './MemoryAPI.js';
+import { pathId } from './pathId.js';
 
 /** Add the optional business and independent transaction qualifiers, encoded once. */
 function validityQuery({ asOf, businessScope, validAt }, sep) {
@@ -231,7 +233,7 @@ export class DecisionAPI {
    * @param {string} params.memoryId
    */
   async resolveRequirement(decisionId, { requirementId, memoryId }) {
-    return this.api.post(`/memory/decisions/pending/${decisionId}/resolve`, {
+    return this.api.post(`/memory/decisions/pending/${pathId(decisionId, '/memory/decisions/pending/')}/resolve`, {
       requirement_id: requirementId,
       memory_id: memoryId
     });
@@ -242,7 +244,7 @@ export class DecisionAPI {
    * @param {string} decisionId
    */
   async tryActivate(decisionId) {
-    return this.api.post(`/memory/decisions/pending/${decisionId}/activate`, {});
+    return this.api.post(`/memory/decisions/pending/${pathId(decisionId, '/memory/decisions/pending/')}/activate`, {});
   }
 
   /**
@@ -260,7 +262,7 @@ export class DecisionAPI {
    */
   /** @param {{asOf?: string|Date, businessScope?: {site: string}, validAt?: string|Date}} [options] */
   async get(decisionId, { asOf, businessScope, validAt } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}${validityQuery({ asOf, businessScope, validAt }, '?')}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
@@ -280,11 +282,15 @@ export class DecisionAPI {
    *   most 256 characters). Caller-supplied, not verified, never used for authorization (CLAIMS-BUILD-20).
    *   `data.decided_by` is accepted too.
    * @param {string|null} [data.recommendedBy] Who recommended the replacement, same rules (`data.recommended_by` too).
+   * @returns {Promise<{old_decision_id: string, new_decision_id: string|null, status: string, review_id?: string}>}
+   *   `status` is `'superseded'`, or `'held_for_review'` when the workspace's supersession policy is `propose`: then
+   *   nothing was replaced, the old decision stays active, `new_decision_id` is null and `review_id` names the review
+   *   that decides it (accept with `client.reasoning.settleReview(reviewId, {action: 'keep_b', reason})`).
    * @throws {TypeError} on a key the service does not accept (it would be silently ignored), or a field given in both
    *   spellings with different values.
    */
   async supersede(decisionId, data = {}) {
-    return this.api.post(`/memory/decisions/${decisionId}/supersede`, supersedeBody(data));
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/supersede`, supersedeBody(data));
   }
 
   /**
@@ -293,7 +299,24 @@ export class DecisionAPI {
    * @param {string} reason
    */
   async retract(decisionId, reason) {
-    return this.api.post(`/memory/decisions/${decisionId}/retract`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/retract`, {
+      reason
+    });
+  }
+
+  /**
+   * Restore a decision that a replacement wrongly retired, in one call (DECISION-RESTORE-ONE-ACTION-1).
+   * The replacement stays active and the undone link is kept in history. Owner only.
+   * Refusals: 404 not_found, 403 not_owner, 409 not_retired | scheduled | replaced_again | replacement_unreadable.
+   * A decision read's lifecycle notes in context_snapshot (retired_by, superseded_reason, superseded_at, retracted_by,
+   * retraction_reason, retracted_at, restored_by, restored_at, restore_reason, restored_from_replacement) come from
+   * the decision's history, not from what an update wrote under those names.
+   * @param {string} decisionId - the retired (superseded) decision
+   * @param {string} reason - why the retirement was wrong (required, not blank)
+   * @returns {Promise<{decision_id: string, status: string, replacement_decision_id: string, replacement_rule: string, restored_at: string, restored_by: string}>}
+   */
+  async restore(decisionId, reason) {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/restore`, {
       reason
     });
   }
@@ -304,7 +327,7 @@ export class DecisionAPI {
    * @param {string} evidenceId
    */
   async reinforce(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${decisionId}/reinforce`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/reinforce`, {
       evidence_id: evidenceId
     });
   }
@@ -319,7 +342,7 @@ export class DecisionAPI {
    * @returns {Promise<{decision_id: string, evidence_id: string, evidence_ids: string[], confidence: number}>}
    */
   async linkDecisionEvidence(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${encodeURIComponent(decisionId)}/evidence`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/evidence`, {
       evidence_id: evidenceId
     });
   }
@@ -350,7 +373,7 @@ export class DecisionAPI {
    * @param {string} evidenceId
    */
   async contradict(decisionId, evidenceId) {
-    return this.api.post(`/memory/decisions/${decisionId}/contradict`, {
+    return this.api.post(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/contradict`, {
       evidence_id: evidenceId
     });
   }
@@ -367,7 +390,7 @@ export class DecisionAPI {
    *   a 400 `invalid_as_of`.
    */
   async getProvenance(decisionId, { asOf, businessScope, validAt } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);
   }
 
   /**
@@ -378,7 +401,7 @@ export class DecisionAPI {
    * @param {number} [options.maxDepth=3]
    */
   async getCausalChain(decisionId, { direction = 'both', maxDepth = 3 } = {}) {
-    return this.api.get(`/memory/decisions/${decisionId}/causal-chain?direction=${direction}&max_depth=${maxDepth}`);
+    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/causal-chain?direction=${direction}&max_depth=${maxDepth}`);
   }
 
   /**
@@ -388,7 +411,7 @@ export class DecisionAPI {
    */
   async findConflicts(decisionId, minContest = 0) {
     return this.api.post(
-      `/memory/decisions/${decisionId}/conflicts?min_contest=${encodeURIComponent(minContest)}`
+      `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/conflicts?min_contest=${encodeURIComponent(minContest)}`
     );
   }
 

@@ -148,6 +148,16 @@ describe('DecisionAPI', () => {
     });
   });
 
+  it('should restore a wrongly retired decision in one call', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.restore('d-1', 'An exception, not a replacement');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/restore', {
+      reason: 'An exception, not a replacement'
+    });
+  });
+
   it('should get provenance for a decision', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);

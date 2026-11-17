@@ -198,3 +198,40 @@ describe('WorkspaceAPI supersession policy (OUTREACH-MARIUS-HITL-SURFACE-1)', ()
     await expect(workspaces.setSupersessionPolicy('ws1', 'propose')).rejects.toMatchObject({ status });
   });
 });
+
+describe('WorkspaceAPI review approval (OUTREACH-MARIUS-HITL-SURFACE-1 part 7)', () => {
+  const SETTINGS = {
+    scope: 'workspace',
+    scope_id: 'ws1',
+    version: 5,
+    stated: { review: { approval: null } },
+    effective: { review: { approval: 'person_only' } },
+    source: { review: { approval: 'default' } },
+    read_only: {}
+  };
+
+  it('reads review.approval (person_only by default)', async () => {
+    const api = mockBaseAPI();
+    api.get.mockResolvedValueOnce(SETTINGS);
+    const workspaces = new WorkspaceAPI(api);
+    await expect(workspaces.getReviewApproval('ws1')).resolves.toEqual({
+      workspaceId: 'ws1', policy: 'person_only', source: 'default', stated: null, version: 5
+    });
+    expect(api.get).toHaveBeenCalledWith('/memory/workspaces/ws1/settings');
+  });
+
+  it.each(['person_only', 'person_or_key', 'anyone', null])('patches review.approval to %s', async approval => {
+    const api = mockBaseAPI();
+    api.patch.mockResolvedValueOnce(SETTINGS);
+    const workspaces = new WorkspaceAPI(api);
+    await workspaces.setReviewApproval('ws1', approval);
+    expect(api.patch).toHaveBeenCalledWith('/memory/workspaces/ws1/settings', { stated: { review: { approval } } }, {});
+  });
+
+  it('rejects an unknown value before any request', async () => {
+    const api = mockBaseAPI();
+    const workspaces = new WorkspaceAPI(api);
+    await expect(workspaces.setReviewApproval('ws1', 'nobody')).rejects.toThrow(TypeError);
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+});
