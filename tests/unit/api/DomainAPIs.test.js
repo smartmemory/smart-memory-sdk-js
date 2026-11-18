@@ -57,6 +57,39 @@ describe('DecisionAPI', () => {
     });
   });
 
+  it('should link evidence to a decision (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.linkDecisionEvidence('d-1', 'ev:0123456789abcdef');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/evidence', {
+      evidence_id: 'ev:0123456789abcdef'
+    });
+  });
+
+  it('should record a Compose evidence receipt (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    const record = {
+      id: 'ev:0123456789abcdef',
+      evidence: { kind: 'sha', repo: '/r', sha: 'afee2c429d3e', at: '2026-11-04T15:00:00Z', by: 'sm20-main' },
+      checked_at: '2026-11-04T15:00:05Z',
+      checks: ['commit exists'],
+      subject: { unit: 'SM-EVIDENCE-TYPE-1' }
+    };
+    await decisions.recordEvidence(record);
+
+    expect(api.post).toHaveBeenCalledWith('/memory/evidence', { record });
+  });
+
+  it('should read an evidence receipt by ref, URL-encoded (SM-EVIDENCE-TYPE-1)', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.getEvidence('ev:0123456789abcdef');
+
+    expect(api.get).toHaveBeenCalledWith('/memory/evidence/ev%3A0123456789abcdef');
+  });
+
   it('should search decisions by topic', async () => {
     const api = mockBaseAPI();
     const decisions = new DecisionAPI(api);
@@ -112,6 +145,16 @@ describe('DecisionAPI', () => {
 
     expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/retract', {
       reason: 'No longer valid'
+    });
+  });
+
+  it('should restore a wrongly retired decision in one call', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    await decisions.restore('d-1', 'An exception, not a replacement');
+
+    expect(api.post).toHaveBeenCalledWith('/memory/decisions/d-1/restore', {
+      reason: 'An exception, not a replacement'
     });
   });
 
@@ -372,6 +415,15 @@ describe('TeamAPI', () => {
     await teams.removeMember('t-1', 'u-1');
 
     expect(api.delete).toHaveBeenCalledWith('/memory/teams/t-1/members/u-1');
+  });
+
+  it('should set and clear a member read-only flag', async () => {
+    const api = mockBaseAPI();
+    const teams = new TeamAPI(api);
+    await teams.setMemberReadOnly('t-1', 'u-1', true);
+    expect(api.put).toHaveBeenCalledWith('/memory/teams/t-1/members/u-1/read-only', { read_only: true });
+    await teams.setMemberReadOnly('t-1', 'u-1', false);
+    expect(api.put).toHaveBeenLastCalledWith('/memory/teams/t-1/members/u-1/read-only', { read_only: false });
   });
 });
 

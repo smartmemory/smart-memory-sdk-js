@@ -14,7 +14,6 @@ export { DecisionAPI } from './api/DecisionAPI.js';
 export { OpinionAPI } from './api/OpinionAPI.js';
 export { GraphAPI } from './api/GraphAPI.js';
 export { VectorAPI } from './api/VectorAPI.js';
-export { RoutingAPI, routingEcho } from './api/RoutingAPI.js';
 export { TeamAPI } from './api/TeamAPI.js';
 export { WorkspaceAPI } from './api/WorkspaceAPI.js';
 export { ProfileAPI } from './api/ProfileAPI.js';
@@ -43,8 +42,13 @@ export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
 export { APIError } from './errors/APIError.js';
+export { SubmitScopeChangedError, UnsupportedReceiptError, AdmissionConflictError, StageChainError, STAGE_CHAIN_CODES } from './errors/ReceiptErrors.js';
+
+// 2.0 save receipt, await and retry identity (REL-CALLERS-JSSDK-1)
+export { SaveReceipt, decodeReceipt } from './api/receipt.js';
+export { awaitReceipt } from './api/awaitReceipt.js';
+export { newIdempotencyKey } from './api/submit.js';
 export { VectorNotFoundError, VectorUnsupportedError, VectorSubstrateError } from './errors/VectorErrors.js';
-export { RoutingPrefsConflictError, routingErrorCode } from './errors/RoutingErrors.js';
 
 // API base URL resolution (DRY-FRONTEND-1)
 export { createApiBaseUrl } from './apiBaseUrl.js';

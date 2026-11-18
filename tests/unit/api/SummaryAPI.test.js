@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { BaseAPI } from '../../../src/api/BaseAPI.js';
+import { AuthCore } from '../../../src/auth/AuthCore.js';
 import { SummaryAPI } from '../../../src/api/SummaryAPI.js';
 
 describe('SummaryAPI', () => {
@@ -52,24 +54,81 @@ describe('SummaryAPI', () => {
     expect(await api.get('snap_nope')).toBeNull();
   });
 
-  it('list passes through limit + isHeartbeat as query params', async () => {
-    await api.list({ isHeartbeat: false, limit: 5 });
-    const args = baseAPI.get.mock.calls[0];
-    expect(args[0]).toBe('/memory/summary/list');
-    expect(args[1]).toEqual({ limit: 5, is_heartbeat: false });
-  });
+  describe('query transport through BaseAPI', () => {
+    let fetchFn;
 
-  it('delta passes from/to as query params', async () => {
-    await api.delta({ from: 'snap_a', to: 'snap_b' });
-    expect(baseAPI.get).toHaveBeenCalledWith('/memory/summary/delta', {
-      from: 'snap_a',
-      to: 'snap_b',
+    beforeEach(() => {
+      fetchFn = vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => ({ snapshots: [] }),
+      });
+      const auth = new AuthCore({
+        mode: 'sso', apiBaseUrl: 'https://summary.invalid', storage: 'memory',
+      });
+      api = new SummaryAPI(new BaseAPI(auth, { fetchFn }));
     });
-  });
 
-  it('delta returns null on 404', async () => {
-    baseAPI.get.mockRejectedValue({ status: 404 });
-    expect(await api.delta({ from: 'a', to: 'b' })).toBeNull();
+    function expectQuery(path, query) {
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      const [url, options] = fetchFn.mock.calls[0];
+      const parsed = new URL(url);
+      expect(parsed.origin).toBe('https://summary.invalid');
+      expect(parsed.pathname).toBe(path);
+      expect(Object.fromEntries(parsed.searchParams)).toEqual(query);
+      expect(url).not.toContain('/?');
+      expect(url).not.toMatch(/[?&]$/);
+      expect(options.method).toBe('GET');
+      for (const key of ['limit', 'is_heartbeat', 'before', 'from', 'to']) {
+        expect(options).not.toHaveProperty(key);
+      }
+    }
+
+    it('list sends paging and false heartbeat in the URL and returns the response', async () => {
+      const before = '2026-11-06T22:10:00+08:00';
+      expect(await api.list({ isHeartbeat: false, limit: 5, before })).toEqual({ snapshots: [] });
+      expectQuery('/memory/summary/list', { limit: '5', is_heartbeat: 'false', before });
+    });
+
+    it('list keeps the default limit and omits unset filters', async () => {
+      await api.list();
+      expectQuery('/memory/summary/list', { limit: '20' });
+    });
+
+    it('list preserves true and zero instead of dropping falsy values', async () => {
+      await api.list({ isHeartbeat: true, limit: 0 });
+      expectQuery('/memory/summary/list', { limit: '0', is_heartbeat: 'true' });
+    });
+
+    it('list omits null fields and keeps undefined defaults', async () => {
+      await api.list({ isHeartbeat: undefined, limit: null, before: undefined });
+      expectQuery('/memory/summary/list', {});
+    });
+
+    it('list applies the default limit for explicit undefined', async () => {
+      await api.list({ isHeartbeat: null, limit: undefined, before: null });
+      expectQuery('/memory/summary/list', { limit: '20' });
+    });
+
+    it('delta encodes both snapshot IDs in the URL and returns the response', async () => {
+      const ids = { from: 'snap a&from=?/#', to: 'snap+b=雪' };
+      expect(await api.delta(ids)).toEqual({ snapshots: [] });
+      expectQuery('/memory/summary/delta', ids);
+    });
+
+    it('delta omits null and undefined fields', async () => {
+      await api.delta({ from: null, to: undefined });
+      expectQuery('/memory/summary/delta', {});
+    });
+
+    it('delta returns null on a real BaseAPI 404', async () => {
+      fetchFn.mockResolvedValue({ ok: false, status: 404, json: async () => ({ detail: 'Not found' }) });
+      expect(await api.delta({ from: 'a', to: 'b' })).toBeNull();
+      expectQuery('/memory/summary/delta', { from: 'a', to: 'b' });
+    });
+
+    it('delta preserves non-404 errors', async () => {
+      fetchFn.mockResolvedValue({ ok: false, status: 422, json: async () => ({ detail: 'Invalid snapshot' }) });
+      await expect(api.delta({ from: 'a', to: 'b' })).rejects.toMatchObject({ status: 422 });
+    });
   });
 
   it('getMarkdown hits the /markdown sub-route', async () => {

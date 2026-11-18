@@ -43,7 +43,8 @@ const client = new SmartMemoryClient({
 });
 
 // The key is sent as a bearer token on every request. There is no session to bootstrap or refresh.
-await client.memories.create({ content: 'Customer prefers email over phone', memoryType: 'semantic' });
+const receipt = await client.memories.create({ content: 'Customer prefers email over phone', memoryType: 'semantic' });
+await client.memories.awaitReceipt(receipt); // the save is a receipt, wait for its terminal fate when you need it
 const results = await client.memories.search('contact preference', { topK: 5 });
 ```
 
@@ -207,9 +208,11 @@ Default `client.memories.search(query)` returns the flat list — no breaking ch
 ### Memories
 
 ```javascript
-client.memories.create({ content: 'text', memoryType: 'semantic' });
+// 2.0 saves resolve to a receipt (run_id, status_url, revision), not the stored item.
+const receipt = await client.memories.create({ content: 'text', memoryType: 'semantic' });
+const done = await client.memories.awaitReceipt(receipt, { timeoutMs: 30000 }); // done.client_timed_out === true if still pending
 client.memories.get(id);
-client.memories.update(id, { content: 'updated' });
+client.memories.update(id, { content: 'updated' }, { expectedRevision: receipt.revision }); // 409 -> AdmissionConflictError
 client.memories.delete(id);
 client.memories.list({ limit: 50, offset: 0, type: 'semantic' });
 client.memories.search('query', { topK: 5, enableHybrid: true });
@@ -244,6 +247,48 @@ client.decisions.listPending(50);
 client.decisions.getProofTree(decisionId, 5);
 client.decisions.getFuzzyConfidence(decisionId);
 ```
+
+### Site validity schedules
+
+`SM-SCOPED-VALIDITY-1` adds `businessScope: { site }` and `validAt` to memory search
+and decision list, search, get and provenance reads. A site is an exact business key.
+Tenant and workspace authorization still come from the authenticated client.
+Omitting `validAt` uses the service's request-start time. `asOf` on decision reads
+and `asOfDate` on memory search select the independent transaction history.
+
+```javascript
+const scopeGoLives = [
+  { scope: { site: 'A' }, valid_from: new Date('2026-02-01T00:00:00Z') },
+  { scope: { site: 'B' }, valid_from: '2026-02-15T00:00:00Z' },
+];
+const scheduled = await client.decisions.supersede(decisionId, {
+  new_content: 'Amended CRF guidance', reason: 'Site rollout', scopeGoLives,
+});
+const effective = { businessScope: { site: 'B' }, validAt: new Date('2026-02-08T00:00:00Z') };
+await client.decisions.get(decisionId, effective);
+await client.decisions.list(effective);
+await client.decisions.search('CRF guidance', 20, effective);
+await client.decisions.getProvenance(decisionId, effective);
+await client.memories.search('CRF guidance', { ...effective, topK: 1 });
+
+await client.memories.supersede(oldId, { content: 'Amended rule', reason: 'Rollout', scopeGoLives });
+await client.memories.supersedeLink(oldId, existingNewId, 'Rollout', { scopeGoLives });
+// Initial decision schedules use the same option.
+await client.decisions.create({ content: 'Original rule', scopeGoLives: [
+  { scope: null, valid_from: '2026-01-01T00:00:00Z' },
+] });
+```
+
+Dates serialize to UTC ISO strings. Schedule entry fields stay `scope` and
+`valid_from`. An explicit `scope: null` schedules the sponsor default. Activated
+exact-site entries take precedence, with sponsor fallback until a site's activation.
+Site-only rollouts preserve the predecessor for other sites and the sponsor.
+Scoped replacements return `{ status: 'scheduled', old_item_id, new_item_id,
+scope_go_lives, recorded_at }`. Legacy calls without these options keep their
+existing request shapes and responses. `validFrom` on replacement writes is the
+legacy global effective date and cannot combine with `scopeGoLives`.
+Invalid schedules and conflicts reject with `APIError`, retaining `status` and
+server `detail`. Replacement methods do not automatically retry these errors.
 
 ### Graph
 
@@ -287,6 +332,7 @@ client.teams.getMembers(teamId);
 client.teams.addMember(teamId, userId, 'admin');
 client.teams.updateMember(teamId, userId, 'member');
 client.teams.removeMember(teamId, userId);
+client.teams.setMemberReadOnly(teamId, userId, true); // org admin only; responses carry read_only
 ```
 
 ### Other APIs
@@ -458,3 +504,11 @@ Search uses `lexical` with default weight 0.8. Replace removed `contains` and `k
 Use `memory.search(query, {channelWeights: {lexical: 0}})`. The optional JS property forwards `channel_weights` without a REST signature change.
 
 Quiesce old writers before first-open indexing. Verify the engine capability pin and use `sm rebuild --lexical` for recovery. [Migration, targets and measured limitations](https://github.com/smartmemory/smart-memory-docs/blob/main/docs/features/CORE-LEXICAL-INDEX-1/migration.md).
+
+### SDK-2.0-RETRY-SAFETY-1
+
+Each save or stage submission binds its retries to the initial workspace, tenant,
+principal, session and API endpoint. A change raises `SubmitScopeChangedError`
+(`code=submit_scope_changed`) before another send, including a 401 recovery replay.
+The error retains `idempotencyKey`. Token refresh for the same session and principal
+can proceed. Check the original workspace before deliberately submitting again.

@@ -49,4 +49,14 @@ export class TeamAPI {
   async removeMember(teamId, userId) {
     return this.api.delete(`/memory/teams/${teamId}/members/${userId}`);
   }
+
+  /**
+   * Set or clear another member's read-only flag. A read-only member keeps the `member` role and can
+   * read, but every write is refused with 403. Only an organization admin (or a superadmin) signed in
+   * with a session may call this, never with an API key and never on their own membership; an admin
+   * target is 409. Team, member list and permissions responses report the flag as `read_only`.
+   */
+  async setMemberReadOnly(teamId, userId, readOnly) {
+    return this.api.put(`/memory/teams/${teamId}/members/${userId}/read-only`, { read_only: readOnly });
+  }
 }

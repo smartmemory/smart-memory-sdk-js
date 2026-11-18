@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BaseAPI } from '../../../src/api/BaseAPI.js';
 import { AuthCore } from '../../../src/auth/AuthCore.js';
 import { APIError } from '../../../src/errors/APIError.js';
+import { RECEIPT } from './receiptFixtures.js';
 
 describe('BaseAPI', () => {
   let authCore;
@@ -77,20 +78,22 @@ describe('BaseAPI', () => {
       vi.spyOn(globalThis, 'fetch').mockResolvedValue({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ id: '1' })
+        json: () => Promise.resolve(RECEIPT)
       });
 
-      const result = await baseAPI.post('/memory/add', { content: 'test' });
+      const body = { content: 'test', idempotency_key: 'sm2_3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b' };
+      const result = await baseAPI.post('/memory/add', body);
 
       expect(fetch).toHaveBeenCalledWith(
         'http://localhost:9001/memory/add',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ content: 'test' }),
+          body: JSON.stringify(body),
           headers: expect.objectContaining({ 'Content-Type': 'application/json' })
         })
       );
-      expect(result).toEqual({ id: '1' });
+      // The transport hands the 2.0 receipt body through untouched; MemoryAPI decodes it.
+      expect(result).toEqual(RECEIPT);
     });
 
     it('passes FormData through POST without a JSON content type', async () => {

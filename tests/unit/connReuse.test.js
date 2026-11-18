@@ -70,7 +70,7 @@ function customAuth(extra = {}) {
 // returns the recorded calls; `expected` is how many requests that class must make.
 const CALL_SITES = [
   ['BaseAPI.request GET', 1, async ({ fn }) => { await new BaseAPI(customAuth(), { fetchFn: fn }).get('/memory/list'); }],
-  ['BaseAPI.request POST', 1, async ({ fn }) => { await new BaseAPI(customAuth(), { fetchFn: fn }).post('/memory/add', { content: 'x' }); }],
+  ['BaseAPI.request POST', 1, async ({ fn }) => { await new BaseAPI(customAuth(), { fetchFn: fn }).post('/memory/add', { content: 'x', idempotency_key: 'sm2_3f2b8c1e-5a4d-4e6f-9b7a-1c2d3e4f5a6b' }); }],
   ['BaseAPI.requestBinary', 1, async ({ fn }) => { await new BaseAPI(customAuth(), { fetchFn: fn }).requestBinary('/memory/okf/export'); }],
   ['BaseAPI.postForm', 1, async ({ fn }) => { await new BaseAPI(customAuth(), { fetchFn: fn }).postForm('/memory/ingest/document', new FormData()); }],
   ['AuthCore.logout', 1, async ({ fn }) => { vi.stubGlobal('fetch', fn); await customAuth().logout(); }],

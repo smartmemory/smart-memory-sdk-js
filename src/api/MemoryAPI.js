@@ -15,6 +15,10 @@
  * @property {number|null} rerank_max_doc_chars Effective prefix limit, not dead config.
  */
 
+import { decodeReceipt, legacyNoStatus } from './receipt.js'; // legacyNoStatus: TODO(SVC-INGEST-WAIT-STATUS-1)
+import { awaitReceipt } from './awaitReceipt.js';
+import { resolveIdempotencyKey, submitWithRetry, mapAdmissionError, snapshotRequest, submissionOptions } from './submit.js';
+
 let warnedLegacyDocumentIngest = false;
 
 function isHttpUrl(source) {
@@ -31,7 +35,19 @@ function isHttpUrl(source) {
 // refuses with a 422 on POST /memory/search, plus `metadata_filter` itself, which this SDK does not accept.
 const SEARCH_FILTER_NEAR_MISS_OPTIONS = new Set([
   'filters', 'filter', 'metadata_filter', 'metadata_filters', 'metadataFilters', 'where', 'meta_filter',
+  'business_scope', 'valid_at', 'businessScopes', 'scope_go_lives', 'scopeGoLives',
 ]);
+
+/** Convert opt-in replacement qualifiers without changing nested contract field names. */
+export function validityWriteOptions({ scopeGoLives, validFrom }) {
+  const body = {};
+  if (scopeGoLives != null) body.scope_go_lives = scopeGoLives.map(entry => ({
+    ...entry,
+    valid_from: entry.valid_from instanceof Date ? entry.valid_from.toISOString() : entry.valid_from,
+  }));
+  if (validFrom != null) body.valid_from = validFrom instanceof Date ? validFrom.toISOString() : validFrom;
+  return body;
+}
 
 export class MemoryAPI {
   constructor(baseAPI) {
@@ -39,7 +55,64 @@ export class MemoryAPI {
   }
 
   /**
+   * One logical save: mint (or reuse) the `idempotency_key`, send the identical body up to four
+   * times on transport loss or 408/429/500/502/503/504 (ST14), and decode the 2.0 receipt.
+   * The whole request is snapshotted before the first send, so every attempt carries the same bytes
+   * even if the caller changes a nested object while one is in flight.
+   * `legacyBridge` (add and ingest only, never an edit) also reads the pre-receipt body
+   * (TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge).
+   * @private
+   */
+  async _save(path, body, { idempotencyKey, method = 'post', expectedRevision, legacyBridge = false } = {}) {
+    const key = resolveIdempotencyKey(idempotencyKey);
+    const request = snapshotRequest({ ...body, idempotency_key: key });
+    const options = submissionOptions(this.api);
+    const send = () => this.api[method](path, request, ...(options ? [options] : []));
+    let raw;
+    try {
+      raw = await submitWithRetry(send, { idempotencyKey: key });
+    } catch (error) {
+      throw mapAdmissionError(error, { expectedRevision });
+    }
+    return decodeReceipt(raw, { legacyBridge });
+  }
+
+  /**
+   * Read the scoped status of a save, edit or stage run (`GET /memory/status/{run_id}`).
+   * @param {string|{status_url: string}} target A `run_id` or a receipt.
+   * @param {{waitMs?: number, signal?: AbortSignal}} [options] `waitMs` holds the read (at most 10000).
+   * @returns {Promise<import('./receipt.js').SaveReceipt>}
+   */
+  async getStatus(target, { waitMs = 0, signal } = {}) {
+    if (target?.legacy) throw legacyNoStatus(); // TODO(SVC-INGEST-WAIT-STATUS-1): remove with the bridge
+    let path = typeof target === 'string' ? `/memory/status/${encodeURIComponent(target)}` : target?.status_url;
+    if (typeof path !== 'string' || !path) throw new TypeError('getStatus needs a run_id or a receipt with a status_url');
+    if (waitMs > 0) path += `${path.includes('?') ? '&' : '?'}wait_ms=${Math.min(10000, Math.floor(waitMs))}`;
+    return decodeReceipt(await this.api.get(path, signal ? { signal } : {}));
+  }
+
+  /**
+   * Wait for a receipt to reach terminal fate (G53). Resolves at once for a terminal receipt; on the
+   * deadline (30 s default) it RESOLVES with the pending receipt flagged `client_timed_out: true`.
+   * @param {import('./receipt.js').SaveReceipt} receipt
+   * @param {{timeoutMs?: number, holdMs?: number, signal?: AbortSignal}} [options]
+   */
+  async awaitReceipt(receipt, options = {}) {
+    return awaitReceipt(this.api, receipt, options);
+  }
+
+  /**
    * Create a memory item.
+   *
+   * Hosted add, ingest, document and conversation saves replay the original receipt for the
+   * same key and body in the same tenant, workspace, user and route. Changed bodies return
+   * 409 idempotency_conflict. Bindings last 30 days, then retry_key_expired requires explicit
+   * new-save consent with a new key. Current authority and subject visibility gate replays.
+   *
+   * Resolves to a 2.0 save receipt (`SaveReceipt`), not the stored item: `receipt.item_id`,
+   * `receipt.run_id`, `receipt.revision`, `String(receipt)` is `'mem_123 (stored)'`. Use
+   * {@link MemoryAPI#awaitReceipt} to wait for a terminal state. Transport loss is retried up
+   * to four attempts with one `idempotency_key`; pass `idempotencyKey` to reuse a persisted key.
    *
    * Provenance like `retrieved_context_ids` travels inside `metadata` — the storage
    * layer lifts it onto the server-side MemoryItem; no dedicated option exists
@@ -57,9 +130,8 @@ export class MemoryAPI {
    *   behaviour untouched. **Only valid with `usePipeline: false`** — the server
    *   answers 400 for the combination rather than silently ignoring it, because
    *   the ingestion pipeline has no per-item override.
-   * @returns {Promise<object>} The service response (`id` is the item id). WS-ROUTING-2 servers
-   *   also return `workspace_id`, `workspace_name`, `routed_by` and `notices`; `routingEcho(result)`
-   *   reads them as typed fields, `null`/`[]` on an older server.
+   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
+   * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async create({
     content,
@@ -69,6 +141,7 @@ export class MemoryAPI {
     profileName = null,
     conversationContext = null,
     embed = null,
+    idempotencyKey,
   }) {
     const body = {
       content,
@@ -85,7 +158,7 @@ export class MemoryAPI {
     if (embed !== null && embed !== undefined) {
       body.embed = embed;
     }
-    return this.api.post('/memory/add', body);
+    return this._save('/memory/add', body, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
 
   async get(id) {
@@ -105,17 +178,36 @@ export class MemoryAPI {
    * @param {'merge'|'replace'} [updates.write_mode] - Node-property write semantics.
    *   'merge' (default) overlays new properties; 'replace' replaces all
    *   (preserving memory_type and node_category).
+   * @param {Object} [options]
+   * @param {string|number} [options.expectedRevision] - G131 edit precondition, sent as
+   *   `expected_revision`. With it the call is an admitted edit: it resolves to a save receipt, is
+   *   retried like a save under one `idempotency_key`, and a stale revision rejects with
+   *   `AdmissionConflictError` (`code: 'revision_conflict'`, `currentRevision`), never retried.
+   *   Without it the request is the legacy PATCH and resolves to the raw response.
+   * @param {string} [options.idempotencyKey] - Reuse a persisted key (only used with `expectedRevision`).
    */
-  async update(id, updates) {
-    return this.api.patch(`/memory/${encodeURIComponent(id)}`, updates);
+  async update(id, updates, { expectedRevision, idempotencyKey } = {}) {
+    const path = `/memory/${encodeURIComponent(id)}`;
+    if (expectedRevision === undefined || expectedRevision === null) {
+      return this.api.patch(path, updates);
+    }
+    const body = { ...updates, expected_revision: expectedRevision };
+    return this._save(path, body, { idempotencyKey, expectedRevision, method: 'patch' });
   }
 
-  async supersede(id, { content, memoryType, metadata = {}, reason }) {
+  /**
+   * Create a replacement. A scopeGoLives rollout preserves the predecessor outside activated sites.
+   * @param {string} id
+   * @param {{content: string, memoryType?: string, metadata?: Object, reason?: string,
+   *   scopeGoLives?: Array<{scope: {site: string}|null, valid_from: string|Date}>, validFrom?: string|Date}} options
+   */
+  async supersede(id, { content, memoryType, metadata = {}, reason, scopeGoLives, validFrom }) {
     return this.api.post(`/memory/${encodeURIComponent(id)}/supersede`, {
       content,
       memory_type: memoryType,
       metadata,
-      reason
+      reason,
+      ...validityWriteOptions({ scopeGoLives, validFrom })
     });
   }
 
@@ -132,13 +224,17 @@ export class MemoryAPI {
    * @param {string} id - The OLD item (the one being superseded)
    * @param {string} newItemId - The NEW item; must already exist and be in scope
    * @param {string} [reason] - Optional human-readable reason
+   * @param {{scopeGoLives?: Array<{scope: {site: string}|null, valid_from: string|Date}>,
+   *   validFrom?: string|Date}} [options] Scoped schedule or legacy global effective date.
+   *   Scoped writes return a scheduled receipt and do not globally close the predecessor.
    * @throws 400 if `newItemId` equals `id`; 404 if either item is missing *or*
    *   out of scope (deliberately indistinguishable); 409 if the store declined.
    */
-  async supersedeLink(id, newItemId, reason = null) {
+  async supersedeLink(id, newItemId, reason = null, { scopeGoLives, validFrom } = {}) {
     return this.api.post(`/memory/${encodeURIComponent(id)}/supersede-link`, {
       new_item_id: newItemId,
-      reason
+      reason,
+      ...validityWriteOptions({ scopeGoLives, validFrom })
     });
   }
 
@@ -232,6 +328,8 @@ export class MemoryAPI {
    * @param {string|Date|null} [options.asOfDate=null] - Transaction-time travel
    *   (PLAT-AUDITABLE-MEMORY-1): return what the system believed at this
    *   ISO-8601 instant. Date objects serialize to ISO automatically.
+   * @param {{site: string}|null} [options.businessScope] Exact business site, independent of security scope.
+   * @param {string|Date|null} [options.validAt] Business effective instant. Omitted uses request-start now.
    * @param {boolean} [options.asOfStrict=false] - Only meaningful with asOfDate
    *   (PLAT-AUDITABLE-MEMORY-1 gap #2). Default returns results that could not be
    *   resolved, each carrying `as_of_resolution: 'unresolved'`, and summarises them
@@ -283,13 +381,14 @@ export class MemoryAPI {
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
    * since/until: ISO strings or Dates bounding created_at in [since, until), independent of asOfDate. */
-  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, ...unknownOptions } = {}) {
+  async search(query, { topK = 5, enableHybrid = true, memoryType = null, expertise = false, cite = false, decompose = false, multiHop = false, maxHops = 3, budgetMs = 1500, semanticHops = false, includeReference = false, includeConsolidated = false, consolidationFirst = false, asOfDate = null, asOfStrict = false, failIfConflicted = false, includeSuperseded = false, includeRetracted = false, includeArchived = false, excludeSpeculative = false, since = null, until = null, hopStrategy = null, channelWeights = null, reranker = null, metadataFilter = null, businessScope = null, validAt = null, ...unknownOptions } = {}) {
     const body = { query, top_k: topK, enable_hybrid: enableHybrid };
+    if (failIfConflicted) body.fail_if_conflicted = failIfConflicted;
     // DEV-ONBOARD-FU-SCOPED-SEARCH-NEARMISS-1: an unknown option is dropped, so a misspelt filter name
     // would search the whole workspace without a signal. Refuse the near-miss names instead.
     for (const name of Object.keys(unknownOptions)) {
       if (SEARCH_FILTER_NEAR_MISS_OPTIONS.has(name)) {
-        throw new Error(`Unknown search option '${name}': the filter option is named 'metadataFilter'`);
+        throw new Error(`Unknown search option '${name}': the filter option is named 'metadataFilter'; scoped options are named businessScope and validAt`);
       }
     }
     // DEV-ONBOARD-FU-SCOPED-SEARCH-1: the server validates the grammar and refuses scope keys (422).
@@ -310,6 +409,8 @@ export class MemoryAPI {
       }
       body.channel_weights = channelWeights;
     }
+    if (businessScope != null) body.business_scope = businessScope;
+    if (validAt != null) body.valid_at = validAt instanceof Date ? validAt.toISOString() : validAt;
     if (reranker != null) body.reranker = reranker;
     for (const [key, value] of Object.entries({ since, until })) {
       if (value != null) body[key] = value instanceof Date ? value.toISOString() : value;
@@ -351,11 +452,16 @@ export class MemoryAPI {
    * There is no fallback answer: a 502 comes back when the configured LLM errors or
    * returns nothing, rather than a synthesized reply.
    *
+   * `used_evidence_ids` lists the evidence ids the answer cites, in first-cited order.
+   * When nothing matches (no model call is made), `answer` is "No stored record matches
+   * this question."; when the model cites none of its evidence, it is "The answer could not
+   * be tied to a stored record." In both cases `grounded` is false.
+   *
    * @param {string} question - The natural-language question.
    * @param {Object} [options]
    * @param {number} [options.limit=5] - How many memories to retrieve as evidence (1-50).
    * @param {boolean} [options.reasoning=true] - When false, `reasoning` comes back empty.
-   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>}>}
+   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string, memory_type: (string|null), created_at: (string|null)}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>, used_evidence_ids: Array<string>, grounded: boolean}>}
    *   Relation rows carry both display labels and graph node ids; combine them as
    *   `${source_id}->${target_id}:${type}` to address the edge in a graph view.
    */
@@ -407,28 +513,22 @@ export class MemoryAPI {
   /**
    * Ingest content through the full extraction pipeline.
    *
-   * Resolves to a receipt whose `status` is `created`, `unchanged`, `replaced` or `held`.
-   * Low-confidence extraction keeps the content (CORE-CONSOLIDATION-MIN-CONF-1): low
-   * entities/relations are dropped and the rest stored; when every extraction signal is low
-   * the receipt is `created` with an `extraction_held` object (reason, confidence, threshold,
-   * counts). `held` (`item_id: null`, nothing stored) is returned only when no extraction signal
-   * was measured and `context.confidence` was below the threshold, or the server runs the
-   * `veto` rollback mode. Check `status` before using `item_id`.
-   *
-   * WS-ROUTING-2 servers also return `workspace_id`, `workspace_name`, `routed_by` and `notices`
-   * (`routingEcho(result)` reads them as typed fields; an older server omits them).
+   * Resolves to a 2.0 save receipt (`SaveReceipt`, `subject.kind` `item_save`), not the 1.x
+   * `created`/`unchanged`/`replaced`/`held` body. The receipt only says the save was admitted:
+   * wait for the terminal outcome with {@link MemoryAPI#awaitReceipt}, then read what extraction
+   * kept from the receipt `result`.
    *
    * @param {string} content
-   * @param {{profileName?: string|null, extractorName?: string, context?: object}} [options]
-   * @returns {Promise<object>}
+   * @param {{profileName?: string|null, extractorName?: string, context?: object, idempotencyKey?: string}} [options]
+   * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
-  async ingest(content, { profileName = null, extractorName = 'llm', context = {} } = {}) {
-    return this.api.post('/memory/ingest', {
+  async ingest(content, { profileName = null, extractorName = 'llm', context = {}, idempotencyKey } = {}) {
+    return this._save('/memory/ingest', {
       content,
       profile_name: profileName,
       extractor_name: extractorName,
       context
-    });
+    }, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
 
   async getLineage(id) {
@@ -470,21 +570,19 @@ export class MemoryAPI {
   }
 
   /**
-   * Ingest a conversation as session chunks. WS-ROUTING-2 servers add the write echo
-   * (`workspace_id`, `workspace_name`, `routed_by`, `notices`) to the result; `routingEcho(result)`
-   * reads it.
-   * @returns {Promise<object>}
+   * Ingest conversation turns. Resolves to a 2.0 save receipt (see {@link MemoryAPI#create}).
+   * @returns {Promise<import('./receipt.js').SaveReceipt>}
    */
   async ingestConversation(turns, {
     sessionBoundaries = null, conversationId = null, sessionDates = null,
-    turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4, context = null
+    turnsPerChunk = 15, maxChunkChars = 12000, maxConcurrent = 4, context = null, idempotencyKey
   } = {}) {
     const body = { turns, turns_per_chunk: turnsPerChunk, max_chunk_chars: maxChunkChars, max_concurrent: maxConcurrent };
     if (sessionBoundaries) body.session_boundaries = sessionBoundaries;
     if (conversationId) body.conversation_id = conversationId;
     if (sessionDates) body.session_dates = sessionDates;
     if (context !== null) body.context = context;
-    return this.api.post('/memory/ingest/conversation', body);
+    return this._save('/memory/ingest/conversation', body, { idempotencyKey });
   }
 
   /**
@@ -498,10 +596,12 @@ export class MemoryAPI {
    * @param {string} [options.chunkStrategy] - paragraph | sentence | markdown | recursive.
    * @param {boolean} [options.reference] - Mark nodes as reference material.
    * @param {Object} [options.context] - Ingestion context.
+   * @param {string} [options.idempotencyKey] - Reuse a persisted key for an explicit later retry.
+   * Resolves to a 2.0 save receipt (`subject.kind` `document_save`; `receipt.document_id`).
    * The deprecated `(content, { source, title })` form is accepted when
    * `options.source` is an HTTP(S) URL. Its content and title are ignored.
    */
-  async ingestDocument(source, { source: legacySource, sourceType, chunkSize, chunkStrategy, reference, context } = {}) {
+  async ingestDocument(source, { source: legacySource, sourceType, chunkSize, chunkStrategy, reference, context, idempotencyKey } = {}) {
     if (!isHttpUrl(source)) {
       if (!isHttpUrl(legacySource)) {
         throw new TypeError('ingestDocument source must be an http:// or https:// URL string');
@@ -518,7 +618,7 @@ export class MemoryAPI {
     if (chunkStrategy != null) body.chunk_strategy = chunkStrategy;
     if (reference != null) body.reference = reference;
     if (context != null) body.context = context;
-    return this.api.post('/memory/ingest/document', body);
+    return this._save('/memory/ingest/document', body, { idempotencyKey });
   }
 
   /**

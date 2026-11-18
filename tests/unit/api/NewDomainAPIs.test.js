@@ -8,6 +8,8 @@ import { OntologyAPI } from '../../../src/api/OntologyAPI.js';
 import { AnalyticsAPI } from '../../../src/api/AnalyticsAPI.js';
 import { ValidationAPI } from '../../../src/api/ValidationAPI.js';
 import { PipelineAPI } from '../../../src/api/PipelineAPI.js';
+import { SaveReceipt } from '../../../src/api/receipt.js';
+import { KEY_RE, STAGE_PENDING } from './receiptFixtures.js';
 import { ArchiveAPI } from '../../../src/api/ArchiveAPI.js';
 import { ZettelkastenAPI } from '../../../src/api/ZettelkastenAPI.js';
 import { GraphAPI } from '../../../src/api/GraphAPI.js';
@@ -704,6 +706,33 @@ describe('ReasoningAPI', () => {
       decision_id: 'd-1'
     });
   });
+
+  it('lists conflict reviews with paging defaults (OUTREACH-MARIUS-HITL-SURFACE-1)', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.listReviews();
+    expect(api.get).toHaveBeenCalledWith('/memory/reasoning/reviews?status=open&limit=50&offset=0');
+    await reasoning.listReviews({ status: 'resolved', limit: 10, offset: 20 });
+    expect(api.get).toHaveBeenLastCalledWith('/memory/reasoning/reviews?status=resolved&limit=10&offset=20');
+  });
+
+  it('settles a review with action and reason only, the id URL-encoded', async () => {
+    const api = mockBaseAPI();
+    const reasoning = new ReasoningAPI(api);
+    await reasoning.settleReview('../workspaces/x', { action: 'keep_b', reason: 'Checked the sheet' });
+    expect(api.post).toHaveBeenCalledWith('/memory/reasoning/reviews/..%2Fworkspaces%2Fx/settle', {
+      action: 'keep_b',
+      reason: 'Checked the sheet'
+    });
+  });
+
+  it.each([404, 403, 409, 422, 500])('passes a %i from settle through', async status => {
+    const api = mockBaseAPI();
+    api.post.mockRejectedValueOnce(Object.assign(new Error('refused'), { status }));
+    const reasoning = new ReasoningAPI(api);
+    await expect(reasoning.settleReview('conflict_a', { action: 'keep_a', reason: 'r' }))
+      .rejects.toMatchObject({ status });
+  });
 });
 
 // ============================================================
@@ -1262,47 +1291,34 @@ describe('ValidationAPI', () => {
 // ============================================================
 
 describe('PipelineAPI', () => {
-  it('should run extraction', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runExtraction({ content: 'text', options: {} });
+  // One row per public stage: route and the request sent. Each resolves to a stage_job receipt (ST33/G169).
+  const STAGES = [
+    ['extraction', 'runExtraction', { content: 'text', options: {} }],
+    ['storage', 'runStorage', { items: [] }],
+    ['linking', 'runLinking', { items: [] }],
+    ['enrichment', 'runEnrichment', { items: [] }],
+    ['grounding', 'runGrounding', { items: [] }],
+  ];
 
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/extraction', {
-      content: 'text',
-      options: {}
-    });
+  it.each(STAGES)('should run %s and resolve to a stage_job receipt', async (stage, method, request) => {
+    const api = mockBaseAPI();
+    api.post.mockResolvedValue(STAGE_PENDING);
+    const receipt = await new PipelineAPI(api)[method](request);
+
+    expect(api.post).toHaveBeenCalledWith(`/memory/pipeline/${stage}`, { ...request, idempotency_key: expect.stringMatching(KEY_RE) });
+    expect(receipt).toBeInstanceOf(SaveReceipt);
+    expect(receipt.run_id).toBe('run_stage_1');
+    expect(receipt.subject.kind).toBe('stage_job');
+    expect(receipt.occurrence_id).toBe('occ_1');
   });
 
-  it('should run storage', async () => {
+  it.each(['dual_node', 'single_node', 'memory_only'])('should send storage_strategy %s unchanged', async (strategy) => {
     const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runStorage({ items: [] });
+    api.post.mockResolvedValue(STAGE_PENDING);
+    await new PipelineAPI(api).runStorage({ run_id: 'run_1', storage_strategy: strategy });
 
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/storage', { items: [] });
-  });
-
-  it('should run linking', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runLinking({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/linking', { items: [] });
-  });
-
-  it('should run enrichment', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runEnrichment({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/enrichment', { items: [] });
-  });
-
-  it('should run grounding', async () => {
-    const api = mockBaseAPI();
-    const pipeline = new PipelineAPI(api);
-    await pipeline.runGrounding({ items: [] });
-
-    expect(api.post).toHaveBeenCalledWith('/memory/pipeline/grounding', { items: [] });
+    expect(api.post.mock.calls[0][0]).toBe('/memory/pipeline/storage');
+    expect(api.post.mock.calls[0][1].storage_strategy).toBe(strategy);
   });
 
   it('should get pipeline state', async () => {
@@ -1708,8 +1724,7 @@ describe('ProcedureCandidateAPI', () => {
         name: null,
         description: null,
         procedure_type: 'extraction',
-        preferred_profile: 'quick_extract',
-        remove_working_items: false
+        preferred_profile: 'quick_extract'
       }
     );
   });
@@ -1721,8 +1736,7 @@ describe('ProcedureCandidateAPI', () => {
       name: 'API Error Handler',
       description: 'Handles 4xx errors',
       procedure_type: 'validation',
-      preferred_profile: 'full_extract',
-      remove_working_items: true
+      preferred_profile: 'full_extract'
     });
 
     expect(api.post).toHaveBeenCalledWith(
@@ -1731,8 +1745,7 @@ describe('ProcedureCandidateAPI', () => {
         name: 'API Error Handler',
         description: 'Handles 4xx errors',
         procedure_type: 'validation',
-        preferred_profile: 'full_extract',
-        remove_working_items: true
+        preferred_profile: 'full_extract'
       }
     );
   });

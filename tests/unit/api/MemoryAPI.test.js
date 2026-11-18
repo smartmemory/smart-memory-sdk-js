@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { MemoryAPI } from '../../../src/api/MemoryAPI.js';
+import { RECEIPT, KEY_RE } from './receiptFixtures.js';
+
+const KEY = { idempotency_key: expect.stringMatching(KEY_RE) };
 
 describe('MemoryAPI', () => {
   let baseAPI;
@@ -8,7 +11,7 @@ describe('MemoryAPI', () => {
   beforeEach(() => {
     baseAPI = {
       get: vi.fn().mockResolvedValue({}),
-      post: vi.fn().mockResolvedValue({}),
+      post: vi.fn().mockResolvedValue(RECEIPT),
       put: vi.fn().mockResolvedValue({}),
       patch: vi.fn().mockResolvedValue({}),
       delete: vi.fn().mockResolvedValue(null)
@@ -24,7 +27,8 @@ describe('MemoryAPI', () => {
       memory_type: 'semantic',
       metadata: null,
       use_pipeline: true,
-      profile_name: null
+      profile_name: null,
+      ...KEY
     });
   });
 
@@ -440,7 +444,8 @@ describe('MemoryAPI', () => {
       content: 'raw content',
       profile_name: null,
       extractor_name: 'llm',
-      context: {}
+      context: {},
+      ...KEY
     });
   });
 
@@ -623,7 +628,8 @@ describe('MemoryAPI', () => {
         turns_per_chunk: 10,
         max_chunk_chars: 12000,
         max_concurrent: 4,
-        conversation_id: 'conv-1'
+        conversation_id: 'conv-1',
+        ...KEY
       });
     });
 
@@ -672,14 +678,16 @@ describe('MemoryAPI', () => {
         chunk_size: 1200,
         chunk_strategy: 'sentence',
         reference: false,
-        context
+        context,
+        ...KEY
       });
     });
 
     it('ingestDocument posts only source when options are omitted', async () => {
       await memoryAPI.ingestDocument('http://example.com/document');
       expect(baseAPI.post).toHaveBeenCalledWith('/memory/ingest/document', {
-        source: 'http://example.com/document'
+        source: 'http://example.com/document',
+        ...KEY
       });
     });
 
@@ -692,10 +700,10 @@ describe('MemoryAPI', () => {
         await memoryAPI.ingestDocument('more text', { source: 'https://example.com/two' });
 
         expect(baseAPI.post).toHaveBeenNthCalledWith(1, '/memory/ingest/document', {
-          source: 'https://example.com/one', chunk_strategy: 'paragraph'
+          source: 'https://example.com/one', chunk_strategy: 'paragraph', ...KEY
         });
         expect(baseAPI.post).toHaveBeenNthCalledWith(2, '/memory/ingest/document', {
-          source: 'https://example.com/two'
+          source: 'https://example.com/two', ...KEY
         });
         expect(warning).toHaveBeenCalledTimes(1);
         expect(warning).toHaveBeenCalledWith(expect.stringContaining('content and title are ignored'));

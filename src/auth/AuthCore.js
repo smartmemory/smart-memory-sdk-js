@@ -222,7 +222,7 @@ export class AuthCore {
   }
 
   /**
-   * Same principal and same tenant (org) as the cached identity. The workspace
+   * Same principal and same tenant (org) as the cached identity (a binding must exist). The workspace
    * is the user's own pick and is deliberately not compared with the server's
    * default workspace. No cached user means nothing to bind: not the same.
    */
@@ -230,7 +230,9 @@ export class AuthCore {
     const user = this.currentUser;
     if (user?.id == null || me?.id == null || String(me.id) !== String(user.id)) return false;
     const tenants = [user.tenant_id, this.tokenManager.getTenantId()].filter(t => t != null && t !== '');
-    return tenants.every(tenant => me.tenant_id != null && String(me.tenant_id) === String(tenant));
+    // No tenant binding at all cannot vouch for the server's tenant (an empty list would pass every()).
+    if (me.tenant_id == null || tenants.length === 0) return false;
+    return tenants.every(tenant => String(me.tenant_id) === String(tenant));
   }
 
   async _probeSession(key) {

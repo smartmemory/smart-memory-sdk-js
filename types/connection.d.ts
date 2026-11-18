@@ -24,7 +24,7 @@ export interface RecoveryAuth {
   getAuthHeaders(extra?: HeadersInit): Record<string, string>;
   getRequestOptions(extra?: RequestInit): RequestInit;
   refreshToken(): Promise<string | null>;
-  clearLocalAuth(options?: { reason?: SignOutReason }): void;
+  clearLocalAuth(options?: { reason?: "user" | "expired" }): void;
   clearIfSessionLost?(): Promise<void>;
 }
 export declare class SessionRefreshError extends Error {

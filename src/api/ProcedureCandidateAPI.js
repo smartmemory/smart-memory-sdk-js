@@ -1,3 +1,5 @@
+const PROMOTE_OPTIONS = ['name', 'description', 'procedure_type', 'preferred_profile'];
+
 export class ProcedureCandidateAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -28,16 +30,21 @@ export class ProcedureCandidateAPI {
    * @param {string} [options.description] - Description for the procedure
    * @param {string} [options.procedure_type='extraction'] - Type of procedure
    * @param {string} [options.preferred_profile='quick_extract'] - Pipeline profile
-   * @param {boolean} [options.remove_working_items=false] - Remove source items after promotion
    * @returns {Promise<Object>} Response with procedure_id and status
+   * @throws {TypeError} on an option not listed above. Promotion never deletes its source working
+   *   items (G129), so a removed option fails loudly instead of being ignored.
    */
   async promote(clusterId, options = {}) {
+    for (const key of Object.keys(options)) {
+      if (!PROMOTE_OPTIONS.includes(key)) {
+        throw new TypeError(`promote() has no option '${key}' (promotion never removes its source items)`);
+      }
+    }
     const body = {
       name: options.name ?? null,
       description: options.description ?? null,
       procedure_type: options.procedure_type ?? 'extraction',
       preferred_profile: options.preferred_profile ?? 'quick_extract',
-      remove_working_items: options.remove_working_items ?? false,
     };
     return this.api.post(`/memory/procedures/candidates/${clusterId}/promote`, body);
   }

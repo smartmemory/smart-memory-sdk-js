@@ -99,6 +99,13 @@ export class RecoveryBoundary extends React.Component {
       const reloading = reloadOnceForChunkError(`${app} RecoveryBoundary ${kind}`, error);
       if (kind === 'auth') logRecovery(app, 'auth-render', error);
       this.setState({ reloading });
+      if (reloading) {
+        // location.reload() may return after a cancelled beforeunload prompt. Bound the blank state.
+        clearTimeout(this.inFlightTimer);
+        this.inFlightTimer = setTimeout(() => {
+          this.setState({ reloading: false, reloadInFlight: false });
+        }, CHUNK_RELOAD_INFLIGHT_MS);
+      }
       return;
     }
     if (info && info.componentStack) console.warn(`[recovery] ${app}: component stack:${info.componentStack}`);

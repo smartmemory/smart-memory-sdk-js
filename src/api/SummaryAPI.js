@@ -13,6 +13,13 @@
  * See `docs/features/CORE-SUMMARY-1/snapshot-contract.json` for the
  * canonical request / response shapes.
  */
+function querySuffix(params) {
+  const query = new URLSearchParams(
+    Object.entries(params).filter(([, value]) => value != null)
+  ).toString();
+  return query ? `?${query}` : '';
+}
+
 export class SummaryAPI {
   constructor(baseAPI) {
     this.api = baseAPI;
@@ -70,19 +77,15 @@ export class SummaryAPI {
    * @param {string} [params.before] ISO 8601 datetime
    */
   async list({ isHeartbeat = null, limit = 20, before = null } = {}) {
-    const query = { limit };
-    if (isHeartbeat !== null) query.is_heartbeat = isHeartbeat;
-    if (before !== null) query.before = before;
-    return this.api.get('/memory/summary/list', query);
+    const suffix = querySuffix({ limit, is_heartbeat: isHeartbeat, before });
+    return this.api.get(`/memory/summary/list${suffix}`);
   }
 
   /** SnapshotDelta between two snapshots. Returns null on 404. */
   async delta({ from: fromId, to: toId }) {
     try {
-      return await this.api.get('/memory/summary/delta', {
-        from: fromId,
-        to: toId,
-      });
+      const suffix = querySuffix({ from: fromId, to: toId });
+      return await this.api.get(`/memory/summary/delta${suffix}`);
     } catch (e) {
       if (e?.status === 404) return null;
       throw e;
