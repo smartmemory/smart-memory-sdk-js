@@ -64,6 +64,16 @@ describe('decision history, sites and auto changes', () => {
     expect(base.get).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['getHistory', ['d0', { limit: 0 }], 'invalid_limit'],
+    ['getSites', ['d1', { at: 'x' }], 'invalid_at_or_scope'],
+    ['listAutoChanges', [{ status: 'x' }], 'invalid_status'],
+  ])('%s exposes the service refusal code and reason', async (method, args, code) => {
+    const error = Object.assign(new Error('bad value'), { status: 400, detail: { detail: { code, message: 'bad value' } } });
+    const decisions = new DecisionAPI({ get: vi.fn().mockRejectedValue(error) });
+    await expect(decisions[method](...args)).rejects.toMatchObject({ code, reason: 'bad value', status: 400 });
+  });
+
   it('lets the service refusal through unchanged', async () => {
     const error = Object.assign(new Error('Decision not found'), { status: 404 });
     const base = { get: vi.fn().mockRejectedValue(error) };

@@ -71,6 +71,14 @@ function nameRefusal(error) {
   return error;
 }
 
+async function readView(api, url) {
+  try {
+    return await api.get(url);
+  } catch (error) {
+    throw nameRefusal(error);
+  }
+}
+
 /** CLAIMS-BUILD-20: the decision "who" fields, sent only when given. */
 function statedBy({ decidedBy, recommendedBy }) {
   return {
@@ -433,11 +441,11 @@ export class DecisionAPI {
    *   100); `before` pages (entries strictly older); `asOf` keeps entries at or before that instant.
    * @returns {Promise<{decision_id: string, entries: Array<Object>, start: {at: string|null, kind: 'recorded'|'migrated'|'unknown', note: string}, truncated: boolean}>}
    * @throws {APIError} 404 for an unknown decision (a decision you cannot read answers the same); 400 `invalid_before`
-   *   or `invalid_as_of`; 422 for a `limit` out of range.
+   *   or `invalid_as_of`; 400 `invalid_limit` for a limit outside 1 through 500.
    */
   async getHistory(decisionId, { limit, before, asOf } = {}) {
     const query = queryString({ limit, before, as_of: asOf });
-    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/history${query}`);
+    return readView(this.api, `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/history${query}`);
   }
 
   /**
@@ -454,7 +462,7 @@ export class DecisionAPI {
    */
   async getSites(decisionId, { at, scopes } = {}) {
     const query = queryString({ at }, (scopes || []).map(scope => ['scope', JSON.stringify(scope)]));
-    return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/sites${query}`);
+    return readView(this.api, `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/sites${query}`);
   }
 
   /**
@@ -466,7 +474,7 @@ export class DecisionAPI {
    * @throws {APIError} 400 `invalid_status` or `invalid_since`.
    */
   async listAutoChanges({ since, status, limit, offset } = {}) {
-    return this.api.get(`/memory/decisions/auto-changes${queryString({ since, status, limit, offset })}`);
+    return readView(this.api, `/memory/decisions/auto-changes${queryString({ since, status, limit, offset })}`);
   }
 
   /**
