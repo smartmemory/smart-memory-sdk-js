@@ -5,6 +5,10 @@
 - `auto-changes` is now a reserved decision id (it is a route name): `decisions.get('auto-changes')` throws `Invalid id` before any request.
 - Decision history, sites and automatic change reads expose named service errors on `APIError.code` and `APIError.reason`. Added decision read examples.
 
+## Unreleased - REL-2-0-MAIN-MERGE-1 (2026-11-18)
+
+- `WorkspaceAPI.setSessionWorkspace` / `clearSessionWorkspace` (WS-ROUTING-4, from main `661c665`): PUT and DELETE `/memory/routing/session`, the session routes the 2.0 service serves. Main's routing prefs and explain client (`RoutingAPI`) is not carried: the 2.0 service has no prefs or explain route.
+
 ## 2.0.2
 
 - REL-2-0-2-MERGED-TIP-1: `setSupersessionPolicy` JSDoc now says turning the review hold off (`'retire'`, or `null` when the inherited value is retire) needs a workspace owner or admin. Docs only.
