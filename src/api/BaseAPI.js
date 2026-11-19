@@ -1,5 +1,5 @@
 import { fetchWithRecovery } from '../fetch/recovery.js';
-import { APIError } from '../errors/APIError.js';
+import { APIError, DecisionHistoryProtectedError } from '../errors/APIError.js';
 
 function isRawBody(body) {
   return (typeof FormData !== 'undefined' && body instanceof FormData) ||
@@ -188,11 +188,10 @@ export class BaseAPI {
       errorData = { message: `HTTP ${response.status}` };
     }
 
-    const error = new APIError(
-      this._extractMessage(errorData, response.status),
-      response.status,
-      errorData
-    );
+    const message = this._extractMessage(errorData, response.status);
+    const error = response.status === 409 && errorData?.detail?.error_code === DecisionHistoryProtectedError.code
+      ? new DecisionHistoryProtectedError(message, errorData)
+      : new APIError(message, response.status, errorData);
     // Retry-After as seconds (the HTTP-date form is ignored: nothing in the save path honors it).
     const retryAfterHeader = response.headers?.get?.('retry-after');
     const retryAfter = retryAfterHeader == null || retryAfterHeader === '' ? NaN : Number(retryAfterHeader);
