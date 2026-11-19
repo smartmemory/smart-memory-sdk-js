@@ -1,6 +1,12 @@
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
 
 - New `DecisionHistoryProtectedError` (extends `APIError`, `status` 409, `code` `'decision_history_protected'`). The service answers it when `MemoryAPI.update`, an edge or link call, or a graph bulk call would change a decision's status, supersession or lifecycle links through a generic write. Nothing is written. Decision history changes only through `DecisionAPI`.
+## Unreleased - STUDIO-DECISION-VIEW-1 U5: the three decision reads (2026-11-18)
+
+- `decisions.getHistory(id, { limit, before, asOf })`, `decisions.getSites(id, { at, scopes })` and `decisions.listAutoChanges({ since, status, limit, offset })` read `/memory/decisions/{id}/history`, `/memory/decisions/{id}/sites` and `/memory/decisions/auto-changes`. A refusal is the usual `APIError` (404 unknown decision, 400 `invalid_before`, `invalid_as_of`, `invalid_scope`, `invalid_status`).
+- Decision detail examples explain the rollout display label and lifecycle status. Site table documentation covers the 503 response when site history is unavailable.
+- `auto-changes` is now a reserved decision id (it is a route name): `decisions.get('auto-changes')` throws `Invalid id` before any request.
+- Decision history, sites and automatic change reads expose named service errors on `APIError.code` and `APIError.reason`. Added decision read examples.
 
 ## Unreleased - REL-2-0-MAIN-MERGE-1 (2026-11-18)
 

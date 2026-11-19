@@ -246,7 +246,14 @@ client.decisions.list({ status: 'pending' });
 client.decisions.listPending(50);
 client.decisions.getProofTree(decisionId, 5);
 client.decisions.getFuzzyConfidence(decisionId);
+const history = await client.decisions.getHistory(decisionId, { limit: 25 });
+const sites = await client.decisions.getSites(decisionId, { at: '2026-10-15T00:00:00Z' });
+const changes = await client.decisions.listAutoChanges({ status: 'unchecked' });
 ```
+
+A decision detail read includes `display_status` for the screen label. During a
+site rollout the label can be `replaced` while `status` is still `active`.
+Use `getSites` to find the rule in force at a particular site.
 
 ### Site validity schedules
 
