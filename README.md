@@ -251,6 +251,10 @@ const sites = await client.decisions.getSites(decisionId, { at: '2026-10-15T00:0
 const changes = await client.decisions.listAutoChanges({ status: 'unchecked' });
 ```
 
+A decision detail read includes `display_status` for the screen label. During a
+site rollout the label can be `replaced` while `status` is still `active`.
+Use `getSites` to find the rule in force at a particular site.
+
 ### Site validity schedules
 
 `SM-SCOPED-VALIDITY-1` adds `businessScope: { site }` and `validAt` to memory search
