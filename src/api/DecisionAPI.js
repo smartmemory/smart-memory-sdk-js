@@ -454,11 +454,12 @@ export class DecisionAPI {
    * @param {{at?: string|Date, scopes?: Array<{site: string}>}} [options] `at` is the date asked about (default now);
    *   `scopes` names extra sites to answer for even when no rule lists them.
    * @returns {Promise<{decision_id: string, at: string, all_sites: boolean, all_sites_from: string|null,
-   *   rows: Array<{scope: Object, in_force: {decision_id: string|null, visible: boolean, from: string}|null,
-   *   next: {decision_id: string|null, visible: boolean, from: string}|null}>}>}
+   *   rows: Array<{scope: Object, in_force: {decision_id: string|null, visible: boolean, from: string|null}|null,
+   *   next: {decision_id: string|null, visible: boolean, from: string|null}|null}>}>}
    *   `all_sites` true means the rule applies everywhere from `all_sites_from` and `rows` is empty. `in_force` null
    *   means no rule of the chain is in force at that site on that date, never a default rule.
-   * @throws {APIError} 404 for an unknown decision; 400 `invalid_scope` or `invalid_at_or_scope`.
+   * @throws {APIError} 404 for an unknown decision, 400 `invalid_scope` or `invalid_at_or_scope`,
+   *   or 503 `scoped_history_unavailable` when the site history cannot be read.
    */
   async getSites(decisionId, { at, scopes } = {}) {
     const query = queryString({ at }, (scopes || []).map(scope => ['scope', JSON.stringify(scope)]));
