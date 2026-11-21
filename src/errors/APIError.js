@@ -46,5 +46,9 @@ export class ConflictCheckUndecidedError extends APIError {
     this.code = ConflictCheckUndecidedError.code;
     this.pairs = Array.isArray(detail?.detail?.pairs) ? detail.detail.pairs : [];
     this.reason = typeof detail?.detail?.reason === 'string' ? detail.detail.reason : '';
+    // Core's judge build adds these to the body: passed through unchanged, null when the service did not send them.
+    this.method = detail?.detail?.method ?? null;
+    this.hint = detail?.detail?.hint ?? null;
+    this.pairsNotChecked = detail?.detail?.pairs_not_checked ?? null;
   }
 }

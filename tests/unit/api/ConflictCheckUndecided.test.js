@@ -77,6 +77,19 @@ describe('conflict_check_undecided', () => {
     expect(wrongStatus).not.toBeInstanceOf(ConflictCheckUndecidedError);
   });
 
+  it('passes method, hint and the not-checked count through unchanged, null when absent', async () => {
+    const sent = { detail: { ...UNDECIDED_409.detail, method: 'jev', hint: 'set a key', pairs_not_checked: 4 } };
+    const full = await new MemoryAPI(await serve(409, sent)).search('KX-410', { failIfConflicted: true }).catch(e => e);
+    expect([full.method, full.hint, full.pairsNotChecked]).toEqual(['jev', 'set a key', 4]);
+    await new Promise(resolve => server.close(resolve));
+    const old = await new MemoryAPI(await serve(409, UNDECIDED_409)).search('KX-410', { failIfConflicted: true }).catch(e => e);
+    expect([old.method, old.hint, old.pairsNotChecked]).toEqual([null, null, null]);
+    await new Promise(resolve => server.close(resolve));
+    const conflict = { detail: { error: 'recall_conflict', pairs: [['a', 'b']], method: 'jev' } };
+    const refused = await new MemoryAPI(await serve(409, conflict)).search('x', { failIfConflicted: true }).catch(e => e);
+    expect(refused.detail.detail.method).toBe('jev');
+  });
+
   it('passes the mark marker through search and pack unchanged', async () => {
     const search = await new MemoryAPI(await serve(200, { results: ITEMS, group_roots: {}, conflict_check: MARKER }))
       .search('KX-410', { failIfConflicted: true });
