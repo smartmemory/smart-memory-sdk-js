@@ -4,6 +4,7 @@
 - Under the server setting `conflict_check_unsure: mark` the read succeeds. The marker `{ method, undecided_pairs: [{ item_ids, reason }] }` is returned unchanged as `conflict_check` on the `search` response and `manifest.conflict_check` on the `pack` response. JSDoc says so.
 - `ConflictCheckUndecidedError.method`, `.hint` and `.pairsNotChecked` carry core's judge fields from the 409 body unchanged (`null` when the service did not send them). The `recall_conflict` 409 stays a plain `APIError` whose `detail.detail.method` is the body's.
 - Tests: `tests/unit/api/ConflictCheckUndecided.test.js` (new, real `AuthCore` and `fetch` against a loopback HTTP server, the service's real response bodies). Needs the service change of the same unit.
+## 2.0.3
 
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
 
