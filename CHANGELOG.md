@@ -1,3 +1,5 @@
+## 2.0.3
+
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
 
 - New `DecisionHistoryProtectedError` (extends `APIError`, `status` 409, `code` `'decision_history_protected'`). The service answers it when `MemoryAPI.update`, an edge or link call, or a graph bulk call would change a decision's status, supersession or lifecycle links through a generic write. Nothing is written. Decision history changes only through `DecisionAPI`.
