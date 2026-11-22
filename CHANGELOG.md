@@ -1,3 +1,5 @@
+## 2.0.4
+
 ## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)
 
 - New `ConflictCheckUndecidedError` (extends `APIError`, `status` 409, `code` `'conflict_check_undecided'`, `pairs` and `reason` read from the response detail), exported from the package root. `MemoryAPI.search` and `RecallAPI.pack` throw it when `failIfConflicted` is set and two notes share a product-code-like name but give different numbers the checker could not compare. It is not the `recall_conflict` error: no disagreement was proven. It was a plain `APIError` before.
