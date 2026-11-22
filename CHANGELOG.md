@@ -1,3 +1,7 @@
+## Unreleased - BUG-DECISION-HISTORY-PAGE-TIE-1 (2026-11-23)
+
+- `decisions.getHistory(id, { limit, cursor, before, asOf })`: new `cursor` option. Pass the previous page's `next_cursor` to walk a history in pages and get every entry exactly once, even when several share one instant. `before` still works but is deprecated (it can skip entries that share an instant with the page's last entry). A cursor the service cannot read, or one taken from another decision, is a 400 `invalid_cursor` on `APIError.code`.
+
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
 
 - New `DecisionHistoryProtectedError` (extends `APIError`, `status` 409, `code` `'decision_history_protected'`). The service answers it when `MemoryAPI.update`, an edge or link call, or a graph bulk call would change a decision's status, supersession or lifecycle links through a generic write. Nothing is written. Decision history changes only through `DecisionAPI`.
