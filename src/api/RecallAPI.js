@@ -38,6 +38,9 @@ export class RecallAPI {
    * options object — and `sections: null` previously reached `null.map(...)` and
    * threw. Omitting also matches the Python SDK and the MCP remote backend, so one
    * body shape reaches the route from every client.
+   * @param {boolean} [params.failIfConflicted] 409 `recall_conflict` on a supported disagreement. A pair the check could
+   *   not decide throws `ConflictCheckUndecidedError`, or, under the server setting `conflict_check_unsure: mark`, comes
+   *   back as `manifest.conflict_check`.
    * @returns {Promise<Object>} RecallPack — `{ block, manifest }`.
    */
   async pack({ budgetTokens, query, sections, preset, asOf, failIfConflicted = false } = {}) {

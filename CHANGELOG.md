@@ -1,3 +1,9 @@
+## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)
+
+- New `ConflictCheckUndecidedError` (extends `APIError`, `status` 409, `code` `'conflict_check_undecided'`, `pairs` and `reason` read from the response detail), exported from the package root. `MemoryAPI.search` and `RecallAPI.pack` throw it when `failIfConflicted` is set and two notes share a product-code-like name but give different numbers the checker could not compare. It is not the `recall_conflict` error: no disagreement was proven. It was a plain `APIError` before.
+- Under the server setting `conflict_check_unsure: mark` the read succeeds. The marker `{ method, undecided_pairs: [{ item_ids, reason }] }` is returned unchanged as `conflict_check` on the `search` response and `manifest.conflict_check` on the `pack` response. JSDoc says so.
+- `ConflictCheckUndecidedError.method`, `.hint` and `.pairsNotChecked` carry core's judge fields from the 409 body unchanged (`null` when the service did not send them). The `recall_conflict` 409 stays a plain `APIError` whose `detail.detail.method` is the body's.
+- Tests: `tests/unit/api/ConflictCheckUndecided.test.js` (new, real `AuthCore` and `fetch` against a loopback HTTP server, the service's real response bodies). Needs the service change of the same unit.
 ## 2.0.3
 
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
