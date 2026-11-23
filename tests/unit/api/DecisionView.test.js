@@ -28,6 +28,8 @@ describe('decision history, sites and auto changes', () => {
     const { base, decisions } = apiWith({ decision_id: 'd0', entries: [], truncated: false });
     await decisions.getHistory('d0');
     expect(base.get).toHaveBeenLastCalledWith('/memory/decisions/d0/history');
+    await decisions.getHistory('d0', { limit: 2, cursor: 'abc=' });
+    expect(base.get).toHaveBeenLastCalledWith('/memory/decisions/d0/history?limit=2&cursor=abc%3D');
     await decisions.getHistory('d0', { limit: 10, before: '2026-11-01T00:00:00+00:00', asOf: new Date('2026-10-02T00:00:00Z') });
     expect(base.get).toHaveBeenLastCalledWith(
       `/memory/decisions/d0/history?limit=10&before=${encodeURIComponent('2026-11-01T00:00:00+00:00')}&as_of=${encodeURIComponent('2026-10-02T00:00:00.000Z')}`,

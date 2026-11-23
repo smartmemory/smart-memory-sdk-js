@@ -437,14 +437,18 @@ export class DecisionAPI {
    * replaced, retracted, restored, review answers, evidence links) with who and why. Who is an actor string
    * `<kind>:<id>` such as `human:alice`.
    * @param {string} decisionId
-   * @param {{limit?: number, before?: string|Date, asOf?: string|Date}} [options] `limit` 1 to 500 (service default
-   *   100); `before` pages (entries strictly older); `asOf` keeps entries at or before that instant.
-   * @returns {Promise<{decision_id: string, entries: Array<Object>, start: {at: string|null, kind: 'recorded'|'migrated'|'unknown', note: string}, truncated: boolean}>}
-   * @throws {APIError} 404 for an unknown decision (a decision you cannot read answers the same); 400 `invalid_before`
-   *   or `invalid_as_of`; 400 `invalid_limit` for a limit outside 1 through 500.
+   * @param {{limit?: number, cursor?: string, before?: string|Date, asOf?: string|Date}} [options] `limit` 1 to 500
+   *   (service default 100); `cursor` pages: pass the previous page's `next_cursor` (returns every entry exactly once,
+   *   even when several share one instant); `before` is DEPRECATED (entries strictly older, lossy at ties, kept for old
+   *   callers); `asOf` keeps entries at or before that instant.
+   * @returns {Promise<{decision_id: string, entries: Array<Object>, start: {at: string|null, kind: 'recorded'|'migrated'|'unknown', note: string}, truncated: boolean, next_cursor?: string|null}>}
+   *   `next_cursor` is set when `truncated` is true.
+   * @throws {APIError} 404 for an unknown decision (a decision you cannot read answers the same); 400 `invalid_before`,
+   *   `invalid_cursor` (unreadable, or taken from another decision) or `invalid_as_of`; 400 `invalid_limit` for a limit
+   *   outside 1 through 500.
    */
-  async getHistory(decisionId, { limit, before, asOf } = {}) {
-    const query = queryString({ limit, before, as_of: asOf });
+  async getHistory(decisionId, { limit, before, asOf, cursor } = {}) {
+    const query = queryString({ limit, before, cursor, as_of: asOf });
     return readView(this.api, `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/history${query}`);
   }
 

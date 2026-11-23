@@ -247,6 +247,8 @@ client.decisions.listPending(50);
 client.decisions.getProofTree(decisionId, 5);
 client.decisions.getFuzzyConfidence(decisionId);
 const history = await client.decisions.getHistory(decisionId, { limit: 25 });
+// next page: every entry exactly once, even at tied instants (`before` is deprecated)
+const more = history.truncated ? await client.decisions.getHistory(decisionId, { limit: 25, cursor: history.next_cursor }) : null;
 const sites = await client.decisions.getSites(decisionId, { at: '2026-10-15T00:00:00Z' });
 const changes = await client.decisions.listAutoChanges({ status: 'unchecked' });
 ```
