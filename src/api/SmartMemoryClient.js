@@ -102,23 +102,52 @@ export class SmartMemoryClient {
   /**
    * Export the current workspace as a gzipped OKF bundle.
    * Needs workspace admin or tenant admin: any other caller gets a 403.
+   * @param {Object} [options]
+   * @param {boolean} [options.vectors=true] Add each item's stored vector so an import with the same embedder skips
+   *   re-embedding (BUG-OKF-IMPORT-SLOW-1); false gives a smaller file.
    * @returns {Promise<ArrayBuffer>}
    */
-  async exportOkf() {
-    return this._api.requestBinary('/memory/okf/export', { method: 'GET' });
+  async exportOkf({ vectors } = {}) {
+    const query = vectors === undefined ? '' : `?vectors=${vectors ? 'true' : 'false'}`;
+    return this._api.requestBinary(`/memory/okf/export${query}`, { method: 'GET' });
   }
 
   /**
    * Import a gzipped OKF bundle into the current workspace.
    * @param {Blob | ArrayBuffer | Uint8Array} archive
-   * @returns {Promise<{ imported: number, failed: number, workspace_id: string }>}
+   * The import merges into what is already in the workspace (BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1):
+   * `created` items were written, `merged` matched an existing item and were left as they are, `links_added` counts
+   * links written, `replacements_restored` replaced decisions put back as replaced, `replacements_not_restored`
+   * pairs it could not restore (named in `warnings`). `imported` = `created` + `merged`.
+   * When the file carries vectors (BUG-OKF-IMPORT-SLOW-1), `vectors_in_file`, `vectors_reused`, `vectors_refused`
+   * (reason to count) and `vectors_sampled` say how many were reused instead of embedded again.
+   * @param {Object} [options]
+   * @param {boolean} [options.background=false] Answer at once with `{ run_id, status, total, deadline_at }` (HTTP
+   *   202) and write in the background; read progress and the result with `okfImportJob(run_id)`.
+   * @returns {Promise<{ imported: number, failed: number, workspace_id: string, created: number, merged: number,
+   *   links_added: number, replacements_restored: number, replacements_not_restored: number, warnings: string[],
+   *   vectors_in_file?: number, vectors_reused?: number, vectors_refused?: Object<string, number>,
+   *   vectors_sampled?: number } | { run_id: string, status: string, total: number, deadline_at: number }>}
    */
-  async importOkf(archive) {
+  async importOkf(archive, { background = false } = {}) {
     const bundle = archive instanceof Blob
       ? archive
       : new Blob([archive], { type: 'application/gzip' });
     const formData = new FormData();
     formData.append('file', bundle, 'smartmemory-okf-import.tar.gz');
-    return this._api.postForm('/memory/okf/import', formData);
+    return this._api.postForm(`/memory/okf/import${background ? '?background=true' : ''}`, formData);
+  }
+
+  /**
+   * Progress and result of a background import (BUG-OKF-IMPORT-SLOW-1).
+   * `status` is `queued`, `running`, `completed`, `failed`, `abandoned` (the server lost the run: importing the same
+   * file again finishes it) or `unknown_run_id`; `done` of `total` items are settled; `result` is the import's answer
+   * once completed.
+   * @param {string} runId
+   * @returns {Promise<{ run_id: string, status: string, done?: number, total?: number, deadline_at?: number,
+   *   error?: string, result?: Object }>}
+   */
+  async okfImportJob(runId) {
+    return this._api.get(`/memory/okf/jobs/${encodeURIComponent(runId)}`);
   }
 }

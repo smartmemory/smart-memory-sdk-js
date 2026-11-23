@@ -72,4 +72,33 @@ describe('OKF portability', () => {
     expect(uploaded.name).toBe('smartmemory-okf-import.tar.gz');
     await expect(readAsArrayBuffer(uploaded)).resolves.toEqual(ARCHIVE.buffer);
   });
+
+  it('exports without vectors when asked (BUG-OKF-IMPORT-SLOW-1)', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      arrayBuffer: () => Promise.resolve(ARCHIVE.buffer)
+    });
+    const client = clientWith(fetchFn);
+
+    await client.exportOkf({ vectors: false });
+    expect(fetchFn.mock.calls[0][0]).toBe(`${BASE_URL}/memory/okf/export?vectors=false`);
+  });
+
+  it('starts a background import and reads its job (BUG-OKF-IMPORT-SLOW-1)', async () => {
+    const started = { run_id: 'okf-import-1', status: 'queued', total: 240, deadline_at: 1 };
+    const state = { run_id: 'okf-import-1', status: 'running', done: 30, total: 240 };
+    const fetchFn = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve(started) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(state) });
+    const client = clientWith(fetchFn);
+
+    await expect(client.importOkf(ARCHIVE, { background: true })).resolves.toEqual(started);
+    expect(fetchFn.mock.calls[0][0]).toBe(`${BASE_URL}/memory/okf/import?background=true`);
+    await expect(client.okfImportJob('okf-import-1')).resolves.toEqual(state);
+    const [url, request] = fetchFn.mock.calls[1];
+    expect(url).toBe(`${BASE_URL}/memory/okf/jobs/okf-import-1`);
+    expect(request.method).toBe('GET');
+    expect(request.headers).toEqual(expect.objectContaining({ 'X-Workspace-Id': 'workspace-1' }));
+  });
 });
