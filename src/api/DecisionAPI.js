@@ -427,6 +427,9 @@ export class DecisionAPI {
    *   the decision state at that instant (status, statement and version live then, never
    *   notes added later). Sent as `as_of` only when set; omitted means now. A bad value is
    *   a 400 `invalid_as_of`.
+   * @returns {Promise<Object>} decision, reasoning_trace, evidence, superseded, superseded_by and
+   *   `inherited_links` ({@link import('./linkTypes.js').InheritedLink}[]): links inherited from the decisions it
+   *   replaced, never in its own `evidence`; with `asOf`, only links written by then.
    */
   async getProvenance(decisionId, { asOf, businessScope, validAt } = {}) {
     return this.api.get(`/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/provenance${validityQuery({ asOf, businessScope, validAt }, '?')}`);

@@ -566,6 +566,11 @@ export class MemoryAPI {
     return this.api.get(`/memory/by-metadata?${params}`);
   }
 
+  /**
+   * A memory's graph neighbours. A decision that replaced another also lists the links it inherits.
+   * @param {string} id
+   * @returns {Promise<{neighbors: import('./linkTypes.js').NeighborRow[]}>}
+   */
   async getNeighbors(id) {
     return this.api.get(`/memory/${encodeURIComponent(id)}/neighbors`);
   }

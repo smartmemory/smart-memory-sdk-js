@@ -47,6 +47,8 @@ export class GraphAPI {
    * Fetch a memory item's graph neighbours.
    * @param {string} itemId
    * @param {{ signal?: AbortSignal }} [options]
+   * @returns {Promise<{neighbors: import('./linkTypes.js').NeighborRow[]}>} A decision that replaced another
+   *   also lists the links it inherits (`inherited`, `inherited_from`, `inherited_depth`).
    */
   async getNeighbors(itemId, options = {}) {
     return this.api.get(`/memory/${encodeURIComponent(itemId)}/neighbors`, options);
