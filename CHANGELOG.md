@@ -2,6 +2,16 @@
 
 - `decisions.getHistory(id, { limit, cursor, before, asOf })`: new `cursor` option. Pass the previous page's `next_cursor` to walk a history in pages and get every entry exactly once, even when several share one instant. `before` still works but is deprecated (it can skip entries that share an instant with the page's last entry). A cursor the service cannot read, or one taken from another decision, is a 400 `invalid_cursor` on `APIError.code`.
 
+## 2.0.4
+
+## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)
+
+- New `ConflictCheckUndecidedError` (extends `APIError`, `status` 409, `code` `'conflict_check_undecided'`, `pairs` and `reason` read from the response detail), exported from the package root. `MemoryAPI.search` and `RecallAPI.pack` throw it when `failIfConflicted` is set and two notes share a product-code-like name but give different numbers the checker could not compare. It is not the `recall_conflict` error: no disagreement was proven. It was a plain `APIError` before.
+- Under the server setting `conflict_check_unsure: mark` the read succeeds. The marker `{ method, undecided_pairs: [{ item_ids, reason }] }` is returned unchanged as `conflict_check` on the `search` response and `manifest.conflict_check` on the `pack` response. JSDoc says so.
+- `ConflictCheckUndecidedError.method`, `.hint` and `.pairsNotChecked` carry core's judge fields from the 409 body unchanged (`null` when the service did not send them). The `recall_conflict` 409 stays a plain `APIError` whose `detail.detail.method` is the body's.
+- Tests: `tests/unit/api/ConflictCheckUndecided.test.js` (new, real `AuthCore` and `fetch` against a loopback HTTP server, the service's real response bodies). Needs the service change of the same unit.
+## 2.0.3
+
 ## Unreleased - DECISION-DOOR-1 shape (b): typed refusal of generic writes to a decision's history (2026-11-19)
 
 - New `DecisionHistoryProtectedError` (extends `APIError`, `status` 409, `code` `'decision_history_protected'`). The service answers it when `MemoryAPI.update`, an edge or link call, or a graph bulk call would change a decision's status, supersession or lifecycle links through a generic write. Nothing is written. Decision history changes only through `DecisionAPI`.

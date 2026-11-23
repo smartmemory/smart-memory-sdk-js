@@ -41,7 +41,7 @@ export { LockAPI } from './api/LockAPI.js';
 export { SequenceAPI } from './api/SequenceAPI.js';
 
 // Errors
-export { APIError, DecisionHistoryProtectedError } from './errors/APIError.js';
+export { APIError, ConflictCheckUndecidedError, DecisionHistoryProtectedError } from './errors/APIError.js';
 export { SubmitScopeChangedError, UnsupportedReceiptError, AdmissionConflictError, StageChainError, STAGE_CHAIN_CODES } from './errors/ReceiptErrors.js';
 
 // 2.0 save receipt, await and retry identity (REL-CALLERS-JSSDK-1)

@@ -377,6 +377,11 @@ export class MemoryAPI {
    *   as a historical belief.
    */
   /**
+   * failIfConflicted: refuses supported disagreements with a 409 `recall_conflict` APIError. A pair the check could not
+   * decide throws `ConflictCheckUndecidedError` (409 `conflict_check_undecided`, `pairs`, `reason`), or, when the server
+   * setting `conflict_check_unsure` is `mark`, the read succeeds and the envelope carries `conflict_check`
+   * (`{ method, undecided_pairs: [{ item_ids, reason }] }`). Undecided is not a proven conflict: `item.conflict` stays null. */
+  /**
    * Each result carries RerankEvidence (including expertise buckets and citation modes).
    * hopStrategy: consensus follows entities several top results agree on; relevance follows
    * best-result entities and one-off bridges; semantic asks an LLM. Omitted preserves core default.
