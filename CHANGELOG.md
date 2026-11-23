@@ -1,3 +1,11 @@
+## Unreleased - BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1: import merges, notes without re-mined decisions (2026-11-23)
+
+- `memories.create({ ..., extractDecisions })`: `false` adds the note with decision extraction off (`POST /memory/add`
+  `extract_decisions`). Sent only when set. Used by the web app's older-export import.
+- `importOkf` result documents the merge counts: `created`, `merged`, `links_added`, `replacements_restored`,
+  `replacements_not_restored` (service `POST /memory/okf/import`).
+- Tests: `tests/unit/api/MemoryAPI.test.js` (forwarded when set, omitted when not).
+
 ## 2.0.4
 
 ## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)

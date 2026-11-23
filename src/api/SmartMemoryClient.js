@@ -111,7 +111,12 @@ export class SmartMemoryClient {
   /**
    * Import a gzipped OKF bundle into the current workspace.
    * @param {Blob | ArrayBuffer | Uint8Array} archive
-   * @returns {Promise<{ imported: number, failed: number, workspace_id: string }>}
+   * The import merges into what is already in the workspace (BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1):
+   * `created` items were written, `merged` matched an existing item and were left as they are, `links_added` counts
+   * links written, `replacements_restored` replaced decisions put back as replaced, `replacements_not_restored`
+   * pairs it could not restore (named in `warnings`). `imported` = `created` + `merged`.
+   * @returns {Promise<{ imported: number, failed: number, workspace_id: string, created: number, merged: number,
+   *   links_added: number, replacements_restored: number, replacements_not_restored: number, warnings: string[] }>}
    */
   async importOkf(archive) {
     const bundle = archive instanceof Blob
