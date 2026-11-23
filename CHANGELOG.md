@@ -5,6 +5,18 @@
 ## Unreleased - BUG-SUPERSEDE-ISOLATES-REPLACEMENT-1: typed link rows for neighbors and decision provenance (2026-11-23)
 
 - New JSDoc typedefs `NeighborRow`, `InheritedLink`, `LinkClass` (`src/api/linkTypes.js`, typing only). `MemoryAPI.getNeighbors` and `GraphAPI.getNeighbors` rows carry `link_class`, `inherited`, `inherited_from`, `inherited_depth`; `DecisionAPI.getProvenance` carries `inherited_links`. Contract: `smart-memory-docs/docs/features/BUG-SUPERSEDE-ISOLATES-REPLACEMENT-1/inherited-links-contract.json`. Needs the service change of the same unit.
+## Unreleased - BUG-OKF-IMPORT-SLOW-1: background import and export vectors option (2026-11-23)
+
+- `importOkf(archive, { background })` (202 `{ run_id, status, total, deadline_at }`), new `okfImportJob(runId)`, `exportOkf({ vectors })`. The import answer documents `vectors_in_file`, `vectors_reused`, `vectors_refused`, `vectors_sampled`.
+
+## Unreleased - BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1: import merges, notes without re-mined decisions (2026-11-23)
+
+- `memories.create({ ..., extractDecisions })`: `false` adds the note with decision extraction off (`POST /memory/add`
+  `extract_decisions`). Sent only when set. Used by the web app's older-export import.
+- `importOkf` result documents the merge counts: `created`, `merged`, `links_added`, `replacements_restored`,
+  `replacements_not_restored` (service `POST /memory/okf/import`).
+- Tests: `tests/unit/api/MemoryAPI.test.js` (forwarded when set, omitted when not).
+
 ## 2.0.4
 
 ## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)

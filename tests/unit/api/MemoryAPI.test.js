@@ -56,6 +56,13 @@ describe('MemoryAPI', () => {
     expect(body).not.toHaveProperty('embed');
   });
 
+  it('create should forward extractDecisions:false and omit it when unset', async () => {
+    await memoryAPI.create({ content: 'test', extractDecisions: false });
+    expect(baseAPI.post.mock.calls.at(-1)[1].extract_decisions).toBe(false);
+    await memoryAPI.create({ content: 'test' });
+    expect(baseAPI.post.mock.calls.at(-1)[1]).not.toHaveProperty('extract_decisions');
+  });
+
   it('create should forward embed:false to suppress embedding', async () => {
     await memoryAPI.create({ content: 'test', usePipeline: false, embed: false });
     expect(baseAPI.post.mock.calls.at(-1)[1].embed).toBe(false);

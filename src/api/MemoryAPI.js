@@ -141,6 +141,7 @@ export class MemoryAPI {
     profileName = null,
     conversationContext = null,
     embed = null,
+    extractDecisions = null,
     idempotencyKey,
   }) {
     const body = {
@@ -157,6 +158,11 @@ export class MemoryAPI {
     // pre-SVC-EMBED-CONTROL-1 request.
     if (embed !== null && embed !== undefined) {
       body.embed = embed;
+    }
+    // BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1: `false` adds the note with decision extraction off. Sent only
+    // when set (null keeps the service default).
+    if (extractDecisions !== null && extractDecisions !== undefined) {
+      body.extract_decisions = extractDecisions;
     }
     return this._save('/memory/add', body, { idempotencyKey, legacyBridge: true }); // TODO(SVC-INGEST-WAIT-STATUS-1)
   }
