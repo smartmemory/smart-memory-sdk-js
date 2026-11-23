@@ -1,3 +1,7 @@
+## Unreleased - BUG-OKF-IMPORT-SLOW-1: background import and export vectors option (2026-11-23)
+
+- `importOkf(archive, { background })` (202 `{ run_id, status, total, deadline_at }`), new `okfImportJob(runId)`, `exportOkf({ vectors })`. The import answer documents `vectors_in_file`, `vectors_reused`, `vectors_refused`, `vectors_sampled`.
+
 ## Unreleased - BUG-EXPORT-CLEAR-IMPORT-DUPLICATE-DECISIONS-1: import merges, notes without re-mined decisions (2026-11-23)
 
 - `memories.create({ ..., extractDecisions })`: `false` adds the note with decision extraction off (`POST /memory/add`
