@@ -1,3 +1,8 @@
+## Unreleased - BUG-MCP-ACTIVATE-STAGED-REASON-1: the activate reply's optional reason (2026-11-24)
+
+- `DecisionAPI.tryActivate` JSDoc: returns the new `DecisionActivation` typedef `{ activated, decision, reason? }`. `reason` is `'staged'` (approved, waits for its approval's publish) only when not activated and the caller may be told; absent otherwise. No runtime change: the reply is returned as the server sent it. Contract `smart-memory-docs/docs/plans/contracts/decisions.json` `api.activate_response`. Needs the service change of the same unit.
+- Tests: `tests/unit/api/PendingDecisionAPI.test.js` (one new case).
+
 ## 2.0.4
 
 ## Unreleased - BUG-FAIL-IF-CONFLICTED-SOURCE-DATE-1: a strict read that could not decide throws its own error (2026-11-21)

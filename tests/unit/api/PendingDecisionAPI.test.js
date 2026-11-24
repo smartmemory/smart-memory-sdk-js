@@ -40,4 +40,16 @@ describe('DecisionAPI pending lifecycle', () => {
     await decisions.tryActivate('dec_1');
     expect(api.post).toHaveBeenCalledWith('/memory/decisions/pending/dec_1/activate', {});
   });
+
+  // BUG-MCP-ACTIVATE-STAGED-REASON-1 J1: the optional reason is returned as the server sent it, never added.
+  it('tryActivate returns the staged reason unchanged and adds none when absent', async () => {
+    const api = mockBaseAPI();
+    const decisions = new DecisionAPI(api);
+    api.post.mockResolvedValueOnce({ activated: false, decision: null, reason: 'staged' });
+    expect(await decisions.tryActivate('dec_s')).toEqual({ activated: false, decision: null, reason: 'staged' });
+    api.post.mockResolvedValueOnce({ activated: false, decision: null });
+    const missing = await decisions.tryActivate('dec_m');
+    expect(missing).toEqual({ activated: false, decision: null });
+    expect('reason' in missing).toBe(false);
+  });
 });

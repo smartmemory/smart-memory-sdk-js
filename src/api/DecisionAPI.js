@@ -29,6 +29,17 @@
  *   POST /memory/reasoning/fuzzy-confidence
  */
 
+/**
+ * Reply of {@link DecisionAPI#tryActivate} (contract smart-memory-docs docs/plans/contracts/decisions.json
+ * `api.activate_response`, BUG-MCP-ACTIVATE-STAGED-REASON-1).
+ * @typedef {Object} DecisionActivation
+ * @property {boolean} activated - True when the pending decision became active.
+ * @property {Object|null} decision - The caller's read of the decision after the attempt; null when it cannot read it.
+ * @property {'staged'} [reason] - Present only when `activated` is false and the caller may be told why. `'staged'`:
+ *   an approved rule change stored but not yet published; only its approval's publish puts it in force. Absent for a
+ *   missing id, an id the caller may not see, and every other state. Treat a value you do not know as no reason.
+ */
+
 import { validityWriteOptions } from './MemoryAPI.js';
 import { pathId } from './pathId.js';
 
@@ -281,6 +292,8 @@ export class DecisionAPI {
   /**
    * Try to activate a pending decision when all requirements are resolved.
    * @param {string} decisionId
+   * @returns {Promise<DecisionActivation>} `{ activated, decision }`, plus `reason: 'staged'` when the caller may be
+   *   told the decision waits for its approval's publish.
    */
   async tryActivate(decisionId) {
     return this.api.post(`/memory/decisions/pending/${pathId(decisionId, '/memory/decisions/pending/')}/activate`, {});
