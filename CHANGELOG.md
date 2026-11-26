@@ -1,3 +1,8 @@
+## Unreleased - DECISION-EFFECTS-GRAPH-1
+
+- Read decision effects, preview a draft, and commit it with per-conflict resolutions through `client.decisions`.
+- Add, confirm, or remove a decision dependency. Snapshot types expose suggested edges, affected nodes and the workspace setting.
+
 ## 2.0.6
 
 ## Unreleased - BUG-DECISION-HISTORY-PAGE-TIE-1 (2026-11-23)

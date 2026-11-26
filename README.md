@@ -257,6 +257,39 @@ A decision detail read includes `display_status` for the screen label. During a
 site rollout the label can be `replaced` while `status` is still `active`.
 Use `getSites` to find the rule in force at a particular site.
 
+#### Decision effects
+
+`getDecisionEffects(id)` reads the standing graph. Preview a draft before saving it.
+The preview and commit snapshots include the conflict IDs, review hops and totals.
+
+```javascript
+const draft = 'Move email to the US vendor to cut cost';
+const preview = await client.decisions.previewDecisionEffects(draft);
+const resolutions = {}; // Use an empty map when the preview has no conflicts.
+for (const conflict of preview.conflicts) {
+  resolutions[conflict.id] = await chooseResolution(conflict); // Your app asks the user.
+}
+const result = await client.decisions.commitDecisionEffects(draft, resolutions);
+```
+
+Each choice is `{ choice: 'replace' }`, `{ choice: 'keep_both_scoped', scope: 'Marketing email' }`,
+or `{ choice: 'cancel' }`. Cancellation returns `{ status: 'cancelled' }`. Commit checks the
+conflicts again. An unsettled conflict raises an `APIError` with status 409 and the conflict IDs
+in the response body (`error.detail`). Budget exhaustion raises an `APIError` with status 429.
+A numeric Retry-After header is available as `error.retryAfterMs`.
+
+```javascript
+await client.decisions.addDecisionDependsOn(dependentId, targetId);
+await client.decisions.confirmDecisionDependsOn(dependentId, targetId);
+await client.decisions.removeDecisionDependsOn(dependentId, targetId);
+```
+
+The snapshot's `suggestedLinks` setting is `suggest_only`, `dashed` (default), or `treat_as_real`.
+Read `suggestions` for listed links, `edge.suggested` for link provenance, and
+`node.viaSuggested` for decisions reached through a suggested link.
+TypeScript callers can import the `DecisionEffectsSnapshot` and `Resolution` types
+from `@smartmemory/sdk-js/decisionEffects`.
+
 ### Site validity schedules
 
 `SM-SCOPED-VALIDITY-1` adds `businessScope: { site }` and `validAt` to memory search

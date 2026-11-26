@@ -71,12 +71,24 @@ function nameRefusal(error) {
   return error;
 }
 
-async function readView(api, url) {
+async function namedReply(request) {
   try {
-    return await api.get(url);
+    return await request;
   } catch (error) {
     throw nameRefusal(error);
   }
+}
+
+function readView(api, url) {
+  return namedReply(api.get(url));
+}
+
+function dependsOnPath(id) {
+  return `/memory/decisions/${pathId(id, '/memory/decisions/')}/depends-on`;
+}
+
+function dependencyPath(id, targetId) {
+  return `${dependsOnPath(id)}/${pathId(targetId, '/memory/decisions/{id}/depends-on/')}`;
 }
 
 /** CLAIMS-BUILD-20: the decision "who" fields, sent only when given. */
@@ -453,6 +465,47 @@ export class DecisionAPI {
   async getHistory(decisionId, { limit, before, asOf, cursor } = {}) {
     const query = queryString({ limit, before, cursor, as_of: asOf });
     return readView(this.api, `/memory/decisions/${pathId(decisionId, '/memory/decisions/')}/history${query}`);
+  }
+
+  /** Read a standing decision's effects.
+   * @param {string} id
+   * @returns {Promise<import('../../types/decisionEffects').DecisionEffectsSnapshot>}
+   */
+  async getDecisionEffects(id) {
+    return readView(this.api, `/memory/decisions/${pathId(id, '/memory/decisions/')}/effects`);
+  }
+
+  /** Preview unsaved text. An explicit asOf is the workspace's current calendar date.
+   * @param {string} text
+   * @param {{asOf?: string}} [options]
+   * @returns {Promise<import('../../types/decisionEffects').DecisionEffectsSnapshot>}
+   */
+  async previewDecisionEffects(text, { asOf } = {}) {
+    return namedReply(this.api.post('/memory/decisions/effects/preview', { text, as_of: asOf }));
+  }
+
+  /** Submit one resolution per conflict id. An empty map is valid for a conflict-free draft.
+   * @param {string} text
+   * @param {Record<string, import('../../types/decisionEffects').Resolution>} resolutions
+   * @returns {Promise<import('../../types/decisionEffects').DecisionEffectsSnapshot | {status: 'cancelled'}>}
+   */
+  async commitDecisionEffects(text, resolutions) {
+    return namedReply(this.api.post('/memory/decisions/effects/commit', { text, resolutions }));
+  }
+
+  /** Add a stated dependency from id to targetId. */
+  async addDecisionDependsOn(id, targetId) {
+    return namedReply(this.api.post(dependsOnPath(id), { target_id: targetId }));
+  }
+
+  /** Confirm a suggested dependency on behalf of the caller. */
+  async confirmDecisionDependsOn(id, targetId) {
+    return namedReply(this.api.post(`${dependencyPath(id, targetId)}/confirm`));
+  }
+
+  /** Remove a dependency from the dependent decision. */
+  async removeDecisionDependsOn(id, targetId) {
+    return namedReply(this.api.delete(dependencyPath(id, targetId)));
   }
 
   /**
