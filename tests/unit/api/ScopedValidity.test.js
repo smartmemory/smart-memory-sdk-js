@@ -110,7 +110,12 @@ function canonical(value) {
   return JSON.stringify(value);
 }
 
-describe('real local service golden', { timeout: 30000 }, () => {
+// The golden group needs a live local service (SCOPED_VALIDITY_*). Locally a missing URL still FAILS loudly
+// (see beforeAll); only the GitHub Actions publish runner, which has no service, skips with this visible reason.
+const noServiceOnRunner = !process.env.SCOPED_VALIDITY_SERVICE_URL && process.env.GITHUB_ACTIONS === 'true';
+const goldenSkipReason = 'SKIPPED ScopedValidity real local service golden: SCOPED_VALIDITY_SERVICE_URL is unset on the GitHub Actions runner (needs a live local service)';
+it.skipIf(!noServiceOnRunner)('real local service golden skipped: no live service on the runner', ({ skip }) => { console.warn(goldenSkipReason); skip(goldenSkipReason); });
+describe.skipIf(noServiceOnRunner)('real local service golden', { timeout: 30000 }, () => {
   let memory, decisions, foreign, otherWorkspace, base, fixture;
   const ids = {};
   beforeAll(() => {
