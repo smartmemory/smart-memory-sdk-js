@@ -468,11 +468,17 @@ export class MemoryAPI {
    * this question."; when the model cites none of its evidence, it is "The answer could not
    * be tied to a stored record." In both cases `grounded` is false.
    *
+   * `decision` (hosted, SAME-ANSWER-U4) is the current decision that matches the question, built from
+   * the stored record: the rule verbatim, the rules it replaced and the recorded reason. It is also
+   * evidence item 1. It is null when no current decision matches; show it above the prose when set.
+   * `lanes_failed` names the search lanes that failed for this answer (`decision-match` when the
+   * decision match could not be read); non-empty means the answer may be partial.
+   *
    * @param {string} question - The natural-language question.
    * @param {Object} [options]
    * @param {number} [options.limit=5] - How many memories to retrieve as evidence (1-50).
    * @param {boolean} [options.reasoning=true] - When false, `reasoning` comes back empty.
-   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string, memory_type: (string|null), created_at: (string|null)}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>, used_evidence_ids: Array<string>, grounded: boolean}>}
+   * @returns {Promise<{answer: string, reasoning: string, evidence: Array<{item_id: string, content: string, memory_type: (string|null), created_at: (string|null)}>, relations: Array<{source: string, type: string, target: string, source_id: string, target_id: string}>, used_evidence_ids: Array<string>, grounded: boolean, decision: ({decision_id: string, content: string, status: string, effective_at: string, replaced: Array<{decision_id: string, content: string, reason: string}>, reason: string, match: string}|null), lanes_failed: Array<string>}>}
    *   Relation rows carry both display labels and graph node ids; combine them as
    *   `${source_id}->${target_id}:${type}` to address the edge in a graph view.
    */
