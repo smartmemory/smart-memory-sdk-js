@@ -1,3 +1,5 @@
+## 2.0.9
+
 ## Unreleased - SAME-ANSWER-U4
 
 - `memory.ask` documents two new response fields from the hosted API: `decision`, the current decision that matches the question (rule, what it replaced, the reason), and `lanes_failed`, the search lanes that failed for the answer.
