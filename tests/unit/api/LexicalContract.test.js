@@ -1,10 +1,17 @@
 import { it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { MemoryAPI } from '../../../src/api/MemoryAPI.js';
 
-const contract = JSON.parse(readFileSync('../smart-memory-docs/docs/features/CORE-LEXICAL-INDEX-1/lexical-contract.json', 'utf8'));
+const CONTRACT_PATH = '../smart-memory-docs/docs/features/CORE-LEXICAL-INDEX-1/lexical-contract.json';
+// Cross-repo contract check: runs unchanged when the sibling smart-memory-docs checkout is present,
+// skips (with this visible reason) in a single-repo runner such as the publish workflow.
+const haveContract = existsSync(CONTRACT_PATH);
+const skipReason = `SKIPPED LexicalContract: ${CONTRACT_PATH} is absent (needs a sibling smart-memory-docs checkout)`;
+// Collect-time console output is dropped for a fully skipped file, so the reason is logged from a test body.
+it.skipIf(haveContract)('cross-repo contract check skipped: sibling contract file absent', ({ skip }) => { console.warn(skipReason); skip(skipReason); });
+const contract = haveContract ? JSON.parse(readFileSync(CONTRACT_PATH, 'utf8')) : null;
 
-it.each(['omitted', 'empty', 'zero', 'accepted', 'contains', 'keyword-bm25', 'unknown', 'validation', 'unavailable'])('search follows lexical contract: %s', async (scenario) => {
+(haveContract ? it : it.skip).each(['omitted', 'empty', 'zero', 'accepted', 'contains', 'keyword-bm25', 'unknown', 'validation', 'unavailable'])('search follows lexical contract: %s', async (scenario) => {
   const transport = { post: vi.fn().mockResolvedValue({ results: [] }) };
   const api = new MemoryAPI(transport);
   const options = {};

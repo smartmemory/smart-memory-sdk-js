@@ -1,12 +1,17 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryAPI } from '../../../src/api/MemoryAPI.js';
 
-const contract = JSON.parse(readFileSync(
-  '../smart-memory-docs/docs/features/CORE-RERANK-EXPOSE-1/rerank-exposure-contract.json', 'utf8',
-));
+const CONTRACT_PATH = '../smart-memory-docs/docs/features/CORE-RERANK-EXPOSE-1/rerank-exposure-contract.json';
+// Cross-repo contract check: runs unchanged when the sibling smart-memory-docs checkout is present,
+// skips (with this visible reason) in a single-repo runner such as the publish workflow.
+const haveContract = existsSync(CONTRACT_PATH);
+const skipReason = `SKIPPED RerankExposure: ${CONTRACT_PATH} is absent (needs a sibling smart-memory-docs checkout)`;
+// Collect-time console output is dropped for a fully skipped file, so the reason is logged from a test body.
+it.skipIf(haveContract)('cross-repo contract check skipped: sibling contract file absent', ({ skip }) => { console.warn(skipReason); skip(skipReason); });
+const contract = haveContract ? JSON.parse(readFileSync(CONTRACT_PATH, 'utf8')) : null;
 
-const statuses = contract.properties.rerank_status.enum;
+const statuses = haveContract ? contract.properties.rerank_status.enum : [];
 
 function evidence(status, score = -11.4) {
   return {
@@ -19,7 +24,7 @@ function evidence(status, score = -11.4) {
   };
 }
 
-describe('CORE-RERANK-EXPOSE-1', () => {
+describe.skipIf(!haveContract)('CORE-RERANK-EXPOSE-1', () => {
   it('documents the exact contract enum and field names', () => {
     const source = readFileSync('src/api/MemoryAPI.js', 'utf8');
     const declaration = source.match(/@typedef \{([^}]+)\} RerankStatus/)[1];
