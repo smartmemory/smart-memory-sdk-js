@@ -102,3 +102,12 @@ it('refuses invalid ids before fetch for either end of the link', async () => {
   await expect(decisions.removeDecisionDependsOn('d', 't/confirm')).rejects.toThrow(/Invalid id/);
   expect(fetchFn).not.toHaveBeenCalled();
 });
+
+it('passes cancellation to fetch without serializing the signal into the URL', async () => {
+  const { decisions, fetchFn } = transport(200, preview);
+  const { signal } = new AbortController();
+  await decisions.getDecisionEffects('decision', {}, { signal });
+  const [[url, options]] = fetchFn.mock.calls;
+  expect(url).toBe('https://sdk.invalid/memory/decisions/decision/effects');
+  expect(options.signal).toBe(signal);
+});

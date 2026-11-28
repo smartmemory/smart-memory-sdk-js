@@ -1,5 +1,6 @@
 ## Unreleased - Decision effects history
 
+- Forward an optional abort signal on standing decision effects reads.
 - Allow standing decision effects reads to select a date and include retired rules.
 
 ## Unreleased - SDKJS-PUBLISH-WORKFLOW-1

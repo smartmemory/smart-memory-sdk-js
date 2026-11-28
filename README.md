@@ -259,7 +259,7 @@ Use `getSites` to find the rule in force at a particular site.
 
 #### Decision effects
 
-`getDecisionEffects(id)` reads the standing graph for today. Pass `{ as_of: '2025-12-15', show_retired: true }` as the second argument to read a date and include retired rules. Both fields are optional. Preview a draft before saving it.
+`getDecisionEffects(id)` reads the standing graph for today. Pass `{ as_of: '2025-12-15', show_retired: true }` as the second argument to read a date and include retired rules. Both fields are optional. Pass `{ signal }` as the third argument to cancel the request. Preview a draft before saving it.
 The preview and commit snapshots include the conflict IDs, review hops and totals.
 
 ```javascript
