@@ -48,3 +48,9 @@ export interface DecisionEffectsSnapshot {
   suggestedLinks?: SuggestedLinks
   suggestions?: { source: string, target: string, reason: string }[]
 }
+
+/** Optional query for a standing decision's ripple. */
+export interface StandingEffectsOptions {
+  as_of?: string; // YYYY-MM-DD
+  show_retired?: boolean;
+}

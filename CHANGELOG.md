@@ -1,3 +1,8 @@
+## Unreleased - Decision effects history
+
+- Forward an optional abort signal on standing decision effects reads.
+- Allow standing decision effects reads to select a date and include retired rules.
+
 ## Unreleased - SDKJS-PUBLISH-WORKFLOW-1
 
 - Fix the npm publish workflow so a release can reach npm: it now builds before it tests, and the two contract suites that read `../smart-memory-docs` and the live-service ScopedValidity golden group skip with a visible reason on the single-repo runner. They run unchanged where their inputs exist.

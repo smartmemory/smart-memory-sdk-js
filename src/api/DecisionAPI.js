@@ -469,10 +469,13 @@ export class DecisionAPI {
 
   /** Read a standing decision's effects.
    * @param {string} id
+   * @param {import('../../types/decisionEffects').StandingEffectsOptions} [options]
+   * @param {{signal?: AbortSignal}} [requestOptions]
    * @returns {Promise<import('../../types/decisionEffects').DecisionEffectsSnapshot>}
    */
-  async getDecisionEffects(id) {
-    return readView(this.api, `/memory/decisions/${pathId(id, '/memory/decisions/')}/effects`);
+  async getDecisionEffects(id, { as_of, show_retired } = {}, { signal } = {}) {
+    const query = queryString({ as_of, show_retired });
+    return namedReply(this.api.get(`/memory/decisions/${pathId(id, '/memory/decisions/')}/effects${query}`, { signal }));
   }
 
   /** Preview unsaved text. An explicit asOf is the workspace's current calendar date.

@@ -36,6 +36,10 @@ const resolutions = {
 
 it.each([
   ['standing', d => d.getDecisionEffects('dep #'), 'GET', 'dep%20%23/effects', undefined],
+  ['standing by date', d => d.getDecisionEffects('dep #', { as_of: '2025-12-15', show_retired: false }),
+    'GET', 'dep%20%23/effects?as_of=2025-12-15&show_retired=false', undefined],
+  ['standing with retired', d => d.getDecisionEffects('dep #', { show_retired: true }),
+    'GET', 'dep%20%23/effects?show_retired=true', undefined],
   ['preview', d => d.previewDecisionEffects('draft'), 'POST', 'effects/preview', { text: 'draft' }, 'PreviewRequest'],
   ['dated preview', d => d.previewDecisionEffects('draft', { asOf: '2026-11-24' }), 'POST', 'effects/preview',
     { text: 'draft', as_of: '2026-11-24' }, 'PreviewRequest'],
@@ -97,4 +101,13 @@ it('refuses invalid ids before fetch for either end of the link', async () => {
   await expect(decisions.confirmDecisionDependsOn('d', '..')).rejects.toThrow(/Invalid id/);
   await expect(decisions.removeDecisionDependsOn('d', 't/confirm')).rejects.toThrow(/Invalid id/);
   expect(fetchFn).not.toHaveBeenCalled();
+});
+
+it('passes cancellation to fetch without serializing the signal into the URL', async () => {
+  const { decisions, fetchFn } = transport(200, preview);
+  const { signal } = new AbortController();
+  await decisions.getDecisionEffects('decision', {}, { signal });
+  const [[url, options]] = fetchFn.mock.calls;
+  expect(url).toBe('https://sdk.invalid/memory/decisions/decision/effects');
+  expect(options.signal).toBe(signal);
 });
