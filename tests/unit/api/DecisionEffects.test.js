@@ -36,6 +36,10 @@ const resolutions = {
 
 it.each([
   ['standing', d => d.getDecisionEffects('dep #'), 'GET', 'dep%20%23/effects', undefined],
+  ['standing by date', d => d.getDecisionEffects('dep #', { as_of: '2025-12-15', show_retired: false }),
+    'GET', 'dep%20%23/effects?as_of=2025-12-15&show_retired=false', undefined],
+  ['standing with retired', d => d.getDecisionEffects('dep #', { show_retired: true }),
+    'GET', 'dep%20%23/effects?show_retired=true', undefined],
   ['preview', d => d.previewDecisionEffects('draft'), 'POST', 'effects/preview', { text: 'draft' }, 'PreviewRequest'],
   ['dated preview', d => d.previewDecisionEffects('draft', { asOf: '2026-11-24' }), 'POST', 'effects/preview',
     { text: 'draft', as_of: '2026-11-24' }, 'PreviewRequest'],
